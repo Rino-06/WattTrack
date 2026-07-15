@@ -57,6 +57,27 @@ settings: key, value   (şimdilik: budget)
 CSV çıktısı Türkçe Excel uyumludur (UTF-8 BOM, `;` ayraç, ondalık virgül) —
 doğrudan Power BI'a da bağlanabilir.
 
+## Sürüm notu (v7)
+
+1. Araç ARŞİVİ: kayıtları olan araç silinince artık kayıtlar kaybolmuyor —
+   araç arşive taşınır (satılan/kazalı araçlar için), geçmişi ve
+   istatistikleri korunur, "Geri al" ile döner; kaydı olmayan araç
+   gerçekten silinir
+2. Kıyasla: "Bugüne kadar" kümülatif özet (toplam mesafe, EV toplam,
+   yakıtlıyla olurdu, toplam kazanç) + EV vs yakıtlı KÜMÜLATİF ÇİZGİ GRAFİK
+3. Ana sayfa: haftalık harcama bölümü kaldırıldı; tek harcama grafiği
+   kendi Hafta(günlük)/Ay/Yıl filtresiyle
+4. JSON geri yükleme akıllandı: tümü mükerrerse uyarır ve eklemez;
+   kısmen mükerrerse yalnız yenileri ekler ve sayıları bildirir
+5. Özel banka ekleme: formdaki banka listesine "+ Yeni banka" ile kendi
+   bankanı ekleyebilirsin, listede kalıcı olur
+6. Geçmiş filtreleri kısaldı: kapalıyken "Banka"/"Lokasyon" yazar,
+   açınca "Tümü" en üsttedir
+7. Araç satırında belirgin 📷 butonu (fotoğraf ekle/değiştir)
+8. Görsel tazeleme: hero'da yeşil gradyan, bar grafiklerde gradyan +
+   animasyon, DC (#16A34A yeşil) / AC (#1B5FAA mavi) / Ev (açık yeşil)
+   ayrışık tonlar — palet yeşil/mavi kaldı
+
 ## Sürüm notu (v6 — yayın sürümü)
 
 1. Örnek veri sistemi tamamen kaldırıldı — uygulama yayına hazır, temiz açılır

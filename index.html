@@ -39,7 +39,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .page{display:none}
 .page.active{display:block}
 
-.hero{background:var(--card);border-radius:20px;padding:20px;margin-bottom:12px;box-shadow:var(--shadow)}
+.hero{background:linear-gradient(150deg,#FFFFFF 30%,#EAF6EE 100%);border-radius:20px;padding:20px;margin-bottom:12px;box-shadow:var(--shadow)}
 .hero .k{font-size:12px;color:var(--muted);margin-bottom:4px}
 .hero .v{font-size:29px;font-weight:700;letter-spacing:-.5px}
 .hero .v.gross{color:var(--muted)}
@@ -67,6 +67,10 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .toplist .tn{flex:1;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .toplist .ts{font-size:11.5px;color:var(--muted2)}
 .toplist .tv{font-weight:700;flex-shrink:0}
+.chart-card{background:var(--card);border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px}
+.chart-card svg{width:100%;height:170px;display:block}
+.vlist .cam{width:30px;height:30px;border-radius:8px;background:var(--chip);color:var(--accent-text);font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.vlist .undo{color:var(--accent);font-size:12.5px;font-weight:700}
 .tiles{display:flex;gap:10px;margin-bottom:10px}
 .tile{flex:1;background:var(--card);border-radius:16px;padding:13px 14px;box-shadow:var(--shadow);min-width:0}
 .tile .k{font-size:11px;color:var(--muted2);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -97,14 +101,10 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .seg button.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
 .seg.mini button{padding:7px 4px;font-size:12px;border-radius:9px}
 
-.weekbars{display:flex;align-items:flex-end;gap:8px;height:64px;margin-bottom:6px}
-.weekbars>div{flex:1;background:rgba(28,135,66,.35);border-radius:4px;min-height:4px}
-.weekdays{display:flex;gap:8px;margin-bottom:20px}
-.weekdays>div{flex:1;text-align:center;font-size:10px;color:var(--faint)}
 .monthbars{display:flex;align-items:flex-end;gap:10px;height:130px;background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
 .mb{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;min-width:0}
 .mb .amt{font-size:9.5px;color:var(--muted);white-space:nowrap}
-.mb .bar{width:100%;background:var(--accent);border-radius:5px 5px 0 0}
+.mb .bar{width:100%;background:linear-gradient(180deg,#2BA35C,#0E6B33);border-radius:6px 6px 0 0;transition:height .35s ease}
 .mb .m{font-size:10.5px;color:var(--muted2)}
 
 .cmp{background:var(--card);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
@@ -275,11 +275,14 @@ nav .plus svg{width:24px;height:24px;stroke:#fff;stroke-width:2.6;stroke-linecap
     <div class="tile"><div class="k" data-i18n="freeCount">Ücretsiz şarj</div><div class="v" id="d-free" style="color:var(--blue)">0</div></div>
   </div>
 
-  <div class="h2" data-i18n="weeklySpend">Haftalık harcama</div>
-  <div class="weekbars" id="d-week"></div>
-  <div class="weekdays" id="d-weekdays"></div>
-
-  <div class="h2" data-i18n="monthlyTotals">Aylık Harcama</div>
+  <div class="h2row" style="margin-top:0">
+    <div class="h2" data-i18n="spendChart">Harcama grafiği</div>
+    <div class="seg mini" id="d-gran" style="width:170px">
+      <button data-v="week" data-i18n="week">Hafta</button>
+      <button data-v="month" class="sel" data-i18n="month">Ay</button>
+      <button data-v="year" data-i18n="year">Yıl</button>
+    </div>
+  </div>
   <div class="monthbars" id="d-months"></div>
 
   <div class="h2" data-i18n="firmDist">Firma dağılımı</div>
@@ -366,6 +369,23 @@ nav .plus svg{width:24px;height:24px;stroke:#fff;stroke-width:2.6;stroke-linecap
       <div class="v" id="c-perkm" style="font-size:28px">—</div>
       <div class="pill" id="c-per100">—</div>
     </div>
+    <div class="h2" data-i18n="cumTitle">Bugüne kadar: aynı km yakıtlıyla gidilseydi</div>
+    <div class="tiles">
+      <div class="tile"><div class="k" id="c-dist-lbl">Toplam mesafe</div><div class="v" id="c-dist">—</div></div>
+      <div class="tile"><div class="k" data-i18n="evSpent">EV toplam (net)</div><div class="v" id="c-evtot" style="color:var(--accent-dark)">—</div></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="k" data-i18n="iceWould">Yakıtlıyla olurdu</div><div class="v" id="c-icetot" style="color:var(--blue)">—</div></div>
+      <div class="tile"><div class="k" data-i18n="totalSaved">Toplam kazanç</div><div class="v" id="c-savetot" style="color:var(--accent-dark)">—</div></div>
+    </div>
+    <div class="chart-card">
+      <svg id="c-line" viewBox="0 0 340 170" preserveAspectRatio="none"></svg>
+      <div class="legend" style="flex-direction:row;justify-content:center;gap:18px;margin-top:8px">
+        <div class="li"><span class="dot" style="background:var(--accent)"></span><span data-i18n="evLine">EV (gerçek)</span></div>
+        <div class="li"><span class="dot" style="background:var(--blue)"></span><span data-i18n="iceLine">Yakıtlı (aynı km)</span></div>
+      </div>
+    </div>
+
     <div class="h2" data-i18n="savingByMonth">Aylara göre kazanç</div>
     <div class="monthbars" id="c-months"></div>
     <div class="about" data-i18n="compareNote">Grafik, kayıtlardaki sürüş mesafesine göre aynı yolu yakıtlı araçla gitseydin aradaki farkı gösterir.</div>
@@ -393,7 +413,9 @@ nav .plus svg{width:24px;height:24px;stroke:#fff;stroke-width:2.6;stroke-linecap
   <div class="section-lbl" data-i18n="vehicles">Araçlarım</div>
   <ul class="vlist" id="set-vehicles"></ul>
   <button class="mini-btn" id="btn-add-vehicle" data-i18n="addVehicle">+ Araç ekle</button>
-  <div class="about" style="margin-top:8px" data-i18n="defaultHint">Yıldıza dokunarak varsayılan aracı seç. Araca dokunarak fotoğraf ekle.</div>
+  <div class="about" style="margin-top:8px" data-i18n="defaultHint">★ varsayılan araç · 📷 fotoğraf ekle/değiştir · × arşivle</div>
+  <div class="section-lbl" id="arch-lbl" style="display:none" data-i18n="archived">Arşiv (satılan/kullanılmayan)</div>
+  <ul class="vlist" id="set-archived" style="opacity:.75"></ul>
 
   <div class="section-lbl" data-i18n="bankCountries">Banka Ülkelerim</div>
   <div class="chips" id="set-bankc" style="margin:0 0 8px"></div>
