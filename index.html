@@ -258,8 +258,8 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
   <div class="seg mini" id="d-period" style="margin-bottom:12px">
     <button data-v="week" data-i18n="week">Hafta</button>
-    <button data-v="month" class="sel" data-i18n="month">Ay</button>
-    <button data-v="year" data-i18n="year">Yıl</button>
+    <button data-v="month" data-i18n="month">Ay</button>
+    <button data-v="year" class="sel" data-i18n="year">Yıl</button>
   </div>
 
   <div class="hero">
@@ -322,7 +322,14 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     </div>
   </div>
 
-  <div class="h2" data-i18n="detailStats">Detay istatistikler</div>
+  <div class="h2row" style="margin-top:0">
+    <div class="h2" data-i18n="detailStats">Detay istatistikler</div>
+    <div class="seg mini" id="d-dstat-type" style="width:170px">
+      <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
+      <button data-v="DC">DC</button>
+      <button data-v="AC">AC</button>
+    </div>
+  </div>
   <div class="dstat">
     <div class="tile"><div class="k" data-i18n="avgDuration">Ort. şarj süresi</div><div class="v" id="d-dur">—</div></div>
     <div class="tile"><div class="k" data-i18n="avgSocRange">Ort. şarj aralığı</div><div class="v" id="d-soc">—</div></div>
@@ -406,6 +413,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       <div class="tile"><div class="k" data-i18n="iceWould">Yakıtlıyla olurdu</div><div class="v" id="c-icetot" style="color:var(--blue)">—</div></div>
       <div class="tile"><div class="k" data-i18n="totalSaved">Toplam kazanç</div><div class="v" id="c-savetot" style="color:var(--accent-dark)">—</div></div>
     </div>
+    <div class="about" id="c-dist-src" style="margin:-6px 0 10px;font-size:11.5px"></div>
     <div class="chart-card">
       <svg id="c-line" viewBox="0 0 340 170" preserveAspectRatio="none"></svg>
       <div class="legend" style="flex-direction:row;justify-content:center;gap:18px;margin-top:8px">
@@ -522,10 +530,11 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       <div>
         <div class="lbl" data-i18n="kwh">Enerji (kWh)</div>
         <div class="kwh-split">
-          <input type="number" id="in-kwh-int" inputmode="numeric" min="0" max="500" placeholder="45">
+          <input type="text" id="in-kwh-int" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="45" aria-label="kWh tam kısım">
           <span class="comma">,</span>
-          <input type="number" id="in-kwh-dec" inputmode="numeric" min="0" max="99" placeholder="47">
+          <input type="text" id="in-kwh-dec" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="27" aria-label="kWh ondalık kısım">
         </div>
+        <div class="about" style="margin:5px 0 0;font-size:11px" data-i18n="kwhHint">Sol kutu tam kısım, sağ kutu 2 haneli ondalık — 45,27 = 45,27 kWh. Sadece rakam.</div>
       </div>
       <div>
         <div class="lbl" id="in-dist-lbl">Sürülen mesafe (km)</div>

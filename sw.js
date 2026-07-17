@@ -1,5 +1,5 @@
 /* WattTrack service worker — çevrimdışı çalışma */
-const CACHE = 'watttrack-v10';
+const CACHE = 'watttrack-v11';
 const ASSETS = [
   './',
   './index.html',

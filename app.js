@@ -16,7 +16,7 @@ const MI = 1.60934;
 
 // ---------- Çeviriler ----------
 const T = {
-tr:{back:'← Geri',odoAsk:'Aracın güncel kilometresi (sayaç)',odometer:'Kilometre sayacı',odoNow:'Araç sayacı',odoTracked:'Başlangıçtan beri yapılan',odoPrompt:'Güncel sayaç ({u}):',odoStartPrompt:'Başlangıç/alım sayacı ({u}):',odoSaved:'Kilometre güncellendi',theme:'Görünüm',themeLight:'Açık',themeDark:'Koyu',spendChart:'Harcama grafiği',cumTitle:'Bugüne kadar: aynı km yakıtlıyla gidilseydi',totalDist:'Toplam mesafe',evSpent:'EV toplam (net)',iceWould:'Yakıtlıyla olurdu',totalSaved:'Toplam kazanç',evLine:'EV (gerçek)',iceLine:'Yakıtlı (aynı km)',archived:'Arşiv (satılan/kullanılmayan)',archivedTag:'arşivde — kayıtları korunuyor',archivedToast:'Araç arşive taşındı, kayıtları korunuyor',restore:'Geri al',newBank:'+ Yeni banka ekle…',newBankPrompt:'Banka adı:',importAllDup:'Bu yedekteki tüm kayıtlar zaten mevcut — hiçbir şey eklenmedi.',importPartial:'{n} yeni kayıt eklendi, {d} mükerrer atlandı',netPaid:'Ödenen (net)',typeSplit:'Şarj tipi dağılımı (kWh)',detailStats:'Detay istatistikler',avgDuration:'Ort. şarj süresi',avgSocRange:'Ort. şarj aralığı',topBanks:'Bankalar (indirim kazancı)',topLocations:'En çok şarj edilen lokasyonlar',bankCountries:'Banka Ülkelerim',bankCountriesD:'Kartların hangi ülkelerden ise seç — formdaki banka listesi bunlara göre gelir. Şarj ettiğin ülke değişse de bankaların değişmez.',addCountry:'+ Ülke ekle',prevPeriod:'önceki döneme göre',navHome:'Ana Sayfa',navHistory:'Geçmiş',navCompare:'Kıyasla',navSettings:'Ayarlar',
+tr:{kwhHint:'Sol kutu tam kısım, sağ kutu 2 haneli ondalık — 45 , 27 = 45,27 kWh. Sadece rakam girilir.',distFromOdo:'Mesafe kaynağı: kilometre sayacı (araç bilgilerinden)',distFromRecords:'Mesafe kaynağı: kayıtlardaki sürüş mesafeleri',back:'← Geri',odoAsk:'Aracın güncel kilometresi (sayaç)',odometer:'Kilometre sayacı',odoNow:'Araç sayacı',odoTracked:'Başlangıçtan beri yapılan',odoPrompt:'Güncel sayaç ({u}):',odoStartPrompt:'Başlangıç/alım sayacı ({u}):',odoSaved:'Kilometre güncellendi',theme:'Görünüm',themeLight:'Açık',themeDark:'Koyu',spendChart:'Harcama grafiği',cumTitle:'Bugüne kadar: aynı km yakıtlıyla gidilseydi',totalDist:'Toplam mesafe',evSpent:'EV toplam (net)',iceWould:'Yakıtlıyla olurdu',totalSaved:'Toplam kazanç',evLine:'EV (gerçek)',iceLine:'Yakıtlı (aynı km)',archived:'Arşiv (satılan/kullanılmayan)',archivedTag:'arşivde — kayıtları korunuyor',archivedToast:'Araç arşive taşındı, kayıtları korunuyor',restore:'Geri al',newBank:'+ Yeni banka ekle…',newBankPrompt:'Banka adı:',importAllDup:'Bu yedekteki tüm kayıtlar zaten mevcut — hiçbir şey eklenmedi.',importPartial:'{n} yeni kayıt eklendi, {d} mükerrer atlandı',netPaid:'Ödenen (net)',typeSplit:'Şarj tipi dağılımı (kWh)',detailStats:'Detay istatistikler',avgDuration:'Ort. şarj süresi',avgSocRange:'Ort. şarj aralığı',topBanks:'Bankalar (indirim kazancı)',topLocations:'En çok şarj edilen lokasyonlar',bankCountries:'Banka Ülkelerim',bankCountriesD:'Kartların hangi ülkelerden ise seç — formdaki banka listesi bunlara göre gelir. Şarj ettiğin ülke değişse de bankaların değişmez.',addCountry:'+ Ülke ekle',prevPeriod:'önceki döneme göre',navHome:'Ana Sayfa',navHistory:'Geçmiş',navCompare:'Kıyasla',navSettings:'Ayarlar',
 week:'Hafta',month:'Ay',year:'Yıl',
 periodWeek:'Bu hafta toplam',periodMonth:'Bu ay toplam',periodYear:'Bu yıl toplam',
 savings:'tasarruf',avgPerKwh:'kWh başı',netLbl:'net',grossLbl:'indirimsiz',
@@ -67,7 +67,7 @@ wiped:'Tüm veriler silindi',imported:'Yedek geri yüklendi',
 importFail:'Dosya geçerli bir WattTrack yedeği değil',importAsk:'kayıt içe aktarılacak. Birleştirilsin mi?',
 jsonDone:'JSON yedek indirildi',csvDone:'CSV indirildi',noData:'Henüz kayıt yok',sessions:'şarj'},
 
-en:{back:'← Back',odoAsk:'Current odometer reading',odometer:'Odometer',odoNow:'Odometer',odoTracked:'Driven since start',odoPrompt:'Current odometer ({u}):',odoStartPrompt:'Starting/purchase odometer ({u}):',odoSaved:'Odometer updated',theme:'Appearance',themeLight:'Light',themeDark:'Dark',spendChart:'Spending chart',cumTitle:'To date: same km with a fuel car',totalDist:'Total distance',evSpent:'EV total (net)',iceWould:'Would cost (fuel)',totalSaved:'Total saved',evLine:'EV (actual)',iceLine:'Fuel (same km)',archived:'Archive (sold/unused)',archivedTag:'archived — records kept',archivedToast:'Vehicle archived, its records are kept',restore:'Restore',newBank:'+ Add new bank…',newBankPrompt:'Bank name:',importAllDup:'All records in this backup already exist — nothing was added.',importPartial:'{n} new records added, {d} duplicates skipped',netPaid:'Paid (net)',typeSplit:'Charge type split (kWh)',detailStats:'Detail statistics',avgDuration:'Avg charge time',avgSocRange:'Avg SoC range',topBanks:'Banks (discount savings)',topLocations:'Most charged locations',bankCountries:'My Bank Countries',bankCountriesD:'Pick the countries your cards are from — the bank list in the form follows these. Your banks don’t change when the charging country does.',addCountry:'+ Add country',prevPeriod:'vs previous period',navHome:'Home',navHistory:'History',navCompare:'Compare',navSettings:'Settings',
+en:{kwhHint:'Left box whole part, right box 2-digit decimals — 45 , 27 = 45.27 kWh. Digits only.',distFromOdo:'Distance source: odometer (from vehicle info)',distFromRecords:'Distance source: per-record distances',back:'← Back',odoAsk:'Current odometer reading',odometer:'Odometer',odoNow:'Odometer',odoTracked:'Driven since start',odoPrompt:'Current odometer ({u}):',odoStartPrompt:'Starting/purchase odometer ({u}):',odoSaved:'Odometer updated',theme:'Appearance',themeLight:'Light',themeDark:'Dark',spendChart:'Spending chart',cumTitle:'To date: same km with a fuel car',totalDist:'Total distance',evSpent:'EV total (net)',iceWould:'Would cost (fuel)',totalSaved:'Total saved',evLine:'EV (actual)',iceLine:'Fuel (same km)',archived:'Archive (sold/unused)',archivedTag:'archived — records kept',archivedToast:'Vehicle archived, its records are kept',restore:'Restore',newBank:'+ Add new bank…',newBankPrompt:'Bank name:',importAllDup:'All records in this backup already exist — nothing was added.',importPartial:'{n} new records added, {d} duplicates skipped',netPaid:'Paid (net)',typeSplit:'Charge type split (kWh)',detailStats:'Detail statistics',avgDuration:'Avg charge time',avgSocRange:'Avg SoC range',topBanks:'Banks (discount savings)',topLocations:'Most charged locations',bankCountries:'My Bank Countries',bankCountriesD:'Pick the countries your cards are from — the bank list in the form follows these. Your banks don’t change when the charging country does.',addCountry:'+ Add country',prevPeriod:'vs previous period',navHome:'Home',navHistory:'History',navCompare:'Compare',navSettings:'Settings',
 week:'Week',month:'Month',year:'Year',
 periodWeek:'This week total',periodMonth:'This month total',periodYear:'This year total',
 savings:'saved',avgPerKwh:'Per kWh',netLbl:'net',grossLbl:'w/o discount',
@@ -118,7 +118,7 @@ wiped:'All data deleted',imported:'Backup restored',
 importFail:'Not a valid WattTrack backup',importAsk:'records will be imported. Merge?',
 jsonDone:'JSON backup downloaded',csvDone:'CSV downloaded',noData:'No records yet',sessions:'sessions'},
 
-de:{back:'← Zurück',odoAsk:'Aktueller Kilometerstand',odometer:'Kilometerstand',odoNow:'Tachostand',odoTracked:'Seit Beginn gefahren',odoPrompt:'Aktueller Stand ({u}):',odoStartPrompt:'Anfangs-/Kaufstand ({u}):',odoSaved:'Kilometerstand aktualisiert',theme:'Darstellung',themeLight:'Hell',themeDark:'Dunkel',spendChart:'Ausgabendiagramm',cumTitle:'Bisher: gleiche km mit Verbrenner',totalDist:'Gesamtstrecke',evSpent:'EV gesamt (netto)',iceWould:'Verbrenner-Kosten',totalSaved:'Gesamt gespart',evLine:'EV (real)',iceLine:'Verbrenner (gleiche km)',archived:'Archiv (verkauft/ungenutzt)',archivedTag:'archiviert — Einträge bleiben',archivedToast:'Fahrzeug archiviert, Einträge bleiben erhalten',restore:'Wiederherstellen',newBank:'+ Neue Bank…',newBankPrompt:'Bankname:',importAllDup:'Alle Einträge existieren bereits — nichts hinzugefügt.',importPartial:'{n} neue Einträge, {d} Duplikate übersprungen',netPaid:'Bezahlt (netto)',typeSplit:'Ladetyp-Verteilung (kWh)',detailStats:'Detail-Statistiken',avgDuration:'Ø Ladedauer',avgSocRange:'Ø Ladebereich',topBanks:'Banken (Rabattersparnis)',topLocations:'Häufigste Ladeorte',bankCountries:'Meine Bankländer',bankCountriesD:'Wähle die Länder deiner Karten — die Bankliste im Formular folgt diesen. Deine Banken ändern sich nicht mit dem Ladeland.',addCountry:'+ Land hinzufügen',prevPeriod:'ggü. Vorperiode',navHome:'Start',navHistory:'Verlauf',navCompare:'Vergleich',navSettings:'Einstellungen',
+de:{kwhHint:'Links Ganzzahl, rechts 2 Dezimalstellen — 45 , 27 = 45,27 kWh. Nur Ziffern.',distFromOdo:'Distanzquelle: Kilometerstand (Fahrzeugdaten)',distFromRecords:'Distanzquelle: Distanzen der Einträge',back:'← Zurück',odoAsk:'Aktueller Kilometerstand',odometer:'Kilometerstand',odoNow:'Tachostand',odoTracked:'Seit Beginn gefahren',odoPrompt:'Aktueller Stand ({u}):',odoStartPrompt:'Anfangs-/Kaufstand ({u}):',odoSaved:'Kilometerstand aktualisiert',theme:'Darstellung',themeLight:'Hell',themeDark:'Dunkel',spendChart:'Ausgabendiagramm',cumTitle:'Bisher: gleiche km mit Verbrenner',totalDist:'Gesamtstrecke',evSpent:'EV gesamt (netto)',iceWould:'Verbrenner-Kosten',totalSaved:'Gesamt gespart',evLine:'EV (real)',iceLine:'Verbrenner (gleiche km)',archived:'Archiv (verkauft/ungenutzt)',archivedTag:'archiviert — Einträge bleiben',archivedToast:'Fahrzeug archiviert, Einträge bleiben erhalten',restore:'Wiederherstellen',newBank:'+ Neue Bank…',newBankPrompt:'Bankname:',importAllDup:'Alle Einträge existieren bereits — nichts hinzugefügt.',importPartial:'{n} neue Einträge, {d} Duplikate übersprungen',netPaid:'Bezahlt (netto)',typeSplit:'Ladetyp-Verteilung (kWh)',detailStats:'Detail-Statistiken',avgDuration:'Ø Ladedauer',avgSocRange:'Ø Ladebereich',topBanks:'Banken (Rabattersparnis)',topLocations:'Häufigste Ladeorte',bankCountries:'Meine Bankländer',bankCountriesD:'Wähle die Länder deiner Karten — die Bankliste im Formular folgt diesen. Deine Banken ändern sich nicht mit dem Ladeland.',addCountry:'+ Land hinzufügen',prevPeriod:'ggü. Vorperiode',navHome:'Start',navHistory:'Verlauf',navCompare:'Vergleich',navSettings:'Einstellungen',
 week:'Woche',month:'Monat',year:'Jahr',
 periodWeek:'Diese Woche gesamt',periodMonth:'Dieser Monat gesamt',periodYear:'Dieses Jahr gesamt',
 savings:'gespart',avgPerKwh:'Pro kWh',netLbl:'netto',grossLbl:'ohne Rabatt',
@@ -169,7 +169,7 @@ wiped:'Alle Daten gelöscht',imported:'Backup wiederhergestellt',
 importFail:'Kein gültiges WattTrack-Backup',importAsk:'Einträge werden importiert. Zusammenführen?',
 jsonDone:'JSON-Backup heruntergeladen',csvDone:'CSV heruntergeladen',noData:'Noch keine Einträge',sessions:'Ladungen'},
 
-fr:{back:'← Retour',odoAsk:'Kilométrage actuel',odometer:'Compteur',odoNow:'Compteur',odoTracked:'Parcourus depuis le début',odoPrompt:'Compteur actuel ({u}) :',odoStartPrompt:'Compteur initial ({u}) :',odoSaved:'Compteur mis à jour',theme:'Apparence',themeLight:'Clair',themeDark:'Sombre',spendChart:'Graphique des dépenses',cumTitle:'À ce jour : mêmes km en thermique',totalDist:'Distance totale',evSpent:'VE total (net)',iceWould:'Coût thermique',totalSaved:'Économie totale',evLine:'VE (réel)',iceLine:'Thermique (mêmes km)',archived:'Archive (vendu/inutilisé)',archivedTag:'archivé — charges conservées',archivedToast:'Véhicule archivé, ses charges sont conservées',restore:'Restaurer',newBank:'+ Nouvelle banque…',newBankPrompt:'Nom de la banque :',importAllDup:'Toutes les charges existent déjà — rien ajouté.',importPartial:'{n} nouvelles charges, {d} doublons ignorés',netPaid:'Payé (net)',typeSplit:'Répartition par type (kWh)',detailStats:'Statistiques détaillées',avgDuration:'Durée moy.',avgSocRange:'Plage moy.',topBanks:'Banques (gains remises)',topLocations:'Lieux les plus utilisés',bankCountries:'Mes pays bancaires',bankCountriesD:'Choisissez les pays de vos cartes — la liste des banques suit ces pays. Vos banques ne changent pas avec le pays de charge.',addCountry:'+ Ajouter un pays',prevPeriod:'vs période précédente',navHome:'Accueil',navHistory:'Historique',navCompare:'Comparer',navSettings:'Réglages',
+fr:{kwhHint:'Gauche : entier, droite : 2 décimales — 45 , 27 = 45,27 kWh. Chiffres uniquement.',distFromOdo:'Source distance : compteur (infos véhicule)',distFromRecords:'Source distance : distances des charges',back:'← Retour',odoAsk:'Kilométrage actuel',odometer:'Compteur',odoNow:'Compteur',odoTracked:'Parcourus depuis le début',odoPrompt:'Compteur actuel ({u}) :',odoStartPrompt:'Compteur initial ({u}) :',odoSaved:'Compteur mis à jour',theme:'Apparence',themeLight:'Clair',themeDark:'Sombre',spendChart:'Graphique des dépenses',cumTitle:'À ce jour : mêmes km en thermique',totalDist:'Distance totale',evSpent:'VE total (net)',iceWould:'Coût thermique',totalSaved:'Économie totale',evLine:'VE (réel)',iceLine:'Thermique (mêmes km)',archived:'Archive (vendu/inutilisé)',archivedTag:'archivé — charges conservées',archivedToast:'Véhicule archivé, ses charges sont conservées',restore:'Restaurer',newBank:'+ Nouvelle banque…',newBankPrompt:'Nom de la banque :',importAllDup:'Toutes les charges existent déjà — rien ajouté.',importPartial:'{n} nouvelles charges, {d} doublons ignorés',netPaid:'Payé (net)',typeSplit:'Répartition par type (kWh)',detailStats:'Statistiques détaillées',avgDuration:'Durée moy.',avgSocRange:'Plage moy.',topBanks:'Banques (gains remises)',topLocations:'Lieux les plus utilisés',bankCountries:'Mes pays bancaires',bankCountriesD:'Choisissez les pays de vos cartes — la liste des banques suit ces pays. Vos banques ne changent pas avec le pays de charge.',addCountry:'+ Ajouter un pays',prevPeriod:'vs période précédente',navHome:'Accueil',navHistory:'Historique',navCompare:'Comparer',navSettings:'Réglages',
 week:'Semaine',month:'Mois',year:'Année',
 periodWeek:'Total cette semaine',periodMonth:'Total ce mois',periodYear:'Total cette année',
 savings:'économisé',avgPerKwh:'Par kWh',netLbl:'net',grossLbl:'sans remise',
@@ -220,7 +220,7 @@ wiped:'Données supprimées',imported:'Sauvegarde restaurée',
 importFail:'Sauvegarde WattTrack invalide',importAsk:'charges à importer. Fusionner ?',
 jsonDone:'Sauvegarde JSON téléchargée',csvDone:'CSV téléchargé',noData:'Aucune charge',sessions:'charges'},
 
-es:{back:'← Atrás',odoAsk:'Kilometraje actual',odometer:'Cuentakilómetros',odoNow:'Cuentakilómetros',odoTracked:'Recorridos desde el inicio',odoPrompt:'Lectura actual ({u}):',odoStartPrompt:'Lectura inicial ({u}):',odoSaved:'Kilometraje actualizado',theme:'Apariencia',themeLight:'Claro',themeDark:'Oscuro',spendChart:'Gráfico de gasto',cumTitle:'Hasta hoy: mismos km con combustión',totalDist:'Distancia total',evSpent:'EV total (neto)',iceWould:'Costaría (combustión)',totalSaved:'Ahorro total',evLine:'EV (real)',iceLine:'Combustión (mismos km)',archived:'Archivo (vendido/sin uso)',archivedTag:'archivado — cargas conservadas',archivedToast:'Vehículo archivado, sus cargas se conservan',restore:'Restaurar',newBank:'+ Añadir banco…',newBankPrompt:'Nombre del banco:',importAllDup:'Todas las cargas ya existen — no se añadió nada.',importPartial:'{n} cargas nuevas, {d} duplicadas omitidas',netPaid:'Pagado (neto)',typeSplit:'Reparto por tipo (kWh)',detailStats:'Estadísticas detalladas',avgDuration:'Duración media',avgSocRange:'Rango medio',topBanks:'Bancos (ahorro por dtos.)',topLocations:'Lugares más usados',bankCountries:'Mis países bancarios',bankCountriesD:'Elige los países de tus tarjetas — la lista de bancos del formulario los sigue. Tus bancos no cambian con el país de carga.',addCountry:'+ Añadir país',prevPeriod:'vs periodo anterior',navHome:'Inicio',navHistory:'Historial',navCompare:'Comparar',navSettings:'Ajustes',
+es:{kwhHint:'Izquierda entero, derecha 2 decimales — 45 , 27 = 45,27 kWh. Solo dígitos.',distFromOdo:'Fuente de distancia: cuentakilómetros',distFromRecords:'Fuente de distancia: distancias por carga',back:'← Atrás',odoAsk:'Kilometraje actual',odometer:'Cuentakilómetros',odoNow:'Cuentakilómetros',odoTracked:'Recorridos desde el inicio',odoPrompt:'Lectura actual ({u}):',odoStartPrompt:'Lectura inicial ({u}):',odoSaved:'Kilometraje actualizado',theme:'Apariencia',themeLight:'Claro',themeDark:'Oscuro',spendChart:'Gráfico de gasto',cumTitle:'Hasta hoy: mismos km con combustión',totalDist:'Distancia total',evSpent:'EV total (neto)',iceWould:'Costaría (combustión)',totalSaved:'Ahorro total',evLine:'EV (real)',iceLine:'Combustión (mismos km)',archived:'Archivo (vendido/sin uso)',archivedTag:'archivado — cargas conservadas',archivedToast:'Vehículo archivado, sus cargas se conservan',restore:'Restaurar',newBank:'+ Añadir banco…',newBankPrompt:'Nombre del banco:',importAllDup:'Todas las cargas ya existen — no se añadió nada.',importPartial:'{n} cargas nuevas, {d} duplicadas omitidas',netPaid:'Pagado (neto)',typeSplit:'Reparto por tipo (kWh)',detailStats:'Estadísticas detalladas',avgDuration:'Duración media',avgSocRange:'Rango medio',topBanks:'Bancos (ahorro por dtos.)',topLocations:'Lugares más usados',bankCountries:'Mis países bancarios',bankCountriesD:'Elige los países de tus tarjetas — la lista de bancos del formulario los sigue. Tus bancos no cambian con el país de carga.',addCountry:'+ Añadir país',prevPeriod:'vs periodo anterior',navHome:'Inicio',navHistory:'Historial',navCompare:'Comparar',navSettings:'Ajustes',
 week:'Semana',month:'Mes',year:'Año',
 periodWeek:'Total esta semana',periodMonth:'Total este mes',periodYear:'Total este año',
 savings:'ahorrado',avgPerKwh:'Por kWh',netLbl:'neto',grossLbl:'sin dto.',
@@ -271,7 +271,7 @@ wiped:'Datos borrados',imported:'Copia restaurada',
 importFail:'Copia WattTrack no válida',importAsk:'cargas se importarán. ¿Combinar?',
 jsonDone:'Copia JSON descargada',csvDone:'CSV descargado',noData:'Sin cargas aún',sessions:'cargas'},
 
-it:{back:'← Indietro',odoAsk:'Chilometraggio attuale',odometer:'Contachilometri',odoNow:'Contachilometri',odoTracked:'Percorsi dall’inizio',odoPrompt:'Lettura attuale ({u}):',odoStartPrompt:'Lettura iniziale ({u}):',odoSaved:'Contachilometri aggiornato',theme:'Aspetto',themeLight:'Chiaro',themeDark:'Scuro',spendChart:'Grafico spese',cumTitle:'Finora: stessi km con termica',totalDist:'Distanza totale',evSpent:'EV totale (netto)',iceWould:'Costerebbe (termica)',totalSaved:'Risparmio totale',evLine:'EV (reale)',iceLine:'Termica (stessi km)',archived:'Archivio (venduto/inutilizzato)',archivedTag:'archiviato — ricariche conservate',archivedToast:'Veicolo archiviato, le ricariche restano',restore:'Ripristina',newBank:'+ Nuova banca…',newBankPrompt:'Nome banca:',importAllDup:'Tutte le ricariche esistono già — nulla aggiunto.',importPartial:'{n} nuove ricariche, {d} duplicati saltati',netPaid:'Pagato (netto)',typeSplit:'Ripartizione per tipo (kWh)',detailStats:'Statistiche dettagliate',avgDuration:'Durata media',avgSocRange:'Intervallo medio',topBanks:'Banche (risparmio sconti)',topLocations:'Luoghi più usati',bankCountries:'I miei paesi bancari',bankCountriesD:'Scegli i paesi delle tue carte — l’elenco banche nel modulo li segue. Le tue banche non cambiano col paese di ricarica.',addCountry:'+ Aggiungi paese',prevPeriod:'vs periodo precedente',navHome:'Home',navHistory:'Cronologia',navCompare:'Confronta',navSettings:'Impostazioni',
+it:{kwhHint:'Sinistra intero, destra 2 decimali — 45 , 27 = 45,27 kWh. Solo cifre.',distFromOdo:'Fonte distanza: contachilometri',distFromRecords:'Fonte distanza: distanze delle ricariche',back:'← Indietro',odoAsk:'Chilometraggio attuale',odometer:'Contachilometri',odoNow:'Contachilometri',odoTracked:'Percorsi dall’inizio',odoPrompt:'Lettura attuale ({u}):',odoStartPrompt:'Lettura iniziale ({u}):',odoSaved:'Contachilometri aggiornato',theme:'Aspetto',themeLight:'Chiaro',themeDark:'Scuro',spendChart:'Grafico spese',cumTitle:'Finora: stessi km con termica',totalDist:'Distanza totale',evSpent:'EV totale (netto)',iceWould:'Costerebbe (termica)',totalSaved:'Risparmio totale',evLine:'EV (reale)',iceLine:'Termica (stessi km)',archived:'Archivio (venduto/inutilizzato)',archivedTag:'archiviato — ricariche conservate',archivedToast:'Veicolo archiviato, le ricariche restano',restore:'Ripristina',newBank:'+ Nuova banca…',newBankPrompt:'Nome banca:',importAllDup:'Tutte le ricariche esistono già — nulla aggiunto.',importPartial:'{n} nuove ricariche, {d} duplicati saltati',netPaid:'Pagato (netto)',typeSplit:'Ripartizione per tipo (kWh)',detailStats:'Statistiche dettagliate',avgDuration:'Durata media',avgSocRange:'Intervallo medio',topBanks:'Banche (risparmio sconti)',topLocations:'Luoghi più usati',bankCountries:'I miei paesi bancari',bankCountriesD:'Scegli i paesi delle tue carte — l’elenco banche nel modulo li segue. Le tue banche non cambiano col paese di ricarica.',addCountry:'+ Aggiungi paese',prevPeriod:'vs periodo precedente',navHome:'Home',navHistory:'Cronologia',navCompare:'Confronta',navSettings:'Impostazioni',
 week:'Settimana',month:'Mese',year:'Anno',
 periodWeek:'Totale settimana',periodMonth:'Totale mese',periodYear:'Totale anno',
 savings:'risparmiato',avgPerKwh:'Per kWh',netLbl:'netto',grossLbl:'senza sconto',
@@ -341,7 +341,7 @@ es:['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'], it:['Lun','Mar','Mer','Gio','V
 const S = {
   country: 'TR', currency: 'TRY', unit: 'km', lang: 'tr',
   advOpen: false, defaultVehicleId: null, onboarded: false,
-  period: 'month', cmp: null, dashVeh: '', cmpVeh: '', bankCountries: null, gran: 'month', customBanks: [], theme: 'light'
+  period: 'year', cmp: null, dashVeh: '', cmpVeh: '', bankCountries: null, gran: 'month', customBanks: [], theme: 'light', dstatType: ''
 };
 const $ = id => document.getElementById(id);
 const t = (key, vars) => {
@@ -617,6 +617,12 @@ $('d-period').addEventListener('click', e => {
   renderDashboard();
 });
 $('d-vehsel').addEventListener('change', () => { S.dashVeh = $('d-vehsel').value; renderDashboard(); });
+$('d-dstat-type').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.dstatType = b.dataset.v;
+  $('d-dstat-type').querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b));
+  renderDashboard();
+});
 $('d-gran').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   S.gran = b.dataset.v;
@@ -698,8 +704,25 @@ async function renderDashboard() {
   } else { dEl.textContent = ''; dEl.className = 'delta'; }
   $('d-avg').textContent = kwh ? fm(sym(), (net / kwh).toFixed(2)) : '—';
   $('d-avg-g').textContent = kwh ? fm(sym(), (gross / kwh).toFixed(2)) : '—';
-  $('d-100').textContent = distKm >= 20 ? money2(netD / distKm * 100 * f) : '—';
-  $('d-100-g').textContent = distKm >= 20 ? money2(grossD / distKm * 100 * f) : '—';
+  if (distKm >= 20) {
+    $('d-100').textContent = money2(netD / distKm * 100 * f);
+    $('d-100-g').textContent = money2(grossD / distKm * 100 * f);
+  } else {
+    // kayıt mesafesi yok → kilometre sayacından genel (tüm zamanlar) değer
+    const oV = S.dashVeh ? vehicles.find(v => String(v.id) === S.dashVeh)
+      : (vehicles.length === 1 ? vehicles[0] : null);
+    const oDist = oV && oV.kmStart != null && oV.kmNow > oV.kmStart ? oV.kmNow - oV.kmStart : 0;
+    if (oDist >= 20) {
+      const allConv = all.filter(isConv);
+      const aNet = allConv.reduce((s, r) => s + amtB(r), 0);
+      const aGross = aNet + allConv.reduce((s, r) => s + savB(r), 0);
+      $('d-100').textContent = money2(aNet / oDist * 100 * f);
+      $('d-100-g').textContent = money2(aGross / oDist * 100 * f);
+    } else {
+      $('d-100').textContent = '—';
+      $('d-100-g').textContent = '—';
+    }
+  }
   $('d-kwh').textContent = kwh.toLocaleString('tr-TR', {maximumFractionDigits: 0});
   $('d-sess').textContent = cur.length + ' / ' + new Set(cur.map(r => r.firma)).size;
   $('d-disc').textContent = money(sav);
@@ -801,13 +824,14 @@ async function renderDashboard() {
       ? Math.round(distDisp(odoV.kmNow - odoV.kmStart)).toLocaleString('tr-TR') + ' ' + S.unit : '—';
   } else odoWrap.style.display = 'none';
 
-  // detay: ortalama süre & SoC aralığı
-  const durs = all.filter(r => r.dur > 0);
+  // detay: ortalama süre & SoC aralığı (Tümü/DC/AC filtresiyle)
+  const dsAll = S.dstatType ? all.filter(r => r.tip === S.dstatType) : all;
+  const durs = dsAll.filter(r => r.dur > 0);
   $('d-dur').textContent = durs.length
     ? (() => { const m = Math.round(durs.reduce((s, r) => s + r.dur, 0) / durs.length);
         return (m >= 60 ? Math.floor(m / 60) + ' ' + t('hours') + ' ' : '') + (m % 60) + ' ' + t('minutes'); })()
     : '—';
-  const socs = all.filter(r => r.socB != null && r.socA != null);
+  const socs = dsAll.filter(r => r.socB != null && r.socA != null);
   $('d-soc').textContent = socs.length
     ? '%' + Math.round(socs.reduce((s, r) => s + r.socB, 0) / socs.length) +
       ' → %' + Math.round(socs.reduce((s, r) => s + r.socA, 0) / socs.length)
@@ -980,10 +1004,26 @@ async function renderCompare() {
   if (!S.cmp) { box.style.display = 'none'; return; }
 
   const all = vehFilter(await db.sessions.toArray(), S.cmpVeh);
-  const wd = all.filter(r => r.mesafeKm > 0);
-  const distKm = wd.reduce((s, r) => s + r.mesafeKm, 0);
-  const net = wd.reduce((s, r) => s + amtB(r), 0);
-  const gross = net + wd.reduce((s, r) => s + savB(r), 0);
+  let wd = all.filter(r => r.mesafeKm > 0);
+  let distKm = wd.reduce((s, r) => s + r.mesafeKm, 0);
+  let net = wd.reduce((s, r) => s + amtB(r), 0);
+  let gross = net + wd.reduce((s, r) => s + savB(r), 0);
+  // kayıt bazlı mesafe yoksa: kilometre sayacı (seçili araç ya da tek araç)
+  const odoV2 = S.cmpVeh ? vehicles.find(v => String(v.id) === S.cmpVeh)
+    : (vehicles.length === 1 ? vehicles[0] : null);
+  const odoDist = odoV2 && odoV2.kmStart != null && odoV2.kmNow > odoV2.kmStart
+    ? odoV2.kmNow - odoV2.kmStart : 0;
+  let odoMode = false;
+  if (distKm < 20 && odoDist >= 20) {
+    odoMode = true;
+    distKm = odoDist;
+    net = all.filter(isConv).reduce((s, r) => s + amtB(r), 0);
+    gross = net + all.filter(isConv).reduce((s, r) => s + savB(r), 0);
+    // grafik/aylık dağıtım için: mesafeyi harcamayla orantılı paylaştır
+    wd = all.filter(isConv).map(r =>
+      ({...r, mesafeKm: net > 0 ? amtB(r) / net * odoDist : 0}));
+  }
+  $('c-dist-src').textContent = odoMode ? t('distFromOdo') : (distKm >= 20 ? t('distFromRecords') : '');
   box.style.display = '';
   if (distKm < 20) {
     $('c-ev').textContent = '—'; $('c-ice').textContent = '—';
@@ -1422,6 +1462,13 @@ function updateNetLine() {
     net.toLocaleString('tr-TR', {maximumFractionDigits: 2}));
 }
 ['in-amount', 'in-disc-val'].forEach(id => $(id).addEventListener('input', updateNetLine));
+// kWh kutuları: yalnız rakam, tam=3 / ondalık=2 hane
+$('in-kwh-int').addEventListener('input', () => {
+  $('in-kwh-int').value = $('in-kwh-int').value.replace(/\D/g, '').slice(0, 3);
+});
+$('in-kwh-dec').addEventListener('input', () => {
+  $('in-kwh-dec').value = $('in-kwh-dec').value.replace(/\D/g, '').slice(0, 2);
+});
 $('in-firm').addEventListener('change', () => {
   $('in-firm-other').style.display = $('in-firm').value === '__other' ? '' : 'none';
 });
@@ -1553,8 +1600,9 @@ async function openAdd(id) {
 
   // kWh: tam + ondalık kutuları
   const kwh = r?.kwh ?? '';
-  $('in-kwh-int').value = kwh === '' ? '' : Math.floor(kwh);
-  $('in-kwh-dec').value = kwh === '' ? '' : Math.round((kwh - Math.floor(kwh)) * 100);
+  $('in-kwh-int').value = (kwh === '' || !kwh) ? '' : Math.floor(kwh);
+  $('in-kwh-dec').value = (kwh === '' || !kwh) ? ''
+    : String(Math.round((kwh - Math.floor(kwh)) * 100)).padStart(2, '0');
   $('in-dist').value = r?.mesafeKm ? Math.round(distDisp(r.mesafeKm)) : '';
   $('in-free').checked = !!r?.free;
   const grossVal = r && !r.free
@@ -1849,8 +1897,15 @@ async function importBackupText(text) {
     if (fresh.length) await db.sessions.bulkAdd(fresh);
     for (const {id, ...v} of (data.vehicles || [])) {
       if (!v.ad) continue;
-      if (!(await db.vehicles.where('ad').equals(v.ad).count()))
-        await db.vehicles.add(v);
+      const ex = await db.vehicles.where('ad').equals(v.ad).first();
+      if (!ex) { await db.vehicles.add(v); continue; }
+      // aynı isimli araç varsa: yedekteki km/fotoğraf bilgisini birleştir
+      const upd = {};
+      if (v.kmStart != null) upd.kmStart = v.kmStart;
+      if (v.kmNow != null && (ex.kmNow == null || v.kmNow > ex.kmNow || ex.kmStart === ex.kmNow))
+        upd.kmNow = Math.max(v.kmNow, ex.kmNow || 0);
+      if (v.photo && !ex.photo) upd.photo = v.photo;
+      if (Object.keys(upd).length) await db.vehicles.update(ex.id, upd);
     }
     toast(dupes.length ? t('importPartial', {n: fresh.length, d: dupes.length}) : t('imported'));
     showScreen('dashboard');

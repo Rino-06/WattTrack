@@ -57,6 +57,20 @@ settings: key, value   (şimdilik: budget)
 CSV çıktısı Türkçe Excel uyumludur (UTF-8 BOM, `;` ayraç, ondalık virgül) —
 doğrudan Power BI'a da bağlanabilir.
 
+## Sürüm notu (v11)
+
+1. Ana sayfa varsayılan dönemi YIL
+2. Detay istatistiklere (ort. süre + ort. şarj aralığı) Tümü/DC/AC filtresi
+3. kWh girişi sıkılaştı: 0 olan kayıt boş gösterilir, kutulara yalnız rakam
+   girilebilir (tam 3, ondalık 2 hane), alt satırda 45,27 örnekli açıklama
+4. KIYASLAMA + 100 KM MALİYETİ artık kayıt mesafesi yoksa KİLOMETRE
+   SAYACINDAN hesaplanır (kmNow − kmStart). Kıyas ekranında "Mesafe
+   kaynağı" notu hangi yöntemin kullanıldığını söyler; grafik ve aylık
+   kazanç, mesafeyi harcamayla orantılı dağıtarak çizilir
+5. JSON içe aktarmada araç birleştirme: aynı isimli araç varsa yedekteki
+   km başlangıç/güncel ve fotoğraf bilgisi mevcut araca işlenir (yedekten
+   gelen gerçek başlangıç km'si onboarding değerini düzeltir)
+
 ## Sürüm notu (v10)
 
 1. Ortadaki şimşek+artı ikonu büyütüldü (32→42 px)
