@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev https://api.frankfurter.app https://nominatim.openstreetmap.org https://api.openchargemap.io; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>WattTrack</title>
+<meta name="description" content="EV şarj harcama takibi — verileriniz cihazınızda kalır.">
+<meta name="theme-color" content="#F1F7F2">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="dexie.min.js"></script>
+<script src="evdata.js"></script>
+<style>
+:root{
+  --bg:#F1F7F2; --card:#FFFFFF; --text:#131714; --muted:#5F6560;
+  --muted2:#5C625D; --faint:#666C67; --accent:#1C8742; --accent-dark:#00682A;
+  --accent-text:#115629; --chip:#D7EBDA; --pill:#C9F1D0; --border:#D5D8D6;
+  --track:#E3EAE4; --circle:#EAF0EB; --red:#C53637; --blue:#007DAA;
+  --shadow:0 1px 3px rgba(0,0,0,.06); --shadow-big:0 8px 20px rgba(0,0,0,.15);
+}
+[data-theme="dark"]{
+  --bg:#0f172a; --card:#1e293b; --text:#f1f5f9; --muted:#94a3b8;
+  --muted2:#94a3b8; --faint:#8ea0b5; --accent:#16a34a; --accent-dark:#22c55e;
+  --accent-text:#86efac; --chip:#14532d; --pill:#14532d; --border:#334155;
+  --track:#334155; --circle:#0a1628; --red:#ef4444; --blue:#3b82f6;
+  --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-big:0 8px 20px rgba(0,0,0,.5);
+}
+[data-theme="dark"] .hero{background:linear-gradient(150deg,#1e293b 30%,#16223a 100%)}
+[data-theme="dark"] input,[data-theme="dark"] select{background:#0a1628}
+[data-theme="dark"] .spec{background:#0a1628}
+[data-theme="dark"] .mb .bar{background:linear-gradient(180deg,#22c55e,#15803d)}
+[data-theme="dark"] nav{border-top-color:#334155}
+[data-theme="dark"] .gps-btn{background:#14532d;color:#86efac}
+[data-theme="dark"] .toast{background:#334155}
+[data-theme="dark"] .ev-summary svg [fill="#F1F7F2"]{fill:#1e293b}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  font-size:15px;line-height:1.45;min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit;font-size:15px;color:var(--text);
+  width:100%;padding:12px 14px;border-radius:12px;
+  border:1px solid var(--border);background:var(--card)}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.lbl{font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.section-lbl{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+
+.app{max-width:520px;margin:0 auto;min-height:100vh;position:relative;display:flex;flex-direction:column}
+.content{flex:1;overflow:auto;padding:20px 20px 24px;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+.page{display:none}
+.page.active{display:block}
+
+.hero{background:linear-gradient(150deg,#FFFFFF 30%,#EAF6EE 100%);border-radius:20px;padding:20px;margin-bottom:12px;box-shadow:var(--shadow)}
+.hero .k{font-size:12px;color:var(--muted);margin-bottom:4px}
+.hero .v{font-size:29px;font-weight:700;letter-spacing:-.5px}
+.hero .v.gross{color:var(--muted)}
+.hero2{display:flex;align-items:stretch;gap:14px}
+.hero2>div:not(.hero-sep){flex:1;min-width:0}
+.hero-sep{width:1px;background:var(--track);flex:none}
+.hero .delta{font-size:12px;font-weight:600;margin-top:6px;min-height:16px}
+.hero .delta.up{color:var(--red)}
+.hero .delta.down{color:var(--accent-dark)}
+.hero .sub2{font-size:13px;color:var(--muted);margin-top:6px}
+.hero .sub2 b{color:var(--text)}
+.hero .pill{display:inline-block;margin-top:6px;padding:5px 10px;border-radius:100px;background:var(--pill);color:var(--accent-text);font-size:12px;font-weight:600}
+.donut-wrap{display:flex;align-items:center;gap:16px;background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);margin-bottom:14px}
+.donut-wrap svg{width:96px;height:96px;flex-shrink:0}
+.legend{flex:1;display:flex;flex-direction:column;gap:7px;font-size:12.5px}
+.legend .li{display:flex;align-items:center;gap:8px}
+.legend .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.legend .lv{margin-left:auto;font-weight:700}
+.dstat{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.dstat .tile .v{font-size:15px}
+.toplist{background:var(--card);border-radius:16px;padding:6px 16px;box-shadow:var(--shadow);margin-bottom:14px}
+.toplist .tl{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--circle);font-size:13.5px}
+.toplist .tl:last-child{border-bottom:none}
+.toplist .rank{width:20px;height:20px;border-radius:6px;background:var(--chip);color:var(--accent-text);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.toplist .tn{flex:1;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toplist .ts{font-size:11.5px;color:var(--muted2)}
+.toplist .tv{font-weight:700;flex-shrink:0}
+.chart-card{background:var(--card);border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px}
+.chart-card svg{width:100%;height:170px;display:block}
+.vlist .cam{width:30px;height:30px;border-radius:8px;background:var(--chip);color:var(--accent-text);font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.vlist .undo{color:var(--accent);font-size:12.5px;font-weight:700}
+.tiles{display:flex;gap:10px;margin-bottom:10px}
+.tile{flex:1;background:var(--card);border-radius:16px;padding:13px 14px;box-shadow:var(--shadow);min-width:0}
+.tile .k{font-size:11px;color:var(--muted2);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .v{font-size:16px;font-weight:600}
+.h2{font-size:14px;font-weight:600;margin-bottom:12px}
+.h2row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:20px}
+.h2row .h2{margin:0}
+.h2row .link{font-size:12px;color:var(--accent);font-weight:500}
+.page-title{font-size:20px;font-weight:700;margin-bottom:18px}
+.card{background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+
+.rows{display:flex;flex-direction:column;gap:10px}
+.crow{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:12px;box-shadow:var(--shadow);cursor:pointer}
+.crow .avatar{width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px}
+.crow .mid{flex:1;min-width:0}
+.crow .name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow .sub{font-size:12px;color:var(--muted2)}
+.crow .right{text-align:right;margin-right:2px}
+.crow .amt{font-size:14px;font-weight:600}
+.crow .sav{font-size:11px;color:#007834;min-height:13px}
+.crow .del{width:26px;height:26px;border-radius:50%;background:var(--circle);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted2);font-size:14px}
+.crow .free-tag{color:var(--blue)}
+.month-group{margin-bottom:20px}
+.empty{text-align:center;color:var(--faint);font-size:14px;padding:36px 0}
+
+.seg{display:flex;gap:8px}
+.seg button{flex:1;text-align:center;padding:10px 6px;border-radius:10px;font-size:13px;font-weight:600;background:var(--card);color:var(--muted);border:1px solid var(--border)}
+.seg button.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.seg.mini button{padding:7px 4px;font-size:12px;border-radius:9px}
+
+.monthbars{display:flex;align-items:flex-end;gap:10px;height:130px;background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+.mb{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;min-width:0}
+.mb .amt{font-size:9.5px;color:var(--muted);white-space:nowrap}
+.mb .bar{width:100%;background:linear-gradient(180deg,#2BA35C,#0E6B33);border-radius:6px 6px 0 0;transition:height .35s ease}
+.mb .m{font-size:10.5px;color:var(--muted2)}
+
+.cmp{background:var(--card);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+.cmp-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cmp-head .avatar{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:13px}
+.cmp-head .mid{flex:1;min-width:0}
+.cmp-head .name{font-size:14px;font-weight:600}
+.cmp-head .sub{font-size:11px;color:var(--muted2)}
+.cmp-head .total{font-size:15px;font-weight:700}
+.cmp .track{height:6px;background:var(--track);border-radius:100px;overflow:hidden}
+.cmp .fill{height:100%;background:var(--accent);border-radius:100px}
+
+.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filters select{flex:1;min-width:96px;padding:9px 10px;font-size:13px;border-radius:10px}
+
+.overlay{position:fixed;inset:0;z-index:30;background:var(--bg);display:none;flex-direction:column;max-width:520px;margin:0 auto}
+.overlay.active{display:flex}
+.ov-head{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top)) 20px 6px;flex-shrink:0}
+.ov-head .close{width:32px;height:32px;border-radius:50%;background:var(--card);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted)}
+.ov-head .title{font-size:16px;font-weight:700}
+.ov-body{flex:1;overflow:auto;padding:14px 20px 30px;display:flex;flex-direction:column;gap:16px}
+.chips{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.chip{padding:6px 12px;border-radius:100px;background:var(--chip);color:var(--accent-text);font-size:12px;font-weight:600}
+.row2{display:flex;gap:10px}
+.row2>div{flex:1;min-width:0}
+.calcline{display:flex;justify-content:space-between;align-items:center;margin-top:10px;background:var(--pill);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--accent-text);font-weight:600}
+.calcline b{font-size:16px;color:var(--accent-dark)}
+.form-err{color:var(--red);font-size:13px;font-weight:600;display:none}
+.form-err.show{display:block}
+.save-btn{background:var(--accent);color:#fff;text-align:center;padding:15px;border-radius:14px;font-weight:600;font-size:15px;box-shadow:var(--shadow-big);width:100%}
+.save-btn:disabled{opacity:.45}
+.details-toggle{font-size:13px;color:var(--accent);font-weight:600;text-align:left;padding:2px 0}
+#adv-fields{display:none;flex-direction:column;gap:16px}
+#adv-fields.open{display:flex}
+.switchrow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.switchrow .t{font-size:14px;font-weight:600}
+.switchrow .d{font-size:11.5px;color:var(--muted2)}
+.sw{position:relative;width:46px;height:27px;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0}
+.sw i{position:absolute;inset:0;background:var(--track);border-radius:100px;transition:.2s;cursor:pointer;display:block}
+.sw i::after{content:"";position:absolute;left:3px;top:3px;width:21px;height:21px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.sw input:checked+i{background:var(--accent)}
+.sw input:checked+i::after{transform:translateX(19px)}
+
+.kwh-split{display:flex;align-items:center;gap:6px}
+.kwh-split input{text-align:center}
+.kwh-split .comma{font-size:22px;font-weight:700;color:var(--muted)}
+.loc-row{display:flex;gap:8px}
+.loc-row input{flex:1}
+.gps-btn{flex-shrink:0;width:48px;border-radius:12px;background:var(--chip);color:var(--accent-text);font-size:18px;border:1px solid var(--border)}
+
+.ob-progress{display:flex;gap:6px;padding:0 20px;margin-top:4px}
+.ob-progress div{flex:1;height:4px;border-radius:4px;background:var(--track)}
+.ob-progress div.on{background:var(--accent)}
+.ob-title{font-size:22px;font-weight:700;letter-spacing:-.3px}
+.ob-sub{font-size:13.5px;color:var(--muted);margin-top:4px;margin-bottom:10px}
+.country-list{display:flex;flex-direction:column;gap:8px}
+.country-item{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:12px;padding:11px 14px;box-shadow:var(--shadow);cursor:pointer;border:2px solid transparent}
+.country-item.sel{border-color:var(--accent)}
+.country-item .flag{font-size:22px}
+.country-item .n{flex:1;font-size:14px;font-weight:600}
+.country-item .c{font-size:12px;color:var(--muted2)}
+.ev-item{background:var(--card);border-radius:12px;padding:11px 14px;box-shadow:var(--shadow);cursor:pointer;border:2px solid transparent}
+.ev-item.sel{border-color:var(--accent)}
+.ev-item .n{font-size:14px;font-weight:600}
+.ev-item .d{font-size:12px;color:var(--muted2)}
+.ev-summary{background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.ev-summary svg,.ev-summary img.carphoto{width:100%;height:110px;display:block;margin-bottom:6px;object-fit:cover;border-radius:12px}
+.ev-summary svg{height:84px;object-fit:unset}
+.ev-summary .name{font-size:16px;font-weight:700;text-align:center;margin-bottom:2px}
+.ev-summary .trim{font-size:12.5px;color:var(--muted2);text-align:center;margin-bottom:12px}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.spec{background:var(--bg);border-radius:10px;padding:9px 11px}
+.spec .k{font-size:10.5px;color:var(--muted2)}
+.spec .v{font-size:13.5px;font-weight:700}
+.photo-btn{margin-top:10px;width:100%;background:var(--chip);color:var(--accent-text);font-weight:600;border-radius:10px;padding:10px;font-size:13px}
+
+.setting-btn{display:block;width:100%;text-align:left;background:var(--card);border-radius:12px;padding:13px 14px;font-size:14px;font-weight:600;box-shadow:var(--shadow);margin-bottom:10px}
+.setting-btn.danger{color:var(--red)}
+.about{font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:20px}
+.vlist{list-style:none;margin-bottom:10px}
+.vlist li{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:12px;padding:11px 14px;box-shadow:var(--shadow);margin-bottom:8px;font-size:14px}
+.vlist .vthumb{width:44px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0}
+.vlist .vn{flex:1;font-weight:600;min-width:0}
+.vlist .vd{font-size:11px;color:var(--muted2);font-weight:400}
+.vlist .star{font-size:17px;color:var(--faint)}
+.vlist .star.on{color:#C87B00}
+.vlist .rm{color:var(--red);font-size:15px}
+.theme-btn{width:34px;height:34px;border-radius:50%;background:var(--card);box-shadow:var(--shadow);border:1px solid var(--border);font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mini-btn{background:var(--chip);color:var(--accent-text);font-weight:600;border-radius:10px;padding:9px 14px;font-size:13px}
+
+nav{position:fixed;bottom:0;left:0;right:0;z-index:10;max-width:520px;margin:0 auto;
+  display:flex;justify-content:space-around;align-items:center;
+  padding:8px 0 calc(12px + env(safe-area-inset-bottom));
+  background:var(--card);border-top:1px solid #DCDFDC}
+nav button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;font-weight:500;color:var(--faint);flex:1}
+nav button svg{width:22px;height:22px;stroke-width:1.8;stroke:currentColor;fill:none}
+nav button span{filter:grayscale(1);opacity:.55}
+nav button.sel span{filter:none;opacity:1}
+nav button.sel{color:var(--accent)}
+nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 20px rgba(0,104,42,.35);margin-top:-30px;border:3px solid var(--accent)}
+
+.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);background:var(--text);color:#fff;padding:10px 18px;border-radius:100px;font-size:13.5px;font-weight:500;opacity:0;transition:all .25s;pointer-events:none;z-index:60;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(min-width:600px){
+  body{background:#E9E6DE;display:flex;align-items:center;justify-content:center;padding:40px 20px;min-height:100vh}
+  .app{width:402px;height:844px;min-height:844px;flex:none;background:var(--bg);border-radius:44px;overflow:hidden;position:relative;
+    box-shadow:0 0 0 11px #1B1B1E,0 0 0 13px #3B3B3F,0 30px 70px rgba(0,0,0,.30)}
+  .content{padding-top:34px}
+  nav{position:absolute;max-width:none;padding-bottom:14px}
+  .overlay{position:absolute;inset:0;max-width:none;border-radius:44px}
+  .ov-head{padding-top:30px}
+  .toast{position:absolute;bottom:100px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="content">
+
+<!-- ============ ANA SAYFA ============ -->
+<section class="page active" id="page-dashboard">
+  <div class="h2row" style="margin-top:0;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <img src="logo.png" alt="" style="height:30px;width:auto">
+      <div class="ob-title" style="font-size:17px"><span style="color:#6CB33F">Watt</span><span style="color:#1B5FAA">Track</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <select id="d-vehsel" aria-label="Araç filtresi" style="width:auto;max-width:160px;padding:7px 10px;font-size:12.5px;border-radius:10px"></select>
+      <button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button>
+    </div>
+  </div>
+
+  <div class="seg mini" id="d-period" style="margin-bottom:12px">
+    <button data-v="week" data-i18n="week">Hafta</button>
+    <button data-v="month" data-i18n="month">Ay</button>
+    <button data-v="year" class="sel" data-i18n="year">Yıl</button>
+  </div>
+
+  <div class="hero">
+    <div class="hero2">
+      <div>
+        <div class="k"><span id="d-period-lbl">Bu ay</span> · <span data-i18n="netLbl">net</span></div>
+        <div class="v" id="d-total">0</div>
+        <div class="delta" id="d-delta"></div>
+      </div>
+      <div class="hero-sep"></div>
+      <div>
+        <div class="k" data-i18n="grossLbl">indirimsiz</div>
+        <div class="v gross" id="d-gross">0</div>
+        <div class="pill" id="d-savings"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><div class="k"><span data-i18n="avgPerKwh">kWh başı</span> · <span data-i18n="netLbl">net</span></div><div class="v" id="d-avg">—</div></div>
+    <div class="tile"><div class="k"><span data-i18n="avgPerKwh">kWh başı</span> · <span data-i18n="grossLbl">indirimsiz</span></div><div class="v" id="d-avg-g">—</div></div>
+  </div>
+  <div class="tiles">
+    <div class="tile"><div class="k"><span id="d-100-lbl">100 km</span> · <span data-i18n="netLbl">net</span></div><div class="v" id="d-100">—</div></div>
+    <div class="tile"><div class="k"><span id="d-100-lbl2">100 km</span> · <span data-i18n="grossLbl">indirimsiz</span></div><div class="v" id="d-100-g">—</div></div>
+  </div>
+  <div class="tiles">
+    <div class="tile"><div class="k" data-i18n="totalKwhP">Enerji (kWh)</div><div class="v" id="d-kwh">0</div></div>
+    <div class="tile"><div class="k" data-i18n="sessionsCompanies">Şarj / Firma</div><div class="v" id="d-sess">0 / 0</div></div>
+  </div>
+  <div class="tiles" style="margin-bottom:20px">
+    <div class="tile"><div class="k" data-i18n="totalDiscP">Alınan indirim</div><div class="v" id="d-disc" style="color:var(--accent-dark)">0</div></div>
+    <div class="tile"><div class="k" data-i18n="freeCount">Ücretsiz şarj</div><div class="v" id="d-free" style="color:var(--blue)">0</div></div>
+  </div>
+
+  <div class="h2row" style="margin-top:0">
+    <div class="h2" data-i18n="spendChart">Harcama grafiği</div>
+    <div class="seg mini" id="d-gran" style="width:170px">
+      <button data-v="week" data-i18n="week">Hafta</button>
+      <button data-v="month" class="sel" data-i18n="month">Ay</button>
+      <button data-v="year" data-i18n="year">Yıl</button>
+    </div>
+  </div>
+  <div class="monthbars" id="d-months"></div>
+
+  <div class="h2" data-i18n="firmDist">Firma dağılımı</div>
+  <div class="rows" style="gap:12px;margin-bottom:20px" id="d-firms"></div>
+
+  <div class="h2" data-i18n="typeSplit">Şarj tipi dağılımı</div>
+  <div class="donut-wrap">
+    <svg viewBox="0 0 42 42" id="d-donut"></svg>
+    <div class="legend" id="d-donut-legend"></div>
+  </div>
+
+  <div id="d-odo-wrap" style="display:none">
+    <div class="h2" data-i18n="odometer">Kilometre sayacı</div>
+    <div class="dstat">
+      <div class="tile"><div class="k" data-i18n="odoNow">Araç sayacı</div><div class="v" id="d-odo">—</div></div>
+      <div class="tile"><div class="k" data-i18n="odoTracked">Alımdan beri yapılan</div><div class="v" id="d-odo-total">—</div></div>
+    </div>
+  </div>
+
+  <div class="h2row" style="margin-top:0">
+    <div class="h2" data-i18n="detailStats">Detay istatistikler</div>
+    <div class="seg mini" id="d-dstat-type" style="width:170px">
+      <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
+      <button data-v="DC">DC</button>
+      <button data-v="AC">AC</button>
+    </div>
+  </div>
+  <div class="dstat">
+    <div class="tile"><div class="k" data-i18n="avgDuration">Ort. şarj süresi</div><div class="v" id="d-dur">—</div></div>
+    <div class="tile"><div class="k" data-i18n="avgSocRange">Ort. şarj aralığı</div><div class="v" id="d-soc">—</div></div>
+  </div>
+  <div class="h2" data-i18n="topBanks">Bankalar (indirim kazancı)</div>
+  <div class="toplist" id="d-banks"></div>
+  <div class="h2" data-i18n="topLocations">En çok şarj edilen lokasyonlar</div>
+  <div class="toplist" id="d-locs" style="margin-bottom:20px"></div>
+
+  <div class="h2row" style="margin-top:0">
+    <div class="h2" data-i18n="recentCharges">Son şarjlar</div>
+    <button class="link" id="d-viewall" data-i18n="viewAll">Tümü</button>
+  </div>
+  <div class="rows" id="d-recent"></div>
+</section>
+
+<!-- ============ GEÇMİŞ ============ -->
+<section class="page" id="page-history">
+  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="historyTitle">Geçmiş</span><button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button></div>
+  <div class="filters">
+    <select id="f-year" aria-label="Yıl filtresi"></select>
+    <select id="f-firm" aria-label="Firma filtresi"></select>
+    <select id="f-type" aria-label="Tip filtresi"></select>
+    <select id="f-veh" aria-label="Araç filtresi" style="display:none"></select>
+    <select id="f-bank" aria-label="Banka filtresi"></select>
+    <select id="f-loc" aria-label="Lokasyon filtresi"></select>
+  </div>
+  <div id="h-groups"></div>
+</section>
+
+<!-- ============ KIYASLA ============ -->
+<section class="page" id="page-compare">
+  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="compareTitle">Yakıtlı Araçla Kıyasla</span><button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button></div>
+
+  <div class="card">
+    <div id="wrap-c-veh" style="display:none;margin-bottom:14px">
+      <div class="lbl" data-i18n="vehicle">Araç</div>
+      <select id="c-vehsel" aria-label="Araç filtresi"></select>
+    </div>
+    <div class="lbl" data-i18n="fuelType">Diğer aracın yakıt tipi</div>
+    <div class="seg mini" id="c-fuel" style="margin-bottom:6px">
+      <button data-v="petrol" class="sel" data-i18n="petrol">Benzin</button>
+      <button data-v="diesel" data-i18n="diesel">Dizel</button>
+      <button data-v="hybrid" data-i18n="hybrid">Hibrit</button>
+      <button data-v="lpg">LPG</button>
+    </div>
+    <div class="about" id="c-hybrid-note" style="display:none;margin-bottom:10px;font-size:12px" data-i18n="hybridNote">Şarj edilmeyen (tam) hibritler de litre/100km ile ölçülür — sadece tüketimi düşüktür (~4-5 lt). Şarjlı hibrit (PHEV) için ortalama karma tüketimi gir.</div>
+    <div class="row2" style="margin-bottom:14px;margin-top:8px">
+      <div>
+        <div class="lbl" id="c-price-lbl">Yakıt fiyatı (lt)</div>
+        <input type="text" inputmode="decimal" id="c-price" placeholder="47,50">
+      </div>
+      <div>
+        <div class="lbl" id="c-cons-lbl">Tüketim (lt/100km)</div>
+        <input type="text" inputmode="decimal" id="c-cons" placeholder="6,5">
+      </div>
+    </div>
+    <button class="save-btn" id="c-calc" style="box-shadow:none" data-i18n="calc">Kıyasla</button>
+  </div>
+
+  <div id="c-result" style="display:none">
+    <div class="tiles">
+      <div class="tile"><div class="k" id="c-ev-lbl">EV 100 km (net)</div><div class="v" id="c-ev" style="color:var(--accent-dark)">—</div></div>
+      <div class="tile"><div class="k" id="c-ice-lbl">Yakıtlı 100 km</div><div class="v" id="c-ice" style="color:var(--red)">—</div></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="k" id="c-evg-lbl">EV 100 km (indirimsiz)</div><div class="v" id="c-ev-g">—</div></div>
+      <div class="tile"><div class="k" id="c-discfx-lbl">İndirim etkisi</div><div class="v" id="c-disc-fx" style="color:var(--accent-dark)">—</div></div>
+    </div>
+    <div class="hero" style="margin-top:2px">
+      <div class="k" id="c-perkm-lbl">Km başına kazanç</div>
+      <div class="v" id="c-perkm" style="font-size:28px">—</div>
+      <div class="pill" id="c-per100">—</div>
+    </div>
+    <div class="h2" data-i18n="cumTitle">Bugüne kadar: aynı km yakıtlıyla gidilseydi</div>
+    <div class="tiles">
+      <div class="tile"><div class="k" id="c-dist-lbl">Toplam mesafe</div><div class="v" id="c-dist">—</div></div>
+      <div class="tile"><div class="k" data-i18n="evSpent">EV toplam (net)</div><div class="v" id="c-evtot" style="color:var(--accent-dark)">—</div></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="k" data-i18n="iceWould">Yakıtlıyla olurdu</div><div class="v" id="c-icetot" style="color:var(--blue)">—</div></div>
+      <div class="tile"><div class="k" data-i18n="totalSaved">Toplam kazanç</div><div class="v" id="c-savetot" style="color:var(--accent-dark)">—</div></div>
+    </div>
+    <div class="about" id="c-dist-src" style="margin:-6px 0 10px;font-size:11.5px"></div>
+    <div class="chart-card">
+      <svg id="c-line" viewBox="0 0 340 170" preserveAspectRatio="none"></svg>
+      <div class="legend" style="flex-direction:row;justify-content:center;gap:18px;margin-top:8px">
+        <div class="li"><span class="dot" style="background:var(--accent)"></span><span data-i18n="evLine">EV (gerçek)</span></div>
+        <div class="li"><span class="dot" style="background:var(--blue)"></span><span data-i18n="iceLine">Yakıtlı (aynı km)</span></div>
+      </div>
+    </div>
+
+    <div class="h2" data-i18n="savingByMonth">Aylara göre kazanç</div>
+    <div class="monthbars" id="c-months"></div>
+    <div class="about" data-i18n="compareNote">Grafik, kayıtlardaki sürüş mesafesine göre aynı yolu yakıtlı araçla gitseydin aradaki farkı gösterir.</div>
+  </div>
+</section>
+
+<!-- ============ AYARLAR ============ -->
+<section class="page" id="page-settings">
+  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="settingsTitle">Ayarlar</span><button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button></div>
+
+  <div class="section-lbl" data-i18n="regionSection">Ülke ve Bölge</div>
+  <button class="setting-btn" id="btn-country" style="display:flex;justify-content:space-between;align-items:center">
+    <span data-i18n="country">Ülke</span><span id="set-country-val" style="color:var(--muted)"></span>
+  </button>
+  <div class="lbl" style="margin-top:6px" data-i18n="currency">Para Birimi</div>
+  <select id="set-currency" aria-label="Para birimi" style="margin-bottom:12px"></select>
+  <div class="lbl" data-i18n="unit">Mesafe Birimi</div>
+  <div class="seg" id="set-unit" style="margin-bottom:12px">
+    <button data-v="km">km</button>
+    <button data-v="mi">mi</button>
+  </div>
+  <div class="lbl" data-i18n="language">Dil</div>
+  <select id="set-lang" aria-label="Dil" style="margin-bottom:12px"></select>
+  <div class="lbl" data-i18n="theme">Görünüm</div>
+  <div class="seg" id="set-theme" style="margin-bottom:20px">
+    <button data-v="light" data-i18n="themeLight">Açık</button>
+    <button data-v="dark" data-i18n="themeDark">Koyu</button>
+  </div>
+
+  <div class="section-lbl" data-i18n="vehicles">Araçlarım</div>
+  <ul class="vlist" id="set-vehicles"></ul>
+  <button class="mini-btn" id="btn-add-vehicle" data-i18n="addVehicle">+ Araç ekle</button>
+  <div class="about" style="margin-top:8px" data-i18n="defaultHint">★ varsayılan araç · 📷 fotoğraf ekle/değiştir · × arşivle</div>
+  <div class="section-lbl" id="arch-lbl" style="display:none" data-i18n="archived">Arşiv (satılan/kullanılmayan)</div>
+  <ul class="vlist" id="set-archived" style="opacity:.75"></ul>
+
+  <div class="section-lbl" data-i18n="bankCountries">Banka Ülkelerim</div>
+  <div class="chips" id="set-bankc" style="margin:0 0 8px"></div>
+  <button class="mini-btn" id="btn-add-bankc" data-i18n="addCountry">+ Ülke ekle</button>
+  <div class="about" style="margin-top:8px" data-i18n="bankCountriesD">Kartların hangi ülkelerden ise seç — formdaki banka listesi bunlara göre gelir. Şarj ettiğin ülke değişse de bankaların değişmez.</div>
+
+  <div class="section-lbl" data-i18n="formSection">Kayıt Formu</div>
+  <div class="switchrow" style="margin-bottom:20px">
+    <div>
+      <div class="t" data-i18n="advAlways">Gelişmiş alanlar hep açık</div>
+      <div class="d" data-i18n="advAlwaysD">Banka, süre, lokasyon ve şarj aralığı formda açık gelsin</div>
+    </div>
+    <label class="sw"><input type="checkbox" id="set-adv"><i></i></label>
+  </div>
+
+  <div class="section-lbl" data-i18n="dataSection">Veri</div>
+  <button class="setting-btn" id="btn-export-json" data-i18n="exportJson">Dışa Aktar (JSON)</button>
+  <button class="setting-btn" id="btn-export-csv" data-i18n="exportCsv">Dışa Aktar (CSV — Excel/Power BI)</button>
+  <button class="setting-btn" id="btn-import" data-i18n="importJson">Yedeği Geri Yükle (JSON)</button>
+  <input type="file" id="file-import" accept=".json" style="display:none">
+  <button class="setting-btn danger" id="btn-wipe" data-i18n="reset" style="margin-bottom:22px">Verileri Sıfırla</button>
+
+  <div class="section-lbl" data-i18n="about">Hakkında</div>
+  <div class="about" data-i18n="aboutText">WattTrack — tüm verileriniz yalnızca bu cihazda saklanır.</div>
+  <div class="about" style="margin-top:-8px">
+    <span data-i18n="version">Sürüm</span>: <b id="app-version"></b><br>
+    <span data-i18n="contactDev">Soru ve katkı</span>:
+    <a href="https://github.com/hasdemirfatih" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">github.com/hasdemirfatih</a><br>
+    <a href="privacy.html" target="_blank" style="color:var(--accent);font-weight:600" data-i18n="privacy">Gizlilik Politikası</a>
+  </div>
+  <button class="setting-btn" id="btn-rate" style="color:var(--accent-dark)">★ <span data-i18n="rateApp">Play Store'da Değerlendir</span></button>
+  <button class="setting-btn" id="btn-support">☕ <span data-i18n="supportDev">Geliştiriciye destek ol (bağış)</span></button>
+</section>
+
+</div>
+</div>
+
+<!-- ============ YENİ KAYIT / DÜZENLE ============ -->
+<section class="overlay" id="page-add">
+  <div class="ov-head">
+    <button class="close" id="btn-close-add">×</button>
+    <div class="title" id="add-title" data-i18n="addTitle">Yeni Şarj Kaydı</div>
+    <div style="width:32px"></div>
+  </div>
+  <div class="ov-body">
+
+    <div class="row2">
+      <div>
+        <div class="lbl" data-i18n="date">Tarih</div>
+        <input type="date" id="in-date">
+      </div>
+      <div>
+        <div class="lbl" data-i18n="country">Ülke</div>
+        <select id="in-country" aria-label="Ülke"></select>
+      </div>
+    </div>
+
+    <div id="wrap-rate" style="display:none">
+      <div class="lbl" id="rate-lbl">Kur</div>
+      <input type="text" inputmode="decimal" id="in-rate" placeholder="—">
+      <div class="about" style="margin:6px 0 0;font-size:11.5px" id="rate-note"></div>
+    </div>
+
+    <div>
+      <div class="lbl" data-i18n="chargeType">Şarj Tipi</div>
+      <div class="seg" id="in-tip">
+        <button data-v="DC" class="sel">DC</button>
+        <button data-v="AC">AC</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="lbl" data-i18n="company">Ev ya da Şarj Firması</div>
+      <select id="in-firm" aria-label="Şarj firması"></select>
+      <input type="text" id="in-firm-other" style="display:none;margin-top:8px" placeholder="">
+    </div>
+
+    <div class="row2">
+      <div>
+        <div class="lbl" data-i18n="kwh">Enerji (kWh)</div>
+        <div class="kwh-split">
+          <input type="text" id="in-kwh-int" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="45" aria-label="kWh tam kısım">
+          <span class="comma">,</span>
+          <input type="text" id="in-kwh-dec" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="27" aria-label="kWh ondalık kısım">
+        </div>
+        <div class="about" style="margin:5px 0 0;font-size:11px" data-i18n="kwhHint">Sol kutu tam kısım, sağ kutu 2 haneli ondalık — 45,27 = 45,27 kWh. Sadece rakam.</div>
+      </div>
+      <div>
+        <div class="lbl" id="in-dist-lbl">Sürülen mesafe (km)</div>
+        <input type="number" id="in-dist" inputmode="decimal" min="0" placeholder="0">
+      </div>
+    </div>
+
+    <div class="switchrow" style="box-shadow:none;border:1px solid var(--border)">
+      <div>
+        <div class="t" data-i18n="freeCharge">Ücretsiz şarj</div>
+        <div class="d" data-i18n="freeChargeD">Kampanya, ev güneş vb. — tutar 0 kaydedilir</div>
+      </div>
+      <label class="sw"><input type="checkbox" id="in-free"><i></i></label>
+    </div>
+
+    <div id="wrap-paid">
+      <div class="lbl" id="in-amount-lbl">Ödenen Tutar</div>
+      <input type="text" inputmode="decimal" id="in-amount" placeholder="0,00">
+    </div>
+
+    <div id="wrap-disc">
+      <div class="lbl" data-i18n="discountType">İndirim Türü</div>
+      <div class="seg" id="in-disc-type" style="margin-bottom:8px">
+        <button data-v="amount" class="sel" data-i18n="amountType">Tutar</button>
+        <button data-v="percent" data-i18n="percentType">Yüzde (%)</button>
+      </div>
+      <input type="text" inputmode="decimal" id="in-disc-val" placeholder="0">
+      <div class="chips" id="disc-chips"></div>
+      <div class="calcline"><span data-i18n="netPaid">Ödenen (net)</span><b id="calc-net">—</b></div>
+    </div>
+
+    <div id="wrap-vehicle" style="display:none">
+      <div class="lbl" data-i18n="vehicle">Araç</div>
+      <select id="in-vehicle" aria-label="Araç"></select>
+    </div>
+
+    <button class="details-toggle" id="btn-adv" type="button">+ Gelişmiş</button>
+    <div id="adv-fields">
+      <div id="wrap-bank">
+        <div class="lbl" data-i18n="bank">Banka / Kampanya</div>
+        <select id="in-bank" aria-label="Banka"></select>
+      </div>
+      <div>
+        <div class="lbl" data-i18n="duration">Şarj süresi</div>
+        <div class="row2">
+          <input type="number" id="in-dur-h" inputmode="numeric" min="0" max="48" placeholder="0">
+          <input type="number" id="in-dur-m" inputmode="numeric" min="0" max="59" placeholder="35">
+        </div>
+        <div class="row2" style="margin-top:4px">
+          <div class="lbl" style="text-align:center" data-i18n="hours">saat</div>
+          <div class="lbl" style="text-align:center" data-i18n="minutes">dakika</div>
+        </div>
+      </div>
+      <div>
+        <div class="lbl" data-i18n="location">Lokasyon</div>
+        <div class="loc-row">
+          <input type="text" id="in-loc" placeholder="Ankara" list="loc-list" autocomplete="off">
+          <button class="gps-btn" id="btn-gps" type="button" title="GPS">📍</button>
+        </div>
+        <datalist id="loc-list"></datalist>
+        <div class="chips" id="loc-chips"></div>
+      </div>
+      <div>
+        <div class="lbl" data-i18n="socRange">Şarj aralığı (%)</div>
+        <div class="row2">
+          <input type="number" id="in-socb" inputmode="numeric" min="0" max="100" placeholder="20">
+          <input type="number" id="in-soca" inputmode="numeric" min="0" max="100" placeholder="80">
+        </div>
+        <div class="chips" id="soc-chips"></div>
+      </div>
+      <div>
+        <div class="lbl" data-i18n="note">Not</div>
+        <input type="text" id="in-note">
+      </div>
+    </div>
+
+    <div class="form-err" id="form-err" data-i18n="formError">Firma, kWh ve tutar gerekli</div>
+    <button class="save-btn" id="btn-save" data-i18n="save">Kaydet</button>
+  </div>
+</section>
+
+<!-- ============ ONBOARDING ============ -->
+<section class="overlay" id="ob">
+  <div class="ov-head" style="justify-content:center">
+    <div class="title" style="font-size:18px">⚡ WattTrack</div>
+  </div>
+  <div class="ob-progress"><div class="on" id="obp1"></div><div id="obp2"></div></div>
+  <div class="ov-body">
+
+    <div id="ob-step1">
+      <div class="ob-title" data-i18n="obWelcome">Hoş geldin!</div>
+      <div class="ob-sub" data-i18n="obCountryQ">Hangi ülkede şarj oluyorsun? Para birimi ve mesafe birimini buna göre ayarlayalım.</div>
+      <div class="lbl" data-i18n="country">Ülke</div>
+      <select id="ob-country" aria-label="Ülke" style="margin-bottom:14px"></select>
+      <div class="row2">
+        <div>
+          <div class="lbl" data-i18n="currency">Para Birimi</div>
+          <select id="ob-currency" aria-label="Para birimi"></select>
+        </div>
+        <div>
+          <div class="lbl" data-i18n="unit">Mesafe</div>
+          <div class="seg" id="ob-unit">
+            <button data-v="km" class="sel">km</button>
+            <button data-v="mi">mi</button>
+          </div>
+        </div>
+      </div>
+      <div class="lbl" style="margin-top:14px" data-i18n="language">Dil</div>
+      <select id="ob-lang" aria-label="Dil"></select>
+      <button class="save-btn" id="ob-next" style="margin-top:20px" data-i18n="continue">Devam</button>
+    </div>
+
+    <div id="ob-step2" style="display:none">
+      <div class="ob-title" data-i18n="obCarQ">Aracını seç</div>
+      <div class="ob-sub" data-i18n="obCarSub">Marka veya model yaz — yıl ve donanıma göre farklı batarya sürümlerini ayırt edebilirsin.</div>
+      <input type="text" id="ob-ev-search" placeholder="ör. Model Y, Togg, Torres…" style="margin-bottom:12px">
+      <div class="rows" id="ob-ev-results"></div>
+      <div id="ob-km-wrap" style="display:none;margin-top:14px">
+        <div class="lbl" id="ob-km-lbl" data-i18n="odoAsk">Aracın güncel kilometresi (sayaç)</div>
+        <input type="number" id="ob-km" inputmode="numeric" min="0" placeholder="13614">
+      </div>
+      <div id="ob-ev-summary" style="display:none;margin-top:14px"></div>
+      <div class="row2" style="margin-top:16px">
+        <button class="save-btn" id="ob-skip" style="background:var(--card);color:var(--muted);box-shadow:var(--shadow)" data-i18n="skip">Atla</button>
+        <button class="save-btn" id="ob-done" disabled data-i18n="start">Başla</button>
+      </div>
+      <button class="save-btn" id="ob-back" style="margin-top:10px;background:transparent;color:var(--muted);box-shadow:none;border:1px solid var(--border)" data-i18n="back">← Geri</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ ÜLKE SEÇİCİ ============ -->
+<section class="overlay" id="page-country">
+  <div class="ov-head">
+    <button class="close" id="btn-close-country">×</button>
+    <div class="title" data-i18n="country">Ülke</div>
+    <div style="width:32px"></div>
+  </div>
+  <div class="ov-body">
+    <input type="text" id="country-search" placeholder="Ülke ara…">
+    <div class="country-list" id="country-list"></div>
+  </div>
+</section>
+
+<!-- ============ ARAÇ EKLE / DÜZENLE ============ -->
+<section class="overlay" id="page-addcar">
+  <div class="ov-head">
+    <button class="close" id="btn-close-addcar">×</button>
+    <div class="title" id="addcar-title" data-i18n="addVehicle">+ Araç ekle</div>
+    <div style="width:32px"></div>
+  </div>
+  <div class="ov-body">
+    <input type="text" id="car-search" placeholder="ör. EV6, Torres…">
+    <div class="rows" id="car-results"></div>
+    <div id="car-summary" style="display:none"></div>
+    <input type="file" id="car-photo" accept="image/*" style="display:none">
+    <button class="save-btn" id="car-save" disabled data-i18n="add">Ekle</button>
+  </div>
+</section>
+
+<nav>
+  <button data-page="dashboard" class="sel">
+    <span style="font-size:19px">📊</span>
+    <span data-i18n="navHome">Ana Sayfa</span>
+  </button>
+  <button data-page="history">
+    <span style="font-size:19px">📋</span>
+    <span data-i18n="navHistory">Geçmiş</span>
+  </button>
+  <button class="plus" id="nav-plus" aria-label="Yeni kayıt">
+    <div><img src="nav-plus.png" alt="" style="height:42px;width:auto"></div>
+  </button>
+  <button data-page="compare">
+    <span style="font-size:19px">🆚</span>
+    <span data-i18n="navCompare">Kıyasla</span>
+  </button>
+  <button data-page="settings">
+    <span style="font-size:19px">⚙️</span>
+    <span data-i18n="navSettings">Ayarlar</span>
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
