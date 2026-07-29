@@ -382,8 +382,8 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       <div class="ob-title" style="font-size:17px"><span style="color:#6CB33F">Watt</span><span style="color:#1B5FAA">Track</span></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <select id="d-vehsel" aria-label="Araç filtresi" style="width:auto;max-width:160px;padding:7px 10px;font-size:12.5px;border-radius:10px"></select>
-      <button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button>
+      <select id="d-vehsel" aria-label="Araç filtresi" style="width:auto;max-width:160px;padding:7px 10px;font-size:12.5px;border-radius:10px" data-i18n-aria="ariaVehFilter"></select>
+      <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
     </div>
   </div>
 
@@ -480,8 +480,8 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   <div class="page-title" style="display:flex;justify-content:space-between;align-items:center">
     <span data-i18n="statsTitle">İstatistikler</span>
     <div style="display:flex;align-items:center;gap:8px">
-      <select id="s-vehsel" aria-label="Araç filtresi" style="width:auto;max-width:160px;padding:7px 10px;font-size:12.5px;border-radius:10px"></select>
-      <button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button>
+      <select id="s-vehsel" aria-label="Araç filtresi" style="width:auto;max-width:160px;padding:7px 10px;font-size:12.5px;border-radius:10px" data-i18n-aria="ariaVehFilter"></select>
+      <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
     </div>
   </div>
   <div id="s-warnings" class="warn-host"></div>
@@ -531,27 +531,27 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
 <!-- ============ GEÇMİŞ ============ -->
 <section class="page" id="page-history">
-  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="historyTitle">Geçmiş</span><button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button></div>
+  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="historyTitle">Geçmiş</span><button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button></div>
   <div class="filters">
-    <select id="f-year" aria-label="Yıl filtresi"></select>
-    <select id="f-firm" aria-label="Firma filtresi"></select>
-    <select id="f-type" aria-label="Tip filtresi"></select>
-    <select id="f-veh" aria-label="Araç filtresi" style="display:none"></select>
-    <select id="f-bank" aria-label="Banka filtresi"></select>
-    <select id="f-loc" aria-label="Lokasyon filtresi"></select>
+    <select id="f-year" data-i18n-aria="ariaYearFilter" aria-label="Yıl filtresi"></select>
+    <select id="f-firm" data-i18n-aria="ariaFirmFilter" aria-label="Firma filtresi"></select>
+    <select id="f-type" data-i18n-aria="ariaTypeFilter" aria-label="Tip filtresi"></select>
+    <select id="f-veh" aria-label="Araç filtresi" style="display:none" data-i18n-aria="ariaVehFilter"></select>
+    <select id="f-bank" data-i18n-aria="ariaBankFilter" aria-label="Banka filtresi"></select>
+    <select id="f-loc" data-i18n-aria="ariaLocFilter" aria-label="Lokasyon filtresi"></select>
   </div>
   <div id="h-groups"></div>
 </section>
 
 <!-- ============ KIYASLA ============ -->
 <section class="page" id="page-compare">
-  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="compareTitle">Yakıtlı Araçla Kıyasla</span><button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button></div>
+  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="compareTitle">Yakıtlı Araçla Kıyasla</span><button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button></div>
   <div id="c-warnings" class="warn-host"></div>
 
   <div class="card">
     <div id="wrap-c-veh" style="display:none;margin-bottom:14px">
       <label class="lbl" data-i18n="vehicle" for="c-vehsel">Araç</label>
-      <select id="c-vehsel" aria-label="Araç filtresi"></select>
+      <select id="c-vehsel"></select>
       <!-- WT-18/4: arşivlenmiş araçların giderleri varsayılan olarak HARİÇ -->
       <label id="wrap-c-arch" style="display:none;align-items:center;gap:8px;margin-top:8px;font-size:12px;cursor:pointer">
         <input type="checkbox" id="c-inclarch" style="width:16px;height:16px">
@@ -577,7 +577,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       </div>
     </div>
     <div style="margin-bottom:14px">
-      <label class="lbl" id="c-icefix-lbl" for="c-icefix">Yakıtlı aracın yıllık sabit gideri (vergi + sigorta + bakım)</label>
+      <label class="lbl" id="c-icefix-lbl" data-i18n="iceFixLabel" for="c-icefix">Yakıtlı aracın yıllık sabit gideri (vergi + sigorta + bakım)</label>
       <input type="text" inputmode="decimal" id="c-icefix" placeholder="0">
       <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;cursor:pointer">
         <input type="checkbox" id="c-prorate" checked style="width:16px;height:16px">
@@ -690,7 +690,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
 <!-- ============ ARACIM ============ -->
 <section class="page" id="page-vehicle">
-  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="vehicleTitle">Aracım</span><button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button></div>
+  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="vehicleTitle">Aracım</span><button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button></div>
 
   <div class="section-lbl" data-i18n="vehicles">Araçlarım</div>
   <ul class="vlist" id="set-vehicles"></ul>
@@ -702,7 +702,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   <div class="card" style="margin-top:20px">
     <div id="wrap-veh-exp" style="display:none;margin-bottom:14px">
       <label class="lbl" data-i18n="vehicle" for="veh-exp-sel">Araç</label>
-      <select id="veh-exp-sel" aria-label="Araç filtresi"></select>
+      <select id="veh-exp-sel"></select>
     </div>
     <div class="h2row" style="margin-top:0">
       <div class="h2" id="c-exp-title" data-i18n="expenses">Araç giderleri</div>
@@ -732,21 +732,21 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
 <!-- ============ AYARLAR ============ -->
 <section class="page" id="page-settings">
-  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="settingsTitle">Ayarlar</span><button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button></div>
+  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="settingsTitle">Ayarlar</span><button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button></div>
 
   <div class="section-lbl" data-i18n="regionSection">Ülke ve Bölge</div>
   <button class="setting-btn" id="btn-country" style="display:flex;justify-content:space-between;align-items:center">
     <span data-i18n="country">Ülke</span><span id="set-country-val" style="color:var(--muted)"></span>
   </button>
   <label class="lbl" style="margin-top:6px" data-i18n="currency" for="set-currency">Para Birimi</label>
-  <select id="set-currency" aria-label="Para birimi" style="margin-bottom:12px"></select>
+  <select id="set-currency" style="margin-bottom:12px"></select>
   <div class="lbl" data-i18n="unit">Mesafe Birimi</div>
   <div class="seg" id="set-unit" style="margin-bottom:12px">
     <button data-v="km">km</button>
     <button data-v="mi">mi</button>
   </div>
   <label class="lbl" data-i18n="language" for="set-lang">Dil</label>
-  <select id="set-lang" aria-label="Dil" style="margin-bottom:12px"></select>
+  <select id="set-lang" style="margin-bottom:12px"></select>
   <div class="lbl" data-i18n="theme">Görünüm</div>
   <div class="seg" id="set-theme" style="margin-bottom:20px">
     <button data-v="light" data-i18n="themeLight">Açık</button>
@@ -813,7 +813,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       </div>
       <div>
         <label class="lbl" data-i18n="country" for="in-country">Ülke</label>
-        <select id="in-country" aria-label="Ülke"></select>
+        <select id="in-country"></select>
       </div>
     </div>
 
@@ -833,7 +833,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
     <div>
       <label class="lbl" data-i18n="company" for="in-firm">Ev-İş ya da Şarj Firması</label>
-      <select id="in-firm" aria-label="Şarj firması"></select>
+      <select id="in-firm"></select>
       <input type="text" id="in-firm-other" maxlength="40" style="display:none;margin-top:8px" placeholder="">
     </div>
 
@@ -847,7 +847,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
         <label class="lbl" id="in-dist-lbl" for="in-dist">Sürülen mesafe (km)</label>
         <input type="number" id="in-dist" inputmode="decimal" min="0" placeholder="0">
         <!-- WT-19: kullanıcı İKİSİNDEN BİRİNİ girer -->
-        <label class="lbl" id="in-odo-lbl" for="in-odo" style="margin-top:8px">veya sayaç değeri</label>
+        <label class="lbl" id="in-odo-lbl" data-i18n="odoOrDist" for="in-odo" style="margin-top:8px">veya sayaç değeri</label>
         <input type="number" id="in-odo" inputmode="decimal" min="0" placeholder="13614">
         <div class="about" id="odo-note" style="margin:5px 0 0;font-size:11px"></div>
       </div>
@@ -887,7 +887,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
     <div id="wrap-vehicle" style="display:none">
       <label class="lbl" data-i18n="vehicle" for="in-vehicle">Araç</label>
-      <select id="in-vehicle" aria-label="Araç"></select>
+      <select id="in-vehicle"></select>
     </div>
 
     <button class="details-toggle" id="btn-adv" type="button">+ Gelişmiş</button>
@@ -905,13 +905,13 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       </div>
       <div id="wrap-bank">
         <label class="lbl" data-i18n="bank" for="in-bank">Banka / Kampanya</label>
-        <select id="in-bank" aria-label="Banka"></select>
+        <select id="in-bank"></select>
       </div>
       <div>
         <label class="lbl" data-i18n="location" for="in-loc">Lokasyon</label>
         <div class="loc-row">
-          <input type="text" id="in-loc" maxlength="60" placeholder="Ankara" list="loc-list" autocomplete="off">
-          <button class="gps-btn" id="btn-gps" type="button" title="GPS">📍</button>
+          <input type="text" id="in-loc" maxlength="60" data-i18n-ph="phLocation" placeholder="Ankara" list="loc-list" autocomplete="off">
+          <button class="gps-btn" id="btn-gps" type="button" title="GPS" data-i18n-aria="ariaGps">📍</button>
         </div>
         <datalist id="loc-list"></datalist>
         <div class="chips" id="loc-chips"></div>
@@ -956,11 +956,11 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       <div class="ob-title" data-i18n="obWelcome">Hoş geldin!</div>
       <div class="ob-sub" data-i18n="obCountryQ">Hangi ülkede şarj oluyorsun? Para birimi ve mesafe birimini buna göre ayarlayalım.</div>
       <label class="lbl" data-i18n="country" for="ob-country">Ülke</label>
-      <select id="ob-country" aria-label="Ülke" style="margin-bottom:14px"></select>
+      <select id="ob-country" style="margin-bottom:14px"></select>
       <div class="row2">
         <div>
           <label class="lbl" data-i18n="currency" for="ob-currency">Para Birimi</label>
-          <select id="ob-currency" aria-label="Para birimi"></select>
+          <select id="ob-currency"></select>
         </div>
         <div>
           <div class="lbl" data-i18n="unit">Mesafe</div>
@@ -971,14 +971,14 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
         </div>
       </div>
       <label class="lbl" style="margin-top:14px" data-i18n="language" for="ob-lang">Dil</label>
-      <select id="ob-lang" aria-label="Dil"></select>
+      <select id="ob-lang"></select>
       <button class="save-btn" id="ob-next" style="margin-top:20px" data-i18n="continue">Devam</button>
     </div>
 
     <div id="ob-step2" style="display:none">
       <div class="ob-title" data-i18n="obCarQ">Aracını seç</div>
       <div class="ob-sub" data-i18n="obCarSub">Marka veya model yaz — yıl ve donanıma göre farklı batarya sürümlerini ayırt edebilirsin.</div>
-      <input type="text" id="ob-ev-search" placeholder="ör. Model Y, Togg, Torres…" style="margin-bottom:12px">
+      <input type="text" id="ob-ev-search" data-i18n-ph="phEvSearch" placeholder="ör. Model Y, Togg, Torres…" style="margin-bottom:12px">
       <div class="rows" id="ob-ev-results"></div>
       <div id="ob-ev-summary" style="display:none;margin-top:14px"></div>
       <button type="button" class="details-toggle" id="ob-change-car" style="display:none" data-i18n="changeCar">Aracı değiştir</button>
@@ -1006,17 +1006,17 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   <div class="ov-body">
     <div>
       <label class="lbl" data-i18n="expType" for="in-exp-type">Gider türü</label>
-      <select id="in-exp-type" aria-label="Gider türü"></select>
+      <select id="in-exp-type"></select>
       <input type="text" id="in-exp-altad" style="display:none;margin-top:8px" maxlength="30" placeholder="">
     </div>
     <div class="row2">
       <div>
         <label class="lbl" data-i18n="date" for="in-exp-date">Tarih</label>
-        <input type="date" id="in-exp-date" aria-label="Tarih">
+        <input type="date" id="in-exp-date">
       </div>
       <div>
         <label class="lbl" data-i18n="currency" for="in-exp-cur">Para birimi</label>
-        <select id="in-exp-cur" aria-label="Para birimi"></select>
+        <select id="in-exp-cur"></select>
       </div>
     </div>
     <div>
@@ -1025,7 +1025,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     </div>
     <div id="wrap-exp-veh" style="display:none">
       <label class="lbl" data-i18n="vehicle" for="in-exp-veh">Araç</label>
-      <select id="in-exp-veh" aria-label="Araç"></select>
+      <select id="in-exp-veh"></select>
     </div>
     <div>
       <label class="lbl" data-i18n="noteLbl" for="in-exp-note">Not</label>
@@ -1043,7 +1043,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div style="width:32px"></div>
   </div>
   <div class="ov-body">
-    <input type="text" id="country-search" placeholder="Ülke ara…">
+    <input type="text" id="country-search" data-i18n-ph="phCountrySearch" placeholder="Ülke ara…">
     <div class="country-list" id="country-list"></div>
   </div>
 </section>
@@ -1056,7 +1056,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div style="width:32px"></div>
   </div>
   <div class="ov-body">
-    <input type="text" id="car-search" placeholder="ör. EV6, Torres…">
+    <input type="text" id="car-search" data-i18n-ph="phCarSearch" placeholder="ör. EV6, Torres…">
     <div class="rows" id="car-results"></div>
     <div id="car-summary" style="display:none"></div>
     <input type="file" id="car-photo" accept="image/*" style="display:none">
@@ -1077,7 +1077,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15.2 13.8"/></svg>
     <span data-i18n="navHistory">Geçmiş</span>
   </button>
-  <button class="plus" id="nav-plus" aria-label="Yeni kayıt">
+  <button class="plus" id="nav-plus" data-i18n-aria="ariaNewRecord" aria-label="Yeni kayıt">
     <div><img src="nav-plus.png" alt="" style="height:42px;width:auto"></div>
   </button>
   <button data-page="compare">

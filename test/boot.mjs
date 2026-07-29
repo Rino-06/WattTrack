@@ -54,7 +54,8 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
   // const/let bildirimleri window'a iliştirilmez; teste açmak için köprü kur
   + `\n;window.__app = {db, S, APP_VERSION, openAdd, showScreen, pf, fmtNum,
        fmtInput, checkNum, isValidDate, localISO, renderDashboard, scanBadData,
-       isConv, amtB, renderStats};`;
+       isConv, amtB, renderStats, applyI18n, T, LANG_NAMES, CHARGERS,
+       COUNTRIES, HOME_NAMES, PAN_EU, BANKS_BY, BANKS_DEFAULT, overlayClose};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -311,6 +312,86 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-15: harcama grafiği kasıtlı seyir olduğunu belirtiyor',
     $('s-chart-scope').textContent.trim() !== '',
     'rozet=' + JSON.stringify($('s-chart-scope').textContent));
+}
+
+// --- WT-22 KABUL: dili İngilizce yapınca Türkçe metin kalmamalı ---
+{
+  // Kullanıcı dili Ayarlar'dan değiştirir; açık bir form varsa önce kapanır.
+  // (Açık formdaki seçenek listeleri openAdd ile üretiliyor, applyI18n'in
+  // kapsamı dışında — form yeniden açıldığında doğru dilde geliyor.)
+  await app().overlayClose('page-add', { force: true });
+  await sleep(150);
+  app().S.lang = 'en';
+  app().applyI18n();
+  await sleep(250);
+  // Kullanıcı dili değiştirince sekmeleri gezer; her sekme ziyarette yeniden
+  // çizilir. Denetim de aynı yolu izlemeli.
+  for (const p of ['dashboard', 'stats', 'history', 'compare', 'vehicle', 'settings']) {
+    app().showScreen(p);
+    await sleep(220);
+  }
+  app().showScreen('dashboard');
+  await sleep(250);
+
+  // Türkçe'ye özgü karakterler + sık geçen Türkçe kelimeler
+  const TR = /[çğışÇĞİŞ]|\b(Araç|Ülke|Tarih|Tutar|Kaydet|Firma|Banka|Gider|Ayarlar|Şarj|Dönem|Yeni kayıt|Tema|Dil|Para birimi)\b/;
+  const offenders = [];
+  const doc = window.document;
+  // Çevrilmeyecek VERİ: dil adları kendi dilinde yazılır, şarj firmalarının
+  // ve şehirlerin özel adları çevrilmez, kullanıcının girdiği metinler de öyle.
+  const DATA = new Set([
+    ...Object.values(app().LANG_NAMES || {}),
+    ...Object.values(app().CHARGERS || {}).flat(),
+    ...(app().PAN_EU || []),
+    ...Object.values(app().BANKS_BY || {}).flat(),
+    ...(app().BANKS_DEFAULT || []),
+    ...(app().COUNTRIES || []).map(c => c[2]),
+    ...(app().HOME_NAMES || []),
+    ...(await app().db.sessions.toArray()).flatMap(r => [r.firma, r.loc, r.banka]),
+    ...(await app().db.vehicles.toArray()).flatMap(v => [v.ad, v.brand, v.model, v.trim])
+  ].filter(Boolean));
+  // görünür metin düğümleri
+  const walk = doc.createTreeWalker(doc.body, 4 /* SHOW_TEXT */);
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    const txt = (n.textContent || '').trim();
+    if (!txt || txt.length < 2) continue;
+    const el = n.parentElement;
+    if (!el || el.closest('script,style,datalist')) continue;
+    // Kapalı overlay içeriği görünmez ve açılışta baştan üretilir
+    const ov = el.closest('.overlay');
+    if (ov && !ov.classList.contains('active')) continue;
+    if (DATA.has(txt)) continue;                    // veri, arayüz metni değil
+    if (TR.test(txt)) offenders.push(`metin<${el.id || el.className || el.tagName}>: ${txt.slice(0, 55)}`);
+  }
+  // aria-label, placeholder, title
+  for (const attr of ['aria-label', 'placeholder', 'title']) {
+    doc.querySelectorAll(`[${attr}]`).forEach(el => {
+      const ov2 = el.closest('.overlay');
+      if (ov2 && !ov2.classList.contains('active')) return;
+      const v = el.getAttribute(attr) || '';
+      if (!DATA.has(v) && TR.test(v)) offenders.push(`${attr}<${el.id || el.tagName}>: ${v.slice(0, 55)}`);
+    });
+  }
+  check('WT-22 KABUL: İngilizce\'de Türkçe metin kalmadı',
+    offenders.length === 0, offenders.slice(0, 6).join(' | '));
+
+  // c-icefix-lbl özellikle: applyI18n bu id'ye HİÇ dokunmuyordu
+  check('WT-22/2: "yakıtlı aracın yıllık sabit gideri" etiketi çevrildi',
+    /Fuel car/.test($('c-icefix-lbl').textContent),
+    'etiket=' + $('c-icefix-lbl').textContent.slice(0, 60));
+
+  // altı dilin hepsinde sözlük eksiksiz mi?
+  const langs = ['tr', 'en', 'de', 'fr', 'es', 'it'];
+  const keys = Object.keys(app().T.tr);
+  const gaps = [];
+  for (const l of langs)
+    for (const k of keys)
+      if (!app().T[l] || app().T[l][k] == null || app().T[l][k] === '') gaps.push(`${l}.${k}`);
+  check(`WT-22: ${keys.length} anahtarın altı dilde de karşılığı var`,
+    gaps.length === 0, gaps.slice(0, 8).join(', '));
+
+  app().S.lang = 'tr';
+  app().applyI18n();
 }
 
 const failed = results.filter(r => !r.pass);
