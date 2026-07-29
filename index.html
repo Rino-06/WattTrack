@@ -325,6 +325,32 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 8px 20px rgba(0,104,42,.35);margin-top:-30px;border:3px solid var(--accent)}
 
+/* ============ WT-25: dokunma hedefleri (WCAG 2.5.5, min 44x44) ============
+   Küçük ikon butonlarında GÖRSEL boyut korunur, dokunma alanı görünmez bir
+   ::after katmanıyla genişletilir. Komşusuyla bitişik olan öğelerde (segment
+   düğmeleri, anahtarlar) görünmez genişletme üst üste bineceği için doğrudan
+   min-height verilir. */
+.crow .del, .vlist .cam, .ov-head .close, .theme-btn,
+.vlist .star, .vlist .rm, .vlist .undo, .chip{position:relative}
+.crow .del::after, .vlist .cam::after, .ov-head .close::after,
+.theme-btn::after, .vlist .star::after, .vlist .rm::after,
+.vlist .undo::after{content:"";position:absolute;inset:-9px}
+/* çipler yan yana duruyor: yatayda yalnız boşluğun yarısı kadar genişlet */
+.chip::after{content:"";position:absolute;inset:-7px -4px}
+/* ikonu olup boyutu tanımsız olanlara taban ölçü */
+.vlist .star, .vlist .rm, .vlist .undo{min-width:32px;min-height:32px;
+  display:inline-flex;align-items:center;justify-content:center}
+/* bitişik öğeler: doğrudan yükselt */
+.seg.mini button{min-height:44px}
+.mini-btn{min-height:44px}
+.details-toggle, .h2row .link{min-height:44px;display:inline-flex;align-items:center}
+/* anahtar dikeyde 27px'ti; görsel ray aynı kalır, kutu 44px olur */
+.sw{height:44px;display:flex;align-items:center}
+.sw i{top:50%;bottom:auto;height:27px;transform:translateY(-50%)}
+/* alt menü: 7 sekme korunuyor, yatayda 44px garanti edilemiyor —
+   dikeyde 48px garanti et, yatayda mümkün olan en genişi ver (flex:1) */
+nav button{min-height:48px;justify-content:center}
+
 .toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);background:var(--text);color:#fff;padding:10px 18px;border-radius:100px;font-size:13.5px;font-weight:500;opacity:0;transition:all .25s;pointer-events:none;z-index:60;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* WT-09/B: "Geri al" butonlu toast — tıklanabilir olması için

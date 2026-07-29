@@ -426,6 +426,80 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await sleep(200);
 }
 
+// --- WT-25: dokunma hedefleri (statik CSS denetimi) ---
+// jsdom'da yerleşim motoru yok, gerçek piksel ölçülemez. Bunun yerine
+// bildirilen boyut + ::after genişletmesi toplanarak etkin alan hesaplanır.
+{
+  const css = [...window.document.querySelectorAll('style')].map(x => x.textContent).join('\n');
+  // Kuralları (seçici listesi, gövde) olarak ayrıştır; gruplu seçiciler
+  // (".a, .b::after{...}") virgülden bölünüp tam eşleşmeyle aranır.
+  // @media blokları iç içe süslü parantez içerdiği için düz regex ayrıştırmayı
+  // kaydırıyor; sarmalayıcılarını kaldır (içlerindeki kurallar düz kalsın).
+  // CSS yorumları seçiciye yapışıp tam eşleşmeyi bozuyor — önce temizle
+  let flat = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  for (let i = 0; i < 20; i++) {
+    const m = /@media[^{]*\{/.exec(flat);
+    if (!m) break;
+    let depth = 1, j = m.index + m[0].length;
+    while (j < flat.length && depth > 0) {
+      if (flat[j] === '{') depth++;
+      else if (flat[j] === '}') depth--;
+      j++;
+    }
+    flat = flat.slice(0, m.index) + flat.slice(m.index + m[0].length, j - 1) + flat.slice(j);
+  }
+  const rules = [];
+  for (const m of flat.matchAll(/([^{}]+)\{([^}]*)\}/g))
+    rules.push([m[1].split(',').map(x => x.trim().replace(/\s+/g, ' ')), m[2]]);
+  const decl = sel => rules.filter(([sels]) => sels.includes(sel))
+    .map(([, body]) => body).join(';');
+  const num = (body, prop) => {
+    const m = [...body.matchAll(new RegExp(prop + '\\s*:\\s*(-?\\d+(?:\\.\\d+)?)px', 'g'))];
+    return m.length ? parseFloat(m[m.length - 1][1]) : null;
+  };
+  // ::after inset genişletmesi: inset:-9px  ya da  inset:-7px -4px
+  const inset = sel => {
+    const body = decl(sel + '::after');
+    const m = /inset\s*:\s*(-?\d+)px(?:\s+(-?\d+)px)?/.exec(body);
+    if (!m) return { v: 0, h: 0 };
+    const v = -parseInt(m[1], 10);
+    const h = m[2] != null ? -parseInt(m[2], 10) : v;
+    return { v: Math.max(0, v), h: Math.max(0, h) };
+  };
+  const effective = (sel, baseW, baseH) => {
+    const body = decl(sel);
+    const w = num(body, 'min-width') ?? num(body, 'width') ?? baseW;
+    const h = num(body, 'min-height') ?? num(body, 'height') ?? baseH;
+    const e = inset(sel);
+    return { w: (w ?? 0) + 2 * e.h, h: (h ?? 0) + 2 * e.v };
+  };
+
+  // Dokümanda ölçülen ve düzeltilmesi istenen öğeler
+  const targets = [
+    ['.crow .del', 26, 26], ['.vlist .cam', 30, 30], ['.chip', 60, 30],
+    ['.seg.mini button', 60, 31], ['.ov-head .close', 32, 32],
+    ['.theme-btn', 34, 34], ['.mini-btn', 60, 35], ['.sw', 46, 27],
+    ['.details-toggle', 60, 21], ['.h2row .link', 60, 21],
+    ['.vlist .star', 0, 0], ['.vlist .rm', 0, 0]
+  ];
+  const small = [];
+  for (const [sel, bw, bh] of targets) {
+    const { w, h } = effective(sel, bw, bh);
+    if (w < 44 || h < 44) small.push(`${sel} ${Math.round(w)}x${Math.round(h)}`);
+  }
+  check('WT-25: küçük dokunma hedefleri 44x44\'e genişletildi',
+    small.length === 0, small.join(' | '));
+
+  // Alt menüde 7 sekme korunuyor: yatayda 44px garanti edilemez,
+  // dikeyde 48px garanti edilmeli (madde metni bunu böyle istiyor)
+  const navH = num(decl('nav button'), 'min-height');
+  check('WT-25: alt menü butonları dikeyde en az 48px', navH >= 48, 'min-height=' + navH);
+  check('WT-25: 7 sekme korundu',
+    window.document.querySelectorAll('nav button[data-page]').length
+      + window.document.querySelectorAll('nav button.plus, nav .plus').length >= 7,
+    'sekme=' + window.document.querySelectorAll('nav button').length);
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
