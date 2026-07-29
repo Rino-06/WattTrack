@@ -53,7 +53,8 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
   .join('\n;\n')
   // const/let bildirimleri window'a iliştirilmez; teste açmak için köprü kur
   + `\n;window.__app = {db, S, APP_VERSION, openAdd, showScreen, pf, fmtNum,
-       fmtInput, checkNum, isValidDate, localISO, renderDashboard, scanBadData};`;
+       fmtInput, checkNum, isValidDate, localISO, renderDashboard, scanBadData,
+       isConv, amtB};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -171,6 +172,33 @@ const tot = $('d-total').textContent, kwhTxt = $('d-kwh').textContent;
 check('WT-02: ana sayfa toplamı binlik nokta ile', /1\.23[45]/.test(tot), 'd-total = ' + tot);
 check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   !/,\d{3}\./.test(tot) && !/,\d{3}\./.test(kwhTxt), `d-total=${tot} d-kwh=${kwhTxt}`);
+
+// --- WT-13: kur bilgisi olmayan kayıt birim fiyatı bozmamalı ---
+{
+  await app().db.sessions.clear();
+  app().S.period = 'year';
+  app().S.currency = 'TRY';
+  // 40 kWh / 400 TRY -> kWh başı 10,00
+  await app().db.sessions.add({ tarih: '2026-07-10T12:00', firma: 'ZES', tip: 'DC',
+    kwh: 40, tutar: 400, odenen: 400, cur: 'TRY', aracId: null });
+  await app().renderDashboard();
+  await sleep(300);
+  const before = $('d-avg').textContent;
+  check('WT-13: temel birim fiyat 10,00', /10,00/.test(before), 'd-avg=' + before);
+
+  // Kur tablosu OLMAYAN yabancı kayıt ekle: 30 kWh, çevrilemez
+  await app().db.sessions.add({ tarih: '2026-07-12T12:00', firma: 'X', tip: 'DC',
+    kwh: 30, tutar: 900, odenen: 900, cur: 'RSD', aracId: null });
+  await app().renderDashboard();
+  await sleep(300);
+  const after = $('d-avg').textContent;
+  check('WT-13 KABUL: kur bilgisi olmayan kayıt birim fiyatı DEĞİŞTİRMEDİ',
+    after === before, `önce=${before} sonra=${after}`);
+  check('WT-13: ham kWh toplamı tüm kayıtları saymaya devam ediyor (70)',
+    $('d-kwh').textContent === '70', 'd-kwh=' + $('d-kwh').textContent);
+  check('WT-13: ham toplamın kapsamı başlıkta belirtildi',
+    $('d-kwh-note').textContent.trim() !== '', 'not=' + JSON.stringify($('d-kwh-note').textContent));
+}
 
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
