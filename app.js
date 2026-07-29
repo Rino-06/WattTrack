@@ -364,18 +364,67 @@ const t = (key, vars) => {
   if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
   return s;
 };
-// virgül toleranslı sayı okuma ("45,5" → 45.5)
-const pf = v => {
-  const n = parseFloat(String(v ?? '').trim().replace(',', '.'));
-  return isNaN(n) ? NaN : n;
-};
+// ---------- WT-02: tek sayı kuralı ----------
+// ONDALIK: virgül (,)  ·  BİNLİK: nokta (.)  ·  2 basamak
+// Kural dil ayarından BAĞIMSIZ, tüm dillerde aynı — ürün kararı.
+// Girişte hem "43,57" hem "43.57" kabul edilir; ikisi de 43.57 olur.
+// dec: saklanacak ondalık basamak. Varsayılan 2; kur alanı gibi hassas
+// alanlar pf(v, 6) ile çağrılır (2'ye yuvarlamak kuru bozardı).
+function pf(str, dec = 2) {
+  if (str == null) return NaN;
+  let s = String(str).trim().replace(/[^\d.,\-]/g, '');   // para simgesi, boşluk, birim at
+  if (!s) return NaN;
+  const sonNokta = s.lastIndexOf('.');
+  const sonVirgul = s.lastIndexOf(',');
+  if (sonNokta > -1 && sonVirgul > -1) {
+    // İkisi de var → SONUNCUSU ondalık, diğeri binlik
+    const ond = Math.max(sonNokta, sonVirgul);
+    s = s.slice(0, ond).replace(/[.,]/g, '') + '.' + s.slice(ond + 1).replace(/[.,]/g, '');
+  } else if (sonNokta > -1 || sonVirgul > -1) {
+    // Tek ayraç → kullanıcı girişinde HER ZAMAN ondalık kabul et
+    s = s.replace(',', '.');
+  }
+  const n = parseFloat(s);
+  if (isNaN(n)) return NaN;
+  const p = Math.pow(10, dec);
+  return Math.round(n * p) / p;
+}
+// Tüm sayı gösteriminin TEK noktası. Dile göre biçimlendirme istenirse
+// değiştirilecek tek yer burası.
+function fmtNum(v, dec = 0) {
+  if (v == null || isNaN(v)) return '—';
+  const neg = v < 0;
+  const [tam, ond] = Math.abs(v).toFixed(dec).split('.');
+  const tamStr = tam.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (neg ? '−' : '') + tamStr + (ond ? ',' + ond : '');
+}
+// Giriş kutusuna yazılacak biçim: fmtNum ile aynı kural, ama eksi işareti
+// normal tire (kutuya geri yazılınca pf() okuyabilsin) ve kur gibi çok
+// ondalıklı alanlarda gereksiz sıfırlar atılır.
+function fmtInput(v, dec = 2) {
+  if (v == null || isNaN(v)) return '';
+  let s = fmtNum(v, dec).replace('−', '-');
+  if (dec > 2 && s.indexOf(',') > -1) s = s.replace(/0+$/, '').replace(/,$/, '');
+  return s;
+}
+// WT-02/C: alandan çıkarken değeri kuralın kendisiyle geri yaz —
+// kullanıcı "43.57" yazıp çıkınca kutuda "43,57" görür, kural görünür olur.
+function bindDecimalInput(id, dec = 2) {
+  const el = $(id);
+  if (!el) return;
+  el.addEventListener('blur', () => {
+    if (!el.value.trim()) return;
+    const n = pf(el.value, dec);
+    el.value = isNaN(n) ? '' : fmtInput(n, dec);
+  });
+}
 const symOf = code => CURRENCY_SYMBOLS[code] || code;
 const sym = () => symOf(S.currency);
 // Harf içeren semboller (L, kr, Kč, Ft…) sayının SONUNA boşlukla gelir: "1.250 L";
 // işaret semboller (₺ € $ £) başa gelir: "₺1.250"
 const fm = (s, str) => /^[A-Za-z]/.test(s) ? str + ' ' + s : s + str;
-const money = v => (v < 0 ? '−' : '') + fm(sym(), Math.abs(Math.round(v || 0)).toLocaleString('tr-TR'));
-const money2 = v => (v < 0 ? '−' : '') + fm(sym(), Math.abs(v || 0).toLocaleString('tr-TR', {maximumFractionDigits: 2}));
+const money = v => (v < 0 ? '−' : '') + fm(sym(), fmtNum(Math.abs(v || 0), 0));
+const money2 = v => (v < 0 ? '−' : '') + fm(sym(), fmtNum(Math.abs(v || 0), 2));
 // WT-01: toISOString() UTC'ye çevirir; TR (UTC+3) gibi doğu saat dilimlerinde
 // gece yarısından sonra DÜNÜN tarihini verir. Tüm tarih anahtarları yerel
 // saate göre üretilmeli.
@@ -795,7 +844,7 @@ async function renderDashboard() {
       ['d-1km','d-1km-g','d-100','d-100-g'].forEach(id => $(id).textContent = '—');
     }
   }
-  $('d-kwh').textContent = kwh.toLocaleString('tr-TR', {maximumFractionDigits: 0});
+  $('d-kwh').textContent = fmtNum(kwh, 0);
   $('d-sess').textContent = cur.length + ' / ' + new Set(cur.map(r => r.firma)).size;
   $('d-disc').textContent = money(sav);
   $('d-free').textContent = cur.filter(r => r.free).length;
@@ -807,9 +856,9 @@ async function renderDashboard() {
   const odoWrap = $('d-odo-wrap');
   if (odoV && odoV.kmNow) {
     odoWrap.style.display = '';
-    $('d-odo').textContent = Math.round(distDisp(odoV.kmNow)).toLocaleString('tr-TR') + ' ' + S.unit;
+    $('d-odo').textContent = fmtNum(distDisp(odoV.kmNow), 0) + ' ' + S.unit;
     $('d-odo-total').textContent = odoV.kmStart != null
-      ? Math.round(distDisp(odoV.kmNow - odoV.kmStart)).toLocaleString('tr-TR') + ' ' + S.unit : '—';
+      ? fmtNum(distDisp(odoV.kmNow - odoV.kmStart), 0) + ' ' + S.unit : '—';
   } else odoWrap.style.display = 'none';
 
   // detay: ortalama süre & SoC aralığı (Tümü/DC/AC filtresiyle)
@@ -837,7 +886,7 @@ async function renderDashboard() {
   const yKwhThis = yThisArr.reduce((s, r) => s + r.kwh, 0), yKwhLast = yLastArr.reduce((s, r) => s + r.kwh, 0);
   const yPriceThis = yKwhThis ? ySumThis / yKwhThis : 0, yPriceLast = yKwhLast ? ySumLast / yKwhLast : 0;
   $('d-yr-spend').textContent = money(ySumThis);
-  $('d-yr-kwh').textContent = yKwhThis.toLocaleString('tr-TR', {maximumFractionDigits: 0}) + ' kWh';
+  $('d-yr-kwh').textContent = fmtNum(yKwhThis, 0) + ' kWh';
   $('d-yr-price').textContent = yKwhThis ? fm(sym(), yPriceThis.toFixed(2)) : '—';
   const yDelta = (curV, prevV, id) => {
     const el = $(id);
@@ -1015,8 +1064,8 @@ function rowHTML(r, withDelete) {
       <div class="sub">${shortDate(r.tarih)} · ${r.kwh} kWh · ${r.tip || 'DC'}${r.mesafeKm ? ' · ' + Math.round(distDisp(r.mesafeKm)) + ' ' + S.unit : ''}</div>
     </div>
     <div class="right">
-      <div class="amt">${r.free ? '<span class="free-tag">' + t('free') + '</span>' : fm(cs, Math.round(r.odenen).toLocaleString('tr-TR'))}</div>
-      <div class="sav">${s > 0 ? '−' + fm(cs, Math.round(s).toLocaleString('tr-TR')) : ''}</div>
+      <div class="amt">${r.free ? '<span class="free-tag">' + t('free') + '</span>' : fm(cs, fmtNum(r.odenen, 0))}</div>
+      <div class="sav">${s > 0 ? '−' + fm(cs, fmtNum(s, 0)) : ''}</div>
     </div>
     ${withDelete ? `<button class="del" data-del="${r.id}">×</button>` : ''}
   </div>`;
@@ -1131,9 +1180,9 @@ async function renderCompare() {
     $('c-vehsel').value = cur;
   }
   if (S.cmp) {
-    $('c-price').value = String(S.cmp.price).replace('.', ',');
-    $('c-cons').value = String(S.cmp.cons).replace('.', ',');
-    $('c-icefix').value = S.cmp.icefix ? String(S.cmp.icefix).replace('.', ',') : '';
+    $('c-price').value = fmtInput(S.cmp.price, 2);
+    $('c-cons').value = fmtInput(S.cmp.cons, 2);
+    $('c-icefix').value = S.cmp.icefix ? fmtInput(S.cmp.icefix, 2) : '';
     $('c-prorate').checked = S.cmp.prorate !== false;
     $('c-fuel').querySelectorAll('button').forEach(x =>
       x.classList.toggle('sel', x.dataset.v === S.cmp.fuel));
@@ -1205,7 +1254,7 @@ async function renderCompare() {
   // --- bugüne kadar kümülatif: EV gerçek vs yakıtlı (aynı km) ---
   const iceTot = distKm * icePerKm;
   $('c-dist-lbl').textContent = t('totalDist');
-  $('c-dist').textContent = Math.round(distDisp(distKm)).toLocaleString('tr-TR') + ' ' + S.unit;
+  $('c-dist').textContent = fmtNum(distDisp(distKm), 0) + ' ' + S.unit;
   $('c-evtot').textContent = money(net);
   $('c-icetot').textContent = money(iceTot);
   $('c-savetot').textContent = '+' + money(Math.max(0, iceTot - net));
@@ -1339,7 +1388,7 @@ async function renderVehiclePage() {
   const vehicles = allV.filter(v => !v.archived);
   const archived = allV.filter(v => v.archived);
   $('set-vehicles').innerHTML = vehicles.length ? vehicles.map(v => {
-    const kmTxt = v.kmNow ? Math.round(distDisp(v.kmNow)).toLocaleString('tr-TR') + ' ' + S.unit : '';
+    const kmTxt = v.kmNow ? fmtNum(distDisp(v.kmNow), 0) + ' ' + S.unit : '';
     const sub = [v.batt ? `${v.trim || ''} · ${v.batt} kWh` : '', kmTxt].filter(Boolean).join(' · ');
     const isDef = v.id === S.defaultVehicleId || (!S.defaultVehicleId && vehicles[0].id === v.id);
     const thumb = v.photo ? `<img class="vthumb" src="${v.photo}" alt="">` : '';
@@ -1492,7 +1541,7 @@ async function renderVehiclePage() {
           <div class="name">${e.altAd ? esc(e.altAd) : t('exp_' + e.tur)}</div>
           <div class="sub">${shortDate(e.tarih + 'T00:00')}${e.not ? ' · ' + esc(e.not) : ''}</div>
         </div>
-        <div class="right"><div class="amt">${fm(symOf(e.cur || S.currency), Math.round(e.tutar).toLocaleString('tr-TR'))}</div></div>
+        <div class="right"><div class="amt">${fm(symOf(e.cur || S.currency), fmtNum(e.tutar, 0))}</div></div>
       </div>`).join('');
     expList.querySelectorAll('[data-exp]').forEach(el =>
       el.addEventListener('click', async () =>
@@ -1758,9 +1807,12 @@ function updateNetLine() {
   const type = $('in-disc-type').querySelector('.sel').dataset.v;
   const net = netFromGross(g, type, pf($('in-disc-val').value) || 0);
   $('calc-net').textContent = fm(symOf(c ? c[3] : S.currency),
-    net.toLocaleString('tr-TR', {maximumFractionDigits: 2}));
+    fmtNum(net, 2));
 }
 ['in-amount', 'in-disc-val'].forEach(id => $(id).addEventListener('input', updateNetLine));
+// WT-02/C: ondalıklı alanlarda blur'da virgüllü geri yazma
+[['in-amount', 2], ['in-disc-val', 2], ['in-rate', 6], ['in-exp-amount', 2],
+ ['c-price', 2], ['c-cons', 2], ['c-icefix', 2]].forEach(([id, d]) => bindDecimalInput(id, d));
 // kWh kutuları: yalnız rakam, tam=3 / ondalık=2 hane
 $('in-kwh-int').addEventListener('input', () => {
   $('in-kwh-int').value = $('in-kwh-int').value.replace(/\D/g, '').slice(0, 3);
@@ -1876,7 +1928,7 @@ async function formCountryChanged(keepRate) {
       $('in-rate').value = '';
       const got = await fetchRate(c[3], S.currency, $('in-date').value);
       if (got && $('in-country').value === code) {
-        $('in-rate').value = String(Math.round(got.rate * 10000) / 10000).replace('.', ',');
+        $('in-rate').value = fmtInput(got.rate, 6);
         $('rate-note').textContent = t('rateAuto', {d: got.date}) + ' — ' + t('rateNote', {b: S.currency});
       }
     }
@@ -1907,11 +1959,11 @@ async function openAdd(id) {
   const grossVal = r && !r.free
     ? (r.tutar != null ? r.tutar : (r.odenen || 0) + savingsOf(r)) : null;
   $('in-amount').value = grossVal != null && !isNaN(grossVal)
-    ? String(Math.round(grossVal * 100) / 100).replace('.', ',') : '';
+    ? fmtInput(grossVal, 2) : '';
   const dt = r?.indirimTip === 'percent' ? 'percent' : 'amount';
   $('in-disc-type').querySelectorAll('button').forEach(b =>
     b.classList.toggle('sel', b.dataset.v === dt));
-  $('in-disc-val').value = r?.indirimDeger ? String(r.indirimDeger).replace('.', ',') : '';
+  $('in-disc-val').value = r?.indirimDeger ? fmtInput(r.indirimDeger, 2) : '';
   const durMin = r?.dur || 0;
   $('in-dur-h').value = durMin ? Math.floor(durMin / 60) : '';
   $('in-dur-m').value = durMin ? durMin % 60 : '';
@@ -1919,7 +1971,7 @@ async function openAdd(id) {
   $('in-socb').value = r?.socB ?? '';
   $('in-soca').value = r?.socA ?? '';
   $('in-note').value = r?.not || '';
-  $('in-rate').value = r?.rate ? String(r.rate).replace('.', ',') : '';
+  $('in-rate').value = r?.rate ? fmtInput(r.rate, 6) : '';
   $('in-free').dispatchEvent(new Event('change'));
 
   // firma / banka / kur — ülkeye göre (düzenlemede firmayı koru)
@@ -1993,7 +2045,7 @@ $('btn-save').addEventListener('click', async () => {
   const code = $('in-country').value;
   const c = COUNTRIES.find(x => x[0] === code);
   const foreign = c[3] !== S.currency;
-  const rate = pf($('in-rate').value);
+  const rate = pf($('in-rate').value, 6);
   if (foreign && (isNaN(rate) || rate <= 0)) {
     $('form-err').textContent = t('rateNeeded');
     $('form-err').classList.add('show');
@@ -2073,7 +2125,7 @@ async function openExpense(rec) {
   $('in-exp-altad').style.display = $('in-exp-type').value === 'other' ? '' : 'none';
   $('in-exp-date').value = (rec?.tarih || '').slice(0, 10) || localISO();
   $('in-exp-cur').value = rec?.cur || S.currency;
-  $('in-exp-amount').value = rec ? String(rec.tutar).replace('.', ',') : '';
+  $('in-exp-amount').value = rec ? fmtInput(rec.tutar, 2) : '';
   $('in-exp-veh').value = rec?.aracId || '';
   $('in-exp-note').value = rec?.not || '';
   $('in-exp-amt-lbl').textContent = t('expAmount') + ' (' + symOf($('in-exp-cur').value) + ')';
