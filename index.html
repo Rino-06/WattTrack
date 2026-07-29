@@ -144,11 +144,15 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .tile .k{font-size:11px;color:var(--muted2);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile .v{font-size:16px;font-weight:600}
 .tile .yd{font-size:11px;font-weight:600;margin-top:3px;min-height:14px}
-.h2{font-size:14px;font-weight:600;margin-bottom:12px}
+.h2{font-size:14px;font-weight:600;margin:0 0 12px}
 .h2row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:20px}
 .h2row .h2{margin:0}
 .h2row .link{font-size:12px;color:var(--accent);font-weight:500}
-.page-title{font-size:20px;font-weight:700;margin-bottom:18px}
+.page-title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.page-title{font-size:20px;font-weight:700;margin:0 0 18px}
+.page-title-row .page-title{margin:0}
+/* WT-23: h2 artık gerçek başlık — tarayıcı varsayılan boyutunu ez */
+h1,h2{font-size:inherit;font-weight:inherit}
 .card{background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
 
 .rows{display:flex;flex-direction:column;gap:10px}
@@ -372,14 +376,14 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   <div class="splash-word"><b>Watt</b><i>Track</i></div>
 </div>
 <div class="app">
-<div class="content">
+<main class="content">
 
 <!-- ============ ANA SAYFA ============ -->
 <section class="page active" id="page-dashboard">
   <div class="h2row" style="margin-top:0;margin-bottom:12px">
     <div style="display:flex;align-items:center;gap:8px">
       <img src="logo.png" alt="" style="height:30px;width:auto">
-      <div class="ob-title" style="font-size:17px"><span style="color:#6CB33F">Watt</span><span style="color:#1B5FAA">Track</span></div>
+      <h1 class="ob-title" style="font-size:17px;margin:0"><span style="color:#6CB33F">Watt</span><span style="color:#1B5FAA">Track</span></h1>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <select id="d-vehsel" aria-label="Araç filtresi" style="width:auto;max-width:160px;padding:7px 10px;font-size:12.5px;border-radius:10px" data-i18n-aria="ariaVehFilter"></select>
@@ -413,7 +417,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   </div>
 
   <div id="d-odo-wrap" style="display:none">
-    <div class="h2" data-i18n="odometer">Kilometre sayacı</div>
+    <h2 class="h2" data-i18n="odometer">Kilometre sayacı</h2>
     <div class="dstat">
       <div class="tile"><div class="k" data-i18n="odoNow">Araç sayacı</div><div class="v" id="d-odo">—</div></div>
       <div class="tile"><div class="k" data-i18n="odoTracked">Alımdan beri yapılan</div><div class="v" id="d-odo-total">—</div></div>
@@ -444,7 +448,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   </div>
 
   <div class="h2row" style="margin-top:0">
-    <div class="h2"><span data-i18n="detailStats">Detay istatistikler</span> <span class="scope-badge" id="d-dstat-scope"></span></div>
+    <h2 class="h2"><span data-i18n="detailStats">Detay istatistikler</span> <span class="scope-badge" id="d-dstat-scope"></span></h2>
     <div class="seg mini" id="d-dstat-type" style="width:170px">
       <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
       <button data-v="DC">DC</button>
@@ -459,7 +463,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div class="tile"><div class="k" data-i18n="chargePower">Ort. şarj gücü</div><div class="v" id="d-power">—</div></div>
   </div>
 
-  <div class="h2"><span data-i18n="yearlyCompare">Yıllık karşılaştırma</span> <span class="scope-badge" id="d-yr-scope"></span></div>
+  <h2 class="h2"><span data-i18n="yearlyCompare">Yıllık karşılaştırma</span> <span class="scope-badge" id="d-yr-scope"></span></h2>
   <div class="tiles">
     <div class="tile"><div class="k" data-i18n="yearlySpendLbl">Toplam harcama (bu yıl)</div><div class="v" id="d-yr-spend">—</div><div class="yd" id="d-yr-spend-d"></div></div>
     <div class="tile"><div class="k" data-i18n="yearlyKwhLbl">Enerji (bu yıl)</div><div class="v" id="d-yr-kwh">—</div><div class="yd" id="d-yr-kwh-d"></div></div>
@@ -469,7 +473,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   </div>
 
   <div class="h2row" style="margin-top:0">
-    <div class="h2" data-i18n="recentCharges">Son şarjlar</div>
+    <h2 class="h2" data-i18n="recentCharges">Son şarjlar</h2>
     <button class="link" id="d-viewall" data-i18n="viewAll">Tümü</button>
   </div>
   <div class="rows" id="d-recent"></div>
@@ -477,8 +481,8 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
 <!-- ============ İSTATİSTİK ============ -->
 <section class="page" id="page-stats">
-  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center">
-    <span data-i18n="statsTitle">İstatistikler</span>
+  <div class="page-title-row">
+    <h1 class="page-title"><span data-i18n="statsTitle">İstatistikler</span></h1>
     <div style="display:flex;align-items:center;gap:8px">
       <select id="s-vehsel" aria-label="Araç filtresi" style="width:auto;max-width:160px;padding:7px 10px;font-size:12.5px;border-radius:10px" data-i18n-aria="ariaVehFilter"></select>
       <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
@@ -496,42 +500,45 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   </div>
 
   <div class="h2row" style="margin-top:0">
-    <div class="h2" data-i18n="spendChart">Harcama grafiği</div>
+    <h2 class="h2" data-i18n="spendChart">Harcama grafiği</h2>
     <span class="scope-badge" id="s-chart-scope"></span>
   </div>
   <div class="monthbars" id="d-months"></div>
 
-  <div class="h2" data-i18n="weekdayDist">Haftanın günlerine göre dağılım</div>
+  <h2 class="h2" data-i18n="weekdayDist">Haftanın günlerine göre dağılım</h2>
   <div class="monthbars" id="d-weekdays"></div>
 
-  <div class="h2" data-i18n="firmDist">Firma dağılımı</div>
+  <h2 class="h2" data-i18n="firmDist">Firma dağılımı</h2>
   <div class="rows" id="d-firms" style="margin-bottom:14px"></div>
 
   <!-- WT-16/5: iki AYRI boyut, iki ayrı donut.
        DC/AC bir teknoloji boyutu; Ev-İş / Şarj firması bir yer boyutu.
        Eskiden tek donutta karışıyorlardı (ev şarjı fiziksel olarak AC'dir). -->
-  <div class="h2" data-i18n="typeSplit">Şarj tipi dağılımı</div>
+  <h2 class="h2" data-i18n="typeSplit">Şarj tipi dağılımı</h2>
   <div class="donut-wrap">
     <svg viewBox="0 0 42 42" id="d-donut"></svg>
     <div class="legend" id="d-donut-legend"></div>
   </div>
 
-  <div class="h2" data-i18n="placeSplit">Şarj yeri dağılımı (kWh)</div>
+  <h2 class="h2" data-i18n="placeSplit">Şarj yeri dağılımı (kWh)</h2>
   <div class="donut-wrap">
     <svg viewBox="0 0 42 42" id="d-donut2"></svg>
     <div class="legend" id="d-donut2-legend"></div>
   </div>
 
-  <div class="h2" data-i18n="topBanks">Bankalar (indirim kazancı)</div>
+  <h2 class="h2" data-i18n="topBanks">Bankalar (indirim kazancı)</h2>
   <div class="toplist" id="d-banks"></div>
 
-  <div class="h2" data-i18n="topLocations">En çok şarj edilen lokasyonlar</div>
+  <h2 class="h2" data-i18n="topLocations">En çok şarj edilen lokasyonlar</h2>
   <div class="toplist" id="d-locs"></div>
 </section>
 
 <!-- ============ GEÇMİŞ ============ -->
 <section class="page" id="page-history">
-  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="historyTitle">Geçmiş</span><button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button></div>
+  <div class="page-title-row">
+    <h1 class="page-title"><span data-i18n="historyTitle">Geçmiş</span></h1>
+    <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
+  </div>
   <div class="filters">
     <select id="f-year" data-i18n-aria="ariaYearFilter" aria-label="Yıl filtresi"></select>
     <select id="f-firm" data-i18n-aria="ariaFirmFilter" aria-label="Firma filtresi"></select>
@@ -545,7 +552,10 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
 <!-- ============ KIYASLA ============ -->
 <section class="page" id="page-compare">
-  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="compareTitle">Yakıtlı Araçla Kıyasla</span><button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button></div>
+  <div class="page-title-row">
+    <h1 class="page-title"><span data-i18n="compareTitle">Yakıtlı Araçla Kıyasla</span></h1>
+    <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
+  </div>
   <div id="c-warnings" class="warn-host"></div>
 
   <div class="card">
@@ -590,7 +600,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
   <div id="c-result" style="display:none">
   <div class="scope-note" id="c-veh-note" style="margin:0 0 10px"></div>
-    <div class="h2" data-i18n="unitCostTitle">Birim maliyet — EV ve Yakıtlı yan yana</div>
+    <h2 class="h2" data-i18n="unitCostTitle">Birim maliyet — EV ve Yakıtlı yan yana</h2>
     <div class="tiles">
       <div class="tile"><div class="k" id="c-1km-lbl">EV 1 km (net)</div><div class="v" id="c-1km" style="color:var(--accent-dark)">—</div></div>
       <div class="tile"><div class="k" id="c-ice1km-lbl">Yakıtlı 1 km</div><div class="v" id="c-ice1km" style="color:var(--red)">—</div></div>
@@ -611,7 +621,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       <div class="v" id="c-perkm" style="font-size:28px">—</div>
       <div class="pill" id="c-per100">—</div>
     </div>
-    <div class="h2" data-i18n="cumTitle">Bugüne kadar: aynı km yakıtlıyla gidilseydi</div>
+    <h2 class="h2" data-i18n="cumTitle">Bugüne kadar: aynı km yakıtlıyla gidilseydi</h2>
     <div class="tiles">
       <div class="tile"><div class="k" data-i18n="evSpent">EV toplam (net)</div><div class="v" id="c-evtot" style="color:var(--accent-dark)">—</div></div>
       <div class="tile"><div class="k" data-i18n="iceWould">Yakıtlıyla olurdu</div><div class="v" id="c-icetot" style="color:var(--blue)">—</div></div>
@@ -632,7 +642,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
          yerine açıklama konur. Grafik SİLİNMİYOR — WT-43'ten sonra anlamlı. -->
     <div class="scope-note" id="c-line-note" style="display:none"></div>
 
-    <div class="h2" data-i18n="tcoTitle">Toplam sahip olma maliyeti (şarj + giderler)</div>
+    <h2 class="h2" data-i18n="tcoTitle">Toplam sahip olma maliyeti (şarj + giderler)</h2>
     <div class="about" data-i18n="tcoExplain" style="margin:-4px 0 10px;font-size:11.5px">Giderler toplamı, Aracım sekmesine girdiğin vergi, sigorta, bakım gibi kalemlerdir.</div>
     <div class="tiles">
       <div class="tile"><div class="k" data-i18n="tcoExpEv">EV sabit giderleri (Aracım)</div><div class="v" id="c-exptot" style="color:var(--accent-dark)">—</div></div>
@@ -654,7 +664,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div class="about" id="c-tco-note" style="margin:-4px 0 14px;font-size:11.5px"></div>
 
     <div id="c-nf-wrap" style="display:none">
-      <div class="h2" data-i18n="nonFuelTitle">Yakıt dışı gider kıyaslaması</div>
+      <h2 class="h2" data-i18n="nonFuelTitle">Yakıt dışı gider kıyaslaması</h2>
       <div class="tiles">
         <div class="tile"><div class="k" id="c-nf-ev-km-lbl">—</div><div class="v" id="c-nf-ev-km" style="color:var(--accent-dark)">—</div></div>
         <div class="tile"><div class="k" id="c-nf-ice-km-lbl">—</div><div class="v" id="c-nf-ice-km" style="color:var(--blue)">—</div></div>
@@ -690,7 +700,10 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
 <!-- ============ ARACIM ============ -->
 <section class="page" id="page-vehicle">
-  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="vehicleTitle">Aracım</span><button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button></div>
+  <div class="page-title-row">
+    <h1 class="page-title"><span data-i18n="vehicleTitle">Aracım</span></h1>
+    <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
+  </div>
 
   <div class="section-lbl" data-i18n="vehicles">Araçlarım</div>
   <ul class="vlist" id="set-vehicles"></ul>
@@ -705,7 +718,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       <select id="veh-exp-sel"></select>
     </div>
     <div class="h2row" style="margin-top:0">
-      <div class="h2" id="c-exp-title" data-i18n="expenses">Araç giderleri</div>
+      <h2 class="h2" id="c-exp-title" data-i18n="expenses">Araç giderleri</h2>
       <button class="mini-btn" id="btn-add-exp" style="margin:0">+ <span data-i18n="addExpense">Gider ekle</span></button>
     </div>
     <div class="tiles">
@@ -714,7 +727,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     </div>
     <div id="v-exp-chart-wrap" style="display:none">
       <div class="h2row" style="margin-top:6px">
-        <div class="h2" data-i18n="expChart">Sabit gider grafiği</div>
+        <h2 class="h2" data-i18n="expChart">Sabit gider grafiği</h2>
         <div class="seg mini" id="v-exp-gran" style="width:120px">
           <button data-v="month" class="sel" data-i18n="month">Ay</button>
           <button data-v="year" data-i18n="year">Yıl</button>
@@ -724,7 +737,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     </div>
     <div class="rows" id="c-exp-list"></div>
     <div id="c-exp-cats-wrap" style="display:none">
-      <div class="h2" data-i18n="expByCat">Gider dağılımı</div>
+      <h2 class="h2" data-i18n="expByCat">Gider dağılımı</h2>
       <div class="toplist" id="c-exp-cats"></div>
     </div>
   </div>
@@ -732,7 +745,10 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
 <!-- ============ AYARLAR ============ -->
 <section class="page" id="page-settings">
-  <div class="page-title" style="display:flex;justify-content:space-between;align-items:center"><span data-i18n="settingsTitle">Ayarlar</span><button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button></div>
+  <div class="page-title-row">
+    <h1 class="page-title"><span data-i18n="settingsTitle">Ayarlar</span></h1>
+    <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
+  </div>
 
   <div class="section-lbl" data-i18n="regionSection">Ülke ve Bölge</div>
   <button class="setting-btn" id="btn-country" style="display:flex;justify-content:space-between;align-items:center">
@@ -1058,13 +1074,13 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   <div class="ov-body">
     <input type="text" id="car-search" data-i18n-ph="phCarSearch" placeholder="ör. EV6, Torres…">
     <div class="rows" id="car-results"></div>
-    <div id="car-summary" style="display:none"></div>
+    <div id="car-summary" style="display:none"></main>
     <input type="file" id="car-photo" accept="image/*" style="display:none">
     <button class="save-btn" id="car-save" disabled data-i18n="add">Ekle</button>
   </div>
 </section>
 
-<nav>
+<nav data-i18n-aria="navMain" aria-label="Ana menü">
   <button data-page="dashboard" class="sel">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.2 9V21h13.6V9"/><path d="M9.8 21v-6.2h4.4V21"/></svg>
     <span data-i18n="navHome">Ana Sayfa</span>

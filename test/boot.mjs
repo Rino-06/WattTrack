@@ -394,6 +394,38 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   app().applyI18n();
 }
 
+// --- WT-23: başlık hiyerarşisi ve landmark'lar ---
+{
+  const doc = window.document;
+  check('WT-23/1: içerik sarmalayıcısı <main>',
+    !!doc.querySelector('main.content'));
+  check('WT-23/2: her sayfanın bir <h1> başlığı var',
+    [...doc.querySelectorAll('.content .page')].every(p => p.querySelector('h1')),
+    [...doc.querySelectorAll('.content .page')]
+      .filter(p => !p.querySelector('h1')).map(p => p.id).join(', ') || '(hepsi tamam)');
+  check('WT-23/2: sayfa başına tam olarak BİR h1',
+    [...doc.querySelectorAll('.content .page')].every(p => p.querySelectorAll('h1').length === 1));
+  check('WT-23/3: alt başlıklar <h2>', doc.querySelectorAll('h2.h2').length === 18,
+    'h2 sayısı=' + doc.querySelectorAll('h2.h2').length);
+  check('WT-23: h1 içinde buton/seçici yok (erişilebilir ad temiz)',
+    [...doc.querySelectorAll('h1')].every(h => !h.querySelector('button,select,input')),
+    [...doc.querySelectorAll('h1')].filter(h => h.querySelector('button,select,input'))
+      .map(h => h.textContent.trim().slice(0, 25)).join(', ') || '(temiz)');
+  check('WT-23/4: <nav> çevrilebilir aria-label taşıyor',
+    doc.querySelector('nav')?.getAttribute('data-i18n-aria') === 'navMain'
+      && !!doc.querySelector('nav')?.getAttribute('aria-label'));
+  // WT-23/5 aria-current WT-24'te eklendi; burada hâlâ çalıştığını doğrula
+  app().showScreen('history');
+  await sleep(200);
+  const cur = [...doc.querySelectorAll('nav button[data-page]')]
+    .filter(b => b.getAttribute('aria-current') === 'page');
+  check('WT-23/5: aktif sekme aria-current=page taşıyor (tek tane)',
+    cur.length === 1 && cur[0].dataset.page === 'history',
+    'aria-current: ' + cur.map(b => b.dataset.page).join(','));
+  app().showScreen('dashboard');
+  await sleep(200);
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
