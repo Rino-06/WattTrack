@@ -84,7 +84,7 @@ const w = makeWindow();
 w.eval(['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
   + `\n;window.__app = {db, S, t, openAdd, renderStats, saveSetting,
-       syncHomePricing, HOME_LABEL, OLD_HOME_NAMES};`);
+       syncHomePricing, HOME_LABEL, OLD_HOME_NAMES, isHomeFirm, applyI18n};`);
 await sleep(1400);
 const A = w.__app;
 const $ = id => w.document.getElementById(id);
@@ -181,6 +181,51 @@ check('WT-16/C KABUL: DC seçilince kWh fiyatı alanı kayboldu',
   'display=' + $('wrap-unitprice').style.display);
 check('WT-16/B: DC seçilince firma listesi Ev-İş\'ten çıktı',
   $('in-firm').value !== 'Ev-İş', 'firma=' + $('in-firm').value);
+
+// ---------- Ev-İş kimliği DİLE BAĞLI OLMAMALI ----------
+// Kullanıcı kayıtları Türkçe girip sonra İngilizce'ye geçerse 'Ev-İş' değeri
+// t('homeChip') ile eşleşmez; birim fiyat alanı açılmaz, indirim geri gelir
+// ve yeniden kaydedince mekan sessizce 'firma'ya kayardı.
+{
+  check('tanıma kümesi altı dilin yeni ve eski etiketlerini biliyor',
+    A.isHomeFirm('Ev-İş') && A.isHomeFirm('Home/Work') && A.isHomeFirm('Casa/Lavoro')
+      && A.isHomeFirm('Ev') && A.isHomeFirm('Zuhause') && !A.isHomeFirm('ZES'));
+
+  // Türkçe'de bir Ev-İş kaydı oluştur
+  A.S.lang = 'tr';
+  const hid = await A.db.sessions.add({
+    tarih: '2026-08-01T12:00', firma: 'Ev-İş', mekan: 'evis', tip: 'AC',
+    kwh: 40, tutar: 112, odenen: 112, cur: 'TRY', aracId: null,
+    tutarKaynak: 'birimFiyat', birimFiyat: 2.80
+  });
+
+  // Dili İngilizce yap ve kaydı düzenlemeye aç
+  A.S.lang = 'en';
+  A.applyI18n();
+  await A.openAdd(hid);
+  await sleep(300);
+
+  check('dil değişince eski Ev-İş kaydı yine ev olarak tanınıyor',
+    A.isHomeFirm($('in-firm').value), 'firma seçili=' + $('in-firm').value);
+  check('KUSUR DÜZELDİ: kWh birim fiyatı alanı hâlâ açık',
+    $('wrap-unitprice').style.display !== 'none',
+    'display=' + $('wrap-unitprice').style.display);
+  check('KUSUR DÜZELDİ: indirim bloğu hâlâ gizli',
+    $('wrap-disc').style.display === 'none',
+    'display=' + $('wrap-disc').style.display);
+  check('firma listesinde iki ayrı "ev" satırı yok',
+    [...$('in-firm').options].filter(o => A.isHomeFirm(o.value)).length === 1,
+    'ev satırları: ' + [...$('in-firm').options].filter(o => A.isHomeFirm(o.value)).map(o => o.value).join(', '));
+
+  // hiçbir şey değiştirmeden yeniden kaydet
+  $('btn-save').click();
+  await sleep(450);
+  const after = await A.db.sessions.get(hid);
+  check('KUSUR DÜZELDİ: yeniden kaydedince mekan evis kaldı (firmaya kaymadı)',
+    after.mekan === 'evis', 'mekan=' + after.mekan);
+  A.S.lang = 'tr';
+  A.applyI18n();
+}
 
 const failed = results.filter(r => !r).length;
 console.log('\n' + (failed ? `${failed} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ') + ` (${results.length} kontrol)`);

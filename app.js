@@ -24,6 +24,12 @@ db.version(2).stores({
 const OLD_HOME_NAMES = ['Ev', 'Home', 'Zuhause', 'Maison', 'Casa'];
 const HOME_LABEL = {tr: 'Ev-İş', en: 'Home/Work', de: 'Zuhause/Arbeit',
   fr: 'Domicile/Travail', es: 'Casa/Trabajo', it: 'Casa/Lavoro'};
+// Ev-İş kimliği DİLE BAĞLI OLMAMALI. Kullanıcı kayıtları Türkçe girip sonra
+// İngilizce'ye geçerse 'Ev-İş' değeri t('homeChip') ile eşleşmez ve kayıt
+// sessizce "Şarj firması"na kayardı. Altı dilin yeni ve eski karşılıkları
+// birlikte tanınır.
+const HOME_NAMES = new Set([...Object.values(HOME_LABEL), ...OLD_HOME_NAMES]);
+const isHomeFirm = f => HOME_NAMES.has(f);
 db.version(3).stores({
   sessions: '++id, tarih, firma, tip, aracId, mekan',
   vehicles: '++id, ad',
@@ -988,7 +994,7 @@ const overlayStack = [];          // en üstteki en sonda
 // Bu yüzden açılıştaki değerler bir anlık görüntüye alınıp onunla kıyaslanır.
 const WATCHED = {
   'page-add': ['in-date', 'in-kwh', 'in-amount', 'in-disc-val', 'in-dist', 'in-odo',
-               'in-missed',
+               'in-missed', 'in-unitprice',
                'in-loc', 'in-note', 'in-rate', 'in-socb', 'in-soca',
                'in-dur-h', 'in-dur-m'],
   'page-expense': ['in-exp-date', 'in-exp-amount', 'in-exp-note', 'in-exp-altad']
@@ -1424,8 +1430,7 @@ async function renderStats() {
     {name: 'AC', kwh: sumKwh(cur.filter(r => r.tip !== 'DC')), col: '#1B5FAA'}
   ].filter(x => x.kwh > 0));
   // Şarj YERİ: `mekan` alanından. Eski kayıtlarda mekan yoksa firma adına düş.
-  const isHome = r => (r.mekan ? r.mekan === 'evis'
-    : (r.firma === t('homeChip') || OLD_HOME_NAMES.includes(r.firma)));
+  const isHome = r => (r.mekan ? r.mekan === 'evis' : isHomeFirm(r.firma));
   drawDonut('d-donut2', 'd-donut2-legend', [
     {name: t('homeChip'), kwh: sumKwh(cur.filter(isHome)), col: '#7DC855'},
     {name: t('placeFirm'), kwh: sumKwh(cur.filter(r => !isHome(r))), col: '#1B5FAA'}
@@ -1664,8 +1669,16 @@ async function renderCompare() {
   $('c-perkm').style.fontSize = '28px';
 
   const f = distFactor();                       // 100 birim = 100*f km
-  const evNetPerKm = net / distKm;
-  const evGrossPerKm = gross / distKm;
+  // WT-20 kararı: `atlanan` işaretli kayıtlar km BAŞI ortalamalardan çıkarılır
+  // (ana sayfayla aynı kural), ama toplam mesafeden ÇIKARILMAZ — o km'ler
+  // gerçekten sürüldü ve "aynı km yakıtlıyla" kıyası onlara dayanıyor.
+  const wdAvg = odoMode ? wd : wd.filter(r => !r.atlanan);
+  const distAvg = wdAvg.reduce((s, r) => s + r.mesafeKm, 0) || distKm;
+  const netAvg = odoMode ? net : wdAvg.reduce((s, r) => s + amtB(r), 0);
+  const grossAvg = odoMode ? gross
+    : netAvg + wdAvg.reduce((s, r) => s + savB(r), 0);
+  const evNetPerKm = netAvg / distAvg;
+  const evGrossPerKm = grossAvg / distAvg;
   const icePerKm = S.cmp.price * S.cmp.cons / 100;
 
   $('c-1km').textContent = money2(evNetPerKm * f);
@@ -2412,13 +2425,14 @@ $('in-tip').addEventListener('click', e => {
 });
 
 // ---------- WT-16/C: Ev-İş şarjında tutarı kWh fiyatından hesapla ----------
-const homeSelected = () => $('in-firm').value === t('homeChip');
+const homeSelected = () => isHomeFirm($('in-firm').value);
 function selectHomeFirm(on) {
   const sel = $('in-firm');
   if (on) {
-    if ([...sel.options].some(o => o.value === t('homeChip'))) sel.value = t('homeChip');
+    const opt = [...sel.options].find(o => isHomeFirm(o.value));
+    if (opt) sel.value = opt.value;
   } else {
-    const first = [...sel.options].find(o => o.value !== t('homeChip') && o.value !== '__other');
+    const first = [...sel.options].find(o => !isHomeFirm(o.value) && o.value !== '__other');
     if (first) sel.value = first.value;
   }
   $('in-firm-other').style.display = sel.value === '__other' ? '' : 'none';
@@ -2552,12 +2566,16 @@ function fillFirmSelect(code, current, usedCounts) {
   const used = Object.entries(usedCounts)
     .sort((a, b) => b[1] - a[1]).map(e => e[0]);
   const home = t('homeChip');
-  const list = [...new Set([home, ...used, ...chargersFor(code)])];
+  // Başka bir dilde kaydedilmiş ev etiketleri mevcut dile indirgenir; aksi
+  // halde listede iki ayrı "ev" satırı görünürdü.
+  const norm = f => isHomeFirm(f) ? home : f;
+  const list = [...new Set([home, ...used.map(norm), ...chargersFor(code).map(norm)])];
   const opts = list.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('') +
     `<option value="__other">${t('other')}</option>`;
   $('in-firm').innerHTML = opts;
-  if (current && list.includes(current)) {
-    $('in-firm').value = current;
+  const cur2 = current ? norm(current) : current;
+  if (cur2 && list.includes(cur2)) {
+    $('in-firm').value = cur2;
     $('in-firm-other').style.display = 'none';
   } else if (current) {
     $('in-firm').value = '__other';
@@ -2648,7 +2666,6 @@ async function openAdd(id) {
   amountSrc = r ? (r.tutarKaynak || 'manuel') : 'birimFiyat';
   $('in-unitprice').value = fmtInput(r?.birimFiyat ?? S.homeKwhPrice, 2);
   $('in-free').dispatchEvent(new Event('change'));
-  syncHomePricing();
 
   // firma / banka / kur — ülkeye göre (düzenlemede firmayı koru)
   await (async () => {
@@ -2701,6 +2718,9 @@ async function openAdd(id) {
   $('adv-fields').classList.toggle('open', advOpen);
   $('btn-adv').textContent = advOpen ? t('advancedHide') : t('advanced');
 
+  // WT-16/C: firma seçimi yukarıdaki await bloklarında yapılıyor; birim fiyat
+  // alanının görünürlüğü ancak ondan SONRA doğru hesaplanabilir.
+  syncHomePricing();
   overlayOpen('page-add');
   markFormClean('page-add');   // WT-24/7: 'temiz' referansı
   $('page-add').querySelector('.ov-body').scrollTop = 0;
@@ -2776,7 +2796,7 @@ $('btn-save').addEventListener('click', async () => {
     tarih: $('in-date').value + 'T12:00',
     tip: $('in-tip').querySelector('.sel').dataset.v,
     firma, kwh: Math.round(kwh * 100) / 100,
-    mekan: firma === t('homeChip') ? 'evis' : 'firma',      // WT-16/1
+    mekan: isHomeFirm(firma) ? 'evis' : 'firma',            // WT-16/1 (dilden bağımsız)
     birimFiyat: homeSelected() && amountSrc === 'birimFiyat'
       ? (pf($('in-unitprice').value) || null) : null,
     tutarKaynak: homeSelected() ? amountSrc : 'manuel',      // WT-16/C4
