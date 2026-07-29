@@ -486,13 +486,18 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   </div>
   <div id="s-warnings" class="warn-host"></div>
 
+  <!-- WT-15: seçici sayfanın TAMAMINI etkiliyor; bu yüzden başlığın hemen
+       altında, tam genişlikte ve kapsamı söyleyen bir etiketle duruyor -->
+  <div class="lbl" id="s-gran-lbl" style="margin-top:2px">Dönem</div>
+  <div class="seg" id="d-gran" role="radiogroup" aria-labelledby="s-gran-lbl" style="margin-bottom:16px">
+    <button data-v="week" data-i18n="week">Hafta</button>
+    <button data-v="month" class="sel" data-i18n="month">Ay</button>
+    <button data-v="year" data-i18n="year">Yıl</button>
+  </div>
+
   <div class="h2row" style="margin-top:0">
     <div class="h2" data-i18n="spendChart">Harcama grafiği</div>
-    <div class="seg mini" id="d-gran" style="width:170px">
-      <button data-v="week" data-i18n="week">Hafta</button>
-      <button data-v="month" class="sel" data-i18n="month">Ay</button>
-      <button data-v="year" data-i18n="year">Yıl</button>
-    </div>
+    <span class="scope-badge" id="s-chart-scope"></span>
   </div>
   <div class="monthbars" id="d-months"></div>
 

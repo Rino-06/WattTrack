@@ -54,7 +54,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
   // const/let bildirimleri window'a iliştirilmez; teste açmak için köprü kur
   + `\n;window.__app = {db, S, APP_VERSION, openAdd, showScreen, pf, fmtNum,
        fmtInput, checkNum, isValidDate, localISO, renderDashboard, scanBadData,
-       isConv, amtB};`;
+       isConv, amtB, renderStats};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -260,6 +260,57 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     $('d-dist-scope').textContent.trim() !== '' &&
       !/tüm zamanlar/i.test($('d-dist-scope').textContent),
     'not=' + JSON.stringify($('d-dist-scope').textContent));
+}
+
+// --- WT-15: istatistik seçicisi sayfanın tamamını etkiliyor mu? ---
+{
+  await app().db.sessions.clear();
+  await app().db.vehicles.clear();
+  const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const today = new Date();
+  const oldD = new Date(today); oldD.setMonth(oldD.getMonth() - 5);
+  await app().db.sessions.bulkAdd([
+    // bu hafta: AC / Firma A / banka X / Ankara
+    { tarih: iso(today) + 'T12:00', firma: 'FirmaA', tip: 'AC', kwh: 20, tutar: 200,
+      odenen: 200, cur: 'TRY', banka: 'BankaX', loc: 'Ankara', aracId: null },
+    // 5 ay önce: DC / Firma B / banka Y / İzmir
+    { tarih: iso(oldD) + 'T12:00', firma: 'FirmaB', tip: 'DC', kwh: 60, tutar: 700,
+      odenen: 700, cur: 'TRY', banka: 'BankaY', loc: 'İzmir', aracId: null }
+  ]);
+  app().S.dashVeh = '';
+
+  app().S.gran = 'year';
+  await app().renderStats();
+  await sleep(350);
+  const firmsYear = $('d-firms').textContent;
+  const donutYear = $('d-donut-legend').textContent;
+  const banksYear = $('d-banks').textContent;
+  const locsYear = $('d-locs').textContent;
+  const wdYear = $('d-weekdays').textContent;
+
+  app().S.gran = 'week';
+  await app().renderStats();
+  await sleep(350);
+  const firmsWeek = $('d-firms').textContent;
+  const donutWeek = $('d-donut-legend').textContent;
+
+  check('WT-15 KABUL: "Hafta" seçince firma dağılımı daraldı',
+    firmsYear.includes('FirmaB') && !firmsWeek.includes('FirmaB'),
+    `yıl FirmaB=${firmsYear.includes('FirmaB')} hafta FirmaB=${firmsWeek.includes('FirmaB')}`);
+  check('WT-15 KABUL: "Hafta" seçince donut daraldı',
+    donutYear !== donutWeek && !donutWeek.includes('DC'),
+    `yıl=${donutYear.trim().slice(0, 40)} hafta=${donutWeek.trim().slice(0, 40)}`);
+  check('WT-15: bankalar da daraldı',
+    banksYear.includes('BankaY') && !$('d-banks').textContent.includes('BankaY'));
+  check('WT-15: lokasyonlar da daraldı',
+    locsYear.includes('İzmir') && !$('d-locs').textContent.includes('İzmir'));
+  check('WT-15: gün dağılımı da daraldı', wdYear !== $('d-weekdays').textContent);
+  check('WT-15: seçici kapsamı etiketle söylüyor',
+    /Dönem/.test($('s-gran-lbl').textContent),
+    'etiket=' + JSON.stringify($('s-gran-lbl').textContent));
+  check('WT-15: harcama grafiği kasıtlı seyir olduğunu belirtiyor',
+    $('s-chart-scope').textContent.trim() !== '',
+    'rozet=' + JSON.stringify($('s-chart-scope').textContent));
 }
 
 const failed = results.filter(r => !r.pass);
