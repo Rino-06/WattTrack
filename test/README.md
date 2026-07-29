@@ -16,6 +16,7 @@ npm test
 | `backup.mjs` (27) | WT-06 sıfırlama, WT-07 ayar geri yükleme, WT-08 aracId eşleme, WT-09 araç silme + toplu taşıma/geri al + öksüz kayıt |
 | `overlay.mjs` (20) | WT-24 dialog semantiği, odak, Escape, geri tuşu, sekme geçmişi, kirli form onayı (düzenleme modu dahil) |
 | `homework.mjs` (22) | WT-16 Ev-İş/Firma ayrımı, şema v3 migration'ı (v2 verisiyle ayrı açılış), kWh birim fiyatından tutar |
+| `odo.mjs` (16) | WT-19 sırasız kayıt, iki komşu doğrulaması, silme, kmStart sınırı, mi birim dönüşümü |
 
 **Not:** Bu, WT-51'in (birim testleri + CI) yerine geçmez — o madde saf
 fonksiyonları izole test edecek ve GitHub Actions'a bağlanacak. Buradakiler
