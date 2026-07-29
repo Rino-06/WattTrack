@@ -2469,7 +2469,14 @@ $('btn-support').addEventListener('click', () => {
 });
 $('btn-wipe').addEventListener('click', async () => {
   if (!confirm(t('wipeAsk1')) || !confirm(t('wipeAsk2'))) return;
-  await db.sessions.clear(); await db.vehicles.clear(); await db.settings.clear();
+  // WT-06: expenses.clear() eksikti — sıfırlama sonrası eski vergi/sigorta
+  // kayıtları geri gelip TCO'yu bozuyordu. Dördü tek transaction'da.
+  await db.transaction('rw', db.sessions, db.vehicles, db.expenses, db.settings, async () => {
+    await db.sessions.clear();
+    await db.vehicles.clear();
+    await db.expenses.clear();
+    await db.settings.clear();
+  });
   toast(t('wiped'));
   location.reload();
 });
