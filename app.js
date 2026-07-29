@@ -988,6 +988,54 @@ function showScreen(name, {push = true} = {}) {
   document.querySelector('.content').scrollTop = 0;
 }
 
+// WT-29/2: hata düzeltilince aria-invalid ve aria-describedby kaldırılır.
+function clearFormErr() {
+  const err = $('form-err');
+  if (err) { err.textContent = ''; err.classList.remove('show'); }
+  document.querySelectorAll('[aria-invalid="true"]').forEach(el => {
+    el.removeAttribute('aria-invalid');
+    const d = (el.getAttribute('aria-describedby') || '')
+      .split(/\s+/).filter(x => x && x !== 'form-err').join(' ');
+    if (d) el.setAttribute('aria-describedby', d); else el.removeAttribute('aria-describedby');
+  });
+}
+
+// ============================================================
+// GRAFİKLERİN METİN ALTERNATİFİ (WT-30)
+// ============================================================
+// Donut, bar grafikleri ve drawLineChart çıktısı ekran okuyucuya görünmezdi.
+// Ayrıca bar sütunları <div>'di ve click dinleyicisi vardı — klavyeyle
+// erişilemiyordu.
+//
+// bars: [{label, value, text}] · text verilmezse label + biçimli değer
+function labelBarChart(hostId, title, bars) {
+  const host = $(hostId);
+  if (!host) return;
+  host.setAttribute('role', 'img');
+  host.setAttribute('aria-label', title + ': ' +
+    (bars.length ? bars.map(b => `${b.label} ${b.text}`).join(', ') : t('noData')));
+  // Görsel gizli özet tablo — sütun sütun okunabilsin
+  const sum = document.createElement('table');
+  sum.className = 'sr-only';
+  sum.innerHTML = `<caption>${esc(title)}</caption><tbody>` +
+    bars.map(b => `<tr><th scope="row">${esc(b.label)}</th><td>${esc(b.text)}</td></tr>`).join('') +
+    '</tbody>';
+  host.after(sum);
+  host._srSummary?.remove();
+  host._srSummary = sum;
+}
+// Tıklanabilir sütunları gerçek butona çevir (klavye erişimi)
+function makeBarsFocusable(hostId, labelOf) {
+  $(hostId)?.querySelectorAll('.mb[data-y]').forEach(el => {
+    el.setAttribute('role', 'button');
+    el.tabIndex = 0;
+    el.setAttribute('aria-label', labelOf(el));
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+    });
+  });
+}
+
 // ============================================================
 // SEGMENT KONTROLLERİ (WT-28)
 // ============================================================
@@ -1424,6 +1472,9 @@ async function renderStats() {
     </div>`).join('');
   $('d-months').querySelectorAll('.mb').forEach(el =>
     el.addEventListener('click', () => { histYear = el.dataset.y; showScreen('history'); }));
+  labelBarChart('d-months', t('spendChart'),
+    bars.map(b => ({label: b.label, text: money(b.sum)})));
+  makeBarsFocusable('d-months', el => el.dataset.y + ' — ' + t('viewAll'));
 
   // haftanın günlerine göre dağılım (dönem filtreli, Pzt→Paz)
   const wdSum = [0, 0, 0, 0, 0, 0, 0];
@@ -1439,6 +1490,8 @@ async function renderStats() {
       <div class="bar" style="height:${6 + Math.round(v / maxW * 66)}px"></div>
       <div class="m">${DAYS[S.lang][i]}</div>
     </div>`).join('');
+  labelBarChart('d-weekdays', t('weekdayDist'),
+    wdSum.map((v, i) => ({label: DAYS[S.lang][i], text: money(v)})));
 
   // firma dağılımı (dönem filtreli)
   const by = {};
@@ -1465,7 +1518,7 @@ async function renderStats() {
   // TEKNOLOJİ boyutu, "Ev" bir FİRMA değeriydi — ev şarjı da fiziksel olarak AC
   // olduğu için aynı kayıt ana sayfada "AC", donutta "Ev" sayılıyordu.
   const trackCol = getComputedStyle(document.documentElement).getPropertyValue('--track').trim() || '#E3EAE4';
-  const drawDonut = (svgId, legendId, segs) => {
+  const drawDonut = (svgId, legendId, title, segs) => {
     const tot = segs.reduce((s, x) => s + x.kwh, 0) || 1;
     let off = 25;
     $(svgId).innerHTML =
@@ -1481,16 +1534,21 @@ async function renderStats() {
       `<div class="li"><span class="dot" style="background:${x.col}"></span>${esc(x.name)}
        <span class="lv">${Math.round(x.kwh)} kWh · %${Math.round(x.kwh / tot * 100)}</span></div>`).join('') ||
       `<div class="li" style="color:var(--faint)">${t('noData')}</div>`;
+    // WT-30: donut ekran okuyucuya görünmezdi
+    labelBarChart(svgId, title, segs.map(x => ({
+      label: x.name,
+      text: `${Math.round(x.kwh)} kWh · %${Math.round(x.kwh / tot * 100)}`
+    })));
   };
   const sumKwh = list => list.reduce((s, r) => s + r.kwh, 0);
   // Şarj TİPİ: yalnız `tip` alanından — ana sayfadaki DC/AC filtresiyle aynı kaynak
-  drawDonut('d-donut', 'd-donut-legend', [
+  drawDonut('d-donut', 'd-donut-legend', t('typeSplit'), [
     {name: 'DC', kwh: sumKwh(cur.filter(r => r.tip === 'DC')), col: '#16A34A'},
     {name: 'AC', kwh: sumKwh(cur.filter(r => r.tip !== 'DC')), col: '#1B5FAA'}
   ].filter(x => x.kwh > 0));
   // Şarj YERİ: `mekan` alanından. Eski kayıtlarda mekan yoksa firma adına düş.
   const isHome = r => (r.mekan ? r.mekan === 'evis' : isHomeFirm(r.firma));
-  drawDonut('d-donut2', 'd-donut2-legend', [
+  drawDonut('d-donut2', 'd-donut2-legend', t('placeSplit'), [
     {name: t('homeChip'), kwh: sumKwh(cur.filter(isHome)), col: '#7DC855'},
     {name: t('placeFirm'), kwh: sumKwh(cur.filter(r => !isHome(r))), col: '#1B5FAA'}
   ].filter(x => x.kwh > 0));
@@ -1781,6 +1839,14 @@ async function renderCompare() {
     drawLineChart('c-line', labelsAll.slice(cut), [
       {pts: ptsEvAll.slice(cut), color: '#1C8742'},
       {pts: ptsIceAll.slice(cut), color: '#1B5FAA'}
+    ]);
+    // WT-30: çizgi grafiğinin metin alternatifi — son değerler özetlenir
+    const lastEv = ptsEvAll[ptsEvAll.length - 1] || 0;
+    const lastIce = ptsIceAll[ptsIceAll.length - 1] || 0;
+    labelBarChart('c-line', t('cumTitle'), [
+      {label: t('evLine'), text: money(lastEv)},
+      {label: t('iceLine'), text: money(lastIce)},
+      {label: t('totalSaved'), text: money(lastIce - lastEv)}
     ]);
   }
 
@@ -2197,6 +2263,8 @@ async function renderVehiclePage() {
         <div class="bar" style="height:${6 + Math.round(b.sum / maxE * 66)}px"></div>
         <div class="m">${b.label}</div>
       </div>`).join('');
+    labelBarChart('v-exp-chart', t('expChart'),
+      ebars.map(b => ({label: b.label, text: money(b.sum)})));
   }
 
   const expList = $('c-exp-list');
@@ -2790,12 +2858,20 @@ $('btn-save').addEventListener('click', async () => {
   const free = $('in-free').checked;
   // Hatalı alan "Gelişmiş" bloğunun içindeyse blok kapalıyken focus() hiçbir
   // şey yapmaz ve kullanıcı neyi düzelteceğini göremez — önce bloğu aç.
+  // WT-29/2: hatalı input aria-invalid + aria-describedby ile işaretlenir.
   const showErr = (msg, id) => {
+    clearFormErr();
     $('form-err').textContent = msg;
     $('form-err').classList.add('show');
     if (id) {
       const el = $(id);
       if (el && $('adv-fields').contains(el)) $('adv-fields').classList.add('open');
+      if (el) {
+        el.setAttribute('aria-invalid', 'true');
+        el.setAttribute('aria-describedby',
+          [el.getAttribute('aria-describedby'), 'form-err'].filter(Boolean).join(' '));
+        el.addEventListener('input', clearFormErr, {once: true});
+      }
       el?.focus();
     }
   };

@@ -325,6 +325,10 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 8px 20px rgba(0,104,42,.35);margin-top:-30px;border:3px solid var(--accent)}
 
+/* WT-30: yalnız ekran okuyucuya görünen grafik özet tabloları */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
 /* ============ WT-27: görünür odak göstergesi (WCAG 2.4.7) ============
    Yalnız input/select için outline tanımlıydı; buton, segment, çip, alt menü
    ve overlay kapatma butonlarında hiçbir odak stili yoktu. Ayrıca
@@ -997,7 +1001,7 @@ nav button{min-height:48px;justify-content:center}
       </div>
     </div>
 
-    <div class="form-err" id="form-err" data-i18n="formError">Firma, kWh ve tutar gerekli</div>
+    <div class="form-err" id="form-err" role="alert" data-i18n="formError">Firma, kWh ve tutar gerekli</div>
     <button class="save-btn" id="btn-save" data-i18n="save">Kaydet</button>
   </div>
 </section>
@@ -1152,7 +1156,7 @@ nav button{min-height:48px;justify-content:center}
   </button>
 </nav>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script src="app.js"></script>
 </body>

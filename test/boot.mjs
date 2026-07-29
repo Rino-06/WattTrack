@@ -556,6 +556,111 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     'odak=' + (doc.activeElement === btns[1] ? 'btns[1]' : 'başka') + ' checked=' + checked());
 }
 
+// --- WT-29: toast ve form hatası duyuruluyor mu? ---
+{
+  const doc = window.document;
+  const toast = doc.getElementById('toast');
+  check('WT-29/1: toast canlı bölge (role=status, aria-live=polite, atomic)',
+    toast.getAttribute('role') === 'status'
+      && toast.getAttribute('aria-live') === 'polite'
+      && toast.getAttribute('aria-atomic') === 'true');
+  check('WT-29/2: form hatası role=alert',
+    doc.getElementById('form-err').getAttribute('role') === 'alert');
+
+  // hatalı alan işaretleniyor ve düzeltilince temizleniyor mu?
+  await app().openAdd();
+  await sleep(250);
+  $('in-date').value = '2026-07-20';
+  $('in-kwh').value = '10';
+  $('in-amount').value = '100';
+  $('in-socb').value = '10';
+  $('in-soca').value = '800';        // sınır dışı
+  $('btn-save').click();
+  await sleep(350);
+  const soca = $('in-soca');
+  check('WT-29/2: hatalı input aria-invalid=true',
+    soca.getAttribute('aria-invalid') === 'true');
+  check('WT-29/2: hatalı input aria-describedby ile hataya bağlandı',
+    (soca.getAttribute('aria-describedby') || '').split(/\s+/).includes('form-err'),
+    'describedby=' + soca.getAttribute('aria-describedby'));
+
+  soca.value = '80';
+  soca.dispatchEvent(new window.Event('input', { bubbles: true }));
+  await sleep(200);
+  check('WT-29/2: düzeltilince işaretler kalkıyor',
+    !soca.hasAttribute('aria-invalid')
+      && !(soca.getAttribute('aria-describedby') || '').includes('form-err'),
+    'invalid=' + soca.getAttribute('aria-invalid')
+      + ' describedby=' + soca.getAttribute('aria-describedby'));
+
+  // WT-29/3: çevrimdışı güven — kayıt toast'ı "Cihaza kaydedildi" demeli
+  $('btn-save').click();
+  await sleep(450);
+  check('WT-29/3: kayıt toast\'ı "Cihaza kaydedildi" diyor',
+    /cihaza|device|Gerät|appareil|dispositivo/i.test(toast.textContent),
+    'toast=' + toast.textContent);
+}
+
+// --- WT-30: grafiklerin metin alternatifi ---
+{
+  await app().db.sessions.clear();
+  await app().db.sessions.bulkAdd([
+    { tarih: '2026-07-05T12:00', firma: 'ZES', tip: 'DC', kwh: 40, tutar: 400,
+      odenen: 400, cur: 'TRY', mekan: 'firma', aracId: null },
+    { tarih: '2026-07-06T12:00', firma: 'Ev-İş', tip: 'AC', kwh: 20, tutar: 60,
+      odenen: 60, cur: 'TRY', mekan: 'evis', aracId: null }
+  ]);
+  app().S.gran = 'year';
+  app().S.dashVeh = '';
+  await app().renderStats();
+  await sleep(400);
+  const doc = window.document;
+
+  for (const [id, ad] of [['d-months', 'harcama grafiği'], ['d-weekdays', 'gün dağılımı'],
+                          ['d-donut', 'şarj tipi donutu'], ['d-donut2', 'şarj yeri donutu']]) {
+    const el = doc.getElementById(id);
+    check(`WT-30: ${ad} role=img + veriyi özetleyen aria-label taşıyor`,
+      el.getAttribute('role') === 'img'
+        && (el.getAttribute('aria-label') || '').length > 10,
+      (el.getAttribute('aria-label') || '(yok)').slice(0, 70));
+  }
+  check('WT-30: donut aria-label yüzdeleri içeriyor',
+    /%\d+/.test(doc.getElementById('d-donut').getAttribute('aria-label') || ''),
+    doc.getElementById('d-donut').getAttribute('aria-label'));
+
+  // görsel gizli özet tablolar
+  const tables = doc.querySelectorAll('table.sr-only');
+  check('WT-30: grafiklerin altında görsel gizli özet tablo var',
+    tables.length >= 4, 'tablo=' + tables.length);
+  check('WT-30: özet tablolar caption ve satır başlığı içeriyor',
+    [...tables].every(tb => tb.querySelector('caption') && tb.querySelector('th[scope="row"]')));
+
+  // .sr-only gerçekten gizli mi (CSS)
+  const css = [...doc.querySelectorAll('style')].map(x => x.textContent).join('\n');
+  check('WT-30: .sr-only görsel olarak gizleniyor',
+    /\.sr-only\s*\{[^}]*clip\s*:\s*rect\(0 0 0 0\)/.test(css));
+
+  // tıklanabilir sütunlar klavyeyle erişilebilir mi?
+  const cols = [...doc.querySelectorAll('#d-months .mb[data-y]')];
+  check('WT-30: tıklanabilir bar sütunları klavyeyle erişilebilir',
+    cols.length > 0 && cols.every(c => c.getAttribute('role') === 'button'
+      && c.tabIndex === 0 && c.getAttribute('aria-label')),
+    'sütun=' + cols.length);
+
+  // Enter ile tıklama çalışıyor mu?
+  if (cols.length) {
+    app().showScreen('stats');
+    await sleep(200);
+    cols[cols.length - 1].dispatchEvent(
+      new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await sleep(300);
+    check('WT-30: Enter ile sütun tıklaması çalışıyor (Geçmiş\'e geçti)',
+      doc.getElementById('page-history').classList.contains('active'));
+    app().showScreen('dashboard');
+    await sleep(200);
+  }
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
