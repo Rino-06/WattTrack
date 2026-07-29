@@ -24,14 +24,12 @@ const EXP_ICON = {tax: '🧾', insurance: '🛡️', maintenance: '🔧', tire: 
 
 const AVATAR_COLORS = ['#1C8742', '#007DAA', '#C87B00', '#A54C8B', '#C25C5F'];
 const MI = 1.60934;
-// Sürüm bilgisi version.js'ten gelir (WT-52) — tek kaynak.
-const APP_VERSION = WT_VERSION;
-const APP_DATE = WT_DATE;
-const SCHEMA_VERSION = WT_SCHEMA;
+const APP_VERSION = 'v19';
+const APP_DATE = '26.07.2026';
 
 // ---------- Çeviriler ----------
 const T = {
-tr:{navStats:'İstatistik',statsTitle:'İstatistikler',ice1:'Yakıtlı 1 {u}',unitCostTitle:'Birim maliyet — EV ve Yakıtlı yan yana',tcoExpEv:'EV sabit giderleri (Aracım)',tcoExpIce:'Yakıtlı sabit gider (döneme oranlı)',tco1kmIce:'Yakıtlı 1 {u} (gider dahil)',tcoExplain:'EV sabit giderleri, Aracım sekmesine girdiğin vergi, sigorta, bakım gibi kalemlerdir. Yakıtlı tarafta, yukarıda girdiğin yıllık sabit gider izlenen döneme oranlanır — iki araç aynı dönemde karşılaştırılır.',totalCostAll:'Toplam gider (şarj + sabit)',fixedExpTotal:'Sabit giderler toplamı',expChart:'Sabit gider grafiği',prorateLbl:'Yıllık giderleri (vergi, sigorta) izlenen döneme oranla',prorateNote:'Yıllık kalemler dönem oranıyla (%{p}) hesaba katıldı; gerçek ödenen toplam {r}.',exp_tax:'Vergi (MTV)',exp_insurance:'Sigorta / Kasko',exp_maintenance:'Bakım / Servis',exp_tire:'Lastik',exp_inspection:'Muayene',exp_repair:'Onarım / Hasar',exp_parking:'Otopark / Otoyol',exp_equipment:'Ekipman (ev şarj cihazı vb.)',exp_other:'Diğer',otherTypePh:'Başlık yaz — örn. Aksesuar, Araç yıkama',addExpense:'Gider ekle',editExpense:'Gideri düzenle',expType:'Gider türü',expenses:'Araç giderleri',expByCat:'Gider dağılımı',expTotal:'Giderler toplamı',expAmount:'Tutar',noteLbl:'Not',amountNeeded:'Tutar gir',noExpenses:'Henüz gider yok. Vergi, sigorta ve bakım tutarlarını ekleyerek gerçek maliyeti gör.',tcoTitle:'Toplam sahip olma maliyeti (şarj + giderler)',tcoEv:'EV toplam (şarj + gider)',tcoIce:'Yakıtlı toplam (gider dahil)',tcoSaved:'Gider dahil toplam kazanç',tco1km:'EV 1 {u} (gider dahil)',tcoNote:'İzlenen dönem {d} gün. Yakıtlı aracın sabit gideri bu döneme oranlandı: {f}.',nonFuelTitle:'Yakıt dışı gider kıyaslaması',nonFuelKm:'{u} başına yakıt dışı gider',nonFuel100:'100 {u} başına yakıt dışı gider',nonFuelYear:'Yıllık yakıt dışı gider',nonFuelKwh:'kWh başına yakıt dışı gider',nonFuelDiffYear:'Yıllık yakıt dışı gider farkı',nonFuelChart:'Yıllık yakıt dışı gider (EV / Yakıtlı)',iceShort:'Yakıtlı',chargePower:'Ort. şarj gücü',yearlyCompare:'Yıllık karşılaştırma',yearlySpendLbl:'Toplam harcama (bu yıl)',yearlyKwhLbl:'Enerji (bu yıl)',yearlyPriceLbl:'kWh fiyatı (bu yıl)',weekdayDist:'Haftanın günlerine göre dağılım',vsLastYear:'geçen yıla göre',iceFixHint:'İsteğe bağlı. Benzer bir yakıtlı aracın yıllık vergi, sigorta ve bakım toplamını yaz — adil kıyas için kendi giderlerinle karşılaştırılır.',ev1:'EV 1 {u} ({x})',supportNote:'Bu uygulama tamamen ücretsiz ve reklamsız olarak geliştirilmiştir. Projeye destek olmak veya bir kahve ısmarlamak isterseniz GitHub sayfamıza göz atabilirsiniz.',version:'Sürüm',contactDev:'Soru ve katkı',privacy:'Gizlilik Politikası',rateApp:'Play Store\u0027da Değerlendir',supportDev:'GitHub Proje Sayfası',kwhHint:'Örn. 45,27',distFromOdo:'Mesafe kaynağı: kilometre sayacı (araç bilgilerinden)',distFromRecords:'Mesafe kaynağı: kayıtlardaki sürüş mesafeleri',back:'← Geri',changeCar:'Aracı değiştir',navVehicle:'Aracım',vehicleTitle:'Aracım',odoAsk:'Aracın güncel kilometresi (sayaç)',odometer:'Kilometre sayacı',odoNow:'Araç sayacı',odoTracked:'Başlangıçtan beri yapılan',odoPrompt:'Güncel sayaç ({u}):',odoStartPrompt:'Başlangıç/alım sayacı ({u}):',odoSaved:'Kilometre güncellendi',theme:'Görünüm',themeLight:'Açık',themeDark:'Koyu',spendChart:'Harcama grafiği',cumTitle:'Bugüne kadar: aynı km yakıtlıyla gidilseydi',totalDist:'Toplam mesafe',evSpent:'EV toplam (net)',iceWould:'Yakıtlıyla olurdu',totalSaved:'Toplam kazanç',evLine:'EV (gerçek)',iceLine:'Yakıtlı (aynı km)',archived:'Arşiv (satılan/kullanılmayan)',archivedTag:'arşivde — kayıtları korunuyor',archivedToast:'Araç arşive taşındı, kayıtları korunuyor',restore:'Geri al',newBank:'+ Yeni banka ekle…',newBankPrompt:'Banka adı:',importAllDup:'Bu yedekteki tüm kayıtlar zaten mevcut — hiçbir şey eklenmedi.',importPartial:'{n} yeni kayıt eklendi, {d} mükerrer atlandı',netPaid:'Ödenen (net)',typeSplit:'Şarj tipi dağılımı (kWh)',detailStats:'Detay istatistikler',avgDuration:'Ort. şarj süresi',avgSocRange:'Ort. şarj aralığı',topBanks:'Bankalar (indirim kazancı)',topLocations:'En çok şarj edilen lokasyonlar',bankCountries:'Banka Ülkelerim',bankCountriesD:'Kartların hangi ülkelerden ise seç — formdaki banka listesi bunlara göre gelir. Şarj ettiğin ülke değişse de bankaların değişmez.',addCountry:'+ Ülke ekle',prevPeriod:'önceki döneme göre',navHome:'Ana Sayfa',navHistory:'Geçmiş',navCompare:'Kıyasla',navSettings:'Ayarlar',
+tr:{navStats:'İstatistik',statsTitle:'İstatistikler',ice1:'Yakıtlı 1 {u}',unitCostTitle:'Birim maliyet — EV ve Yakıtlı yan yana',tcoExpEv:'EV sabit giderleri (Aracım)',tcoExpIce:'Yakıtlı sabit gider (döneme oranlı)',tco1kmIce:'Yakıtlı 1 {u} (gider dahil)',tcoExplain:'EV sabit giderleri, Aracım sekmesine girdiğin vergi, sigorta, bakım gibi kalemlerdir. Yakıtlı tarafta, yukarıda girdiğin yıllık sabit gider izlenen döneme oranlanır — iki araç aynı dönemde karşılaştırılır.',totalCostAll:'Toplam gider (şarj + sabit)',fixedExpTotal:'Sabit giderler toplamı',expChart:'Sabit gider grafiği',prorateLbl:'Yıllık giderleri (vergi, sigorta) izlenen döneme oranla',prorateNote:'Yıllık kalemler dönem oranıyla (%{p}) hesaba katıldı; gerçek ödenen toplam {r}.',exp_tax:'Vergi (MTV)',exp_insurance:'Sigorta / Kasko',exp_maintenance:'Bakım / Servis',exp_tire:'Lastik',exp_inspection:'Muayene',exp_repair:'Onarım / Hasar',exp_parking:'Otopark / Otoyol',exp_equipment:'Ekipman (ev şarj cihazı vb.)',exp_other:'Diğer',otherTypePh:'Başlık yaz — örn. Aksesuar, Araç yıkama',addExpense:'Gider ekle',editExpense:'Gideri düzenle',expType:'Gider türü',expenses:'Araç giderleri',expByCat:'Gider dağılımı',expTotal:'Giderler toplamı',expAmount:'Tutar',noteLbl:'Not',amountNeeded:'Tutar gir',noExpenses:'Henüz gider yok. Vergi, sigorta ve bakım tutarlarını ekleyerek gerçek maliyeti gör.',tcoTitle:'Toplam sahip olma maliyeti (şarj + giderler)',tcoEv:'EV toplam (şarj + gider)',tcoIce:'Yakıtlı toplam (gider dahil)',tcoSaved:'Gider dahil toplam kazanç',tco1km:'EV 1 {u} (gider dahil)',tcoNote:'İzlenen dönem {d} gün. Yakıtlı aracın sabit gideri bu döneme oranlandı: {f}.',nonFuelTitle:'Yakıt dışı gider kıyaslaması',nonFuelKm:'{u} başına yakıt dışı gider',nonFuel100:'100 {u} başına yakıt dışı gider',nonFuelYear:'Yıllık yakıt dışı gider',nonFuelKwh:'kWh başına yakıt dışı gider',nonFuelDiffYear:'Yıllık yakıt dışı gider farkı',nonFuelChart:'Yıllık yakıt dışı gider (EV / Yakıtlı)',iceShort:'Yakıtlı',chargePower:'Ort. şarj gücü',yearlyCompare:'Yıllık karşılaştırma',yearlySpendLbl:'Toplam harcama (bu yıl)',yearlyKwhLbl:'Enerji (bu yıl)',yearlyPriceLbl:'kWh fiyatı (bu yıl)',weekdayDist:'Haftanın günlerine göre dağılım',vsLastYear:'geçen yıla göre',iceFixHint:'İsteğe bağlı. Benzer bir yakıtlı aracın yıllık vergi, sigorta ve bakım toplamını yaz — adil kıyas için kendi giderlerinle karşılaştırılır.',ev1:'EV 1 {u} ({x})',supportNote:'Bu uygulama tamamen ücretsiz ve reklamsız olarak geliştirilmiştir. Projeye destek olmak veya bir kahve ısmarlamak isterseniz GitHub sayfamıza göz atabilirsiniz.',version:'Sürüm',contactDev:'Soru ve katkı',privacy:'Gizlilik Politikası',rateApp:'Play Store\u0027da Değerlendir',supportDev:'GitHub Proje Sayfası',kwhHint:'Sol kutu tam kısım, sağ kutu 2 haneli ondalık — 45 , 27 = 45,27 kWh. Sadece rakam girilir.',distFromOdo:'Mesafe kaynağı: kilometre sayacı (araç bilgilerinden)',distFromRecords:'Mesafe kaynağı: kayıtlardaki sürüş mesafeleri',back:'← Geri',changeCar:'Aracı değiştir',navVehicle:'Aracım',vehicleTitle:'Aracım',odoAsk:'Aracın güncel kilometresi (sayaç)',odometer:'Kilometre sayacı',odoNow:'Araç sayacı',odoTracked:'Başlangıçtan beri yapılan',odoPrompt:'Güncel sayaç ({u}):',odoStartPrompt:'Başlangıç/alım sayacı ({u}):',odoSaved:'Kilometre güncellendi',theme:'Görünüm',themeLight:'Açık',themeDark:'Koyu',spendChart:'Harcama grafiği',cumTitle:'Bugüne kadar: aynı km yakıtlıyla gidilseydi',totalDist:'Toplam mesafe',evSpent:'EV toplam (net)',iceWould:'Yakıtlıyla olurdu',totalSaved:'Toplam kazanç',evLine:'EV (gerçek)',iceLine:'Yakıtlı (aynı km)',archived:'Arşiv (satılan/kullanılmayan)',archivedTag:'arşivde — kayıtları korunuyor',archivedToast:'Araç arşive taşındı, kayıtları korunuyor',restore:'Geri al',newBank:'+ Yeni banka ekle…',newBankPrompt:'Banka adı:',importAllDup:'Bu yedekteki tüm kayıtlar zaten mevcut — hiçbir şey eklenmedi.',importPartial:'{n} yeni kayıt eklendi, {d} mükerrer atlandı',netPaid:'Ödenen (net)',typeSplit:'Şarj tipi dağılımı (kWh)',detailStats:'Detay istatistikler',avgDuration:'Ort. şarj süresi',avgSocRange:'Ort. şarj aralığı',topBanks:'Bankalar (indirim kazancı)',topLocations:'En çok şarj edilen lokasyonlar',bankCountries:'Banka Ülkelerim',bankCountriesD:'Kartların hangi ülkelerden ise seç — formdaki banka listesi bunlara göre gelir. Şarj ettiğin ülke değişse de bankaların değişmez.',addCountry:'+ Ülke ekle',prevPeriod:'önceki döneme göre',navHome:'Ana Sayfa',navHistory:'Geçmiş',navCompare:'Kıyasla',navSettings:'Ayarlar',
 week:'Hafta',month:'Ay',year:'Yıl',
 periodWeek:'Bu hafta toplam',periodMonth:'Bu ay toplam',periodYear:'Bu yıl toplam',
 savings:'tasarruf',avgPerKwh:'kWh başı',netLbl:'net',grossLbl:'indirimsiz',
@@ -82,7 +80,7 @@ wiped:'Tüm veriler silindi',imported:'Yedek geri yüklendi',
 importFail:'Dosya geçerli bir WattTrack yedeği değil',importAsk:'kayıt içe aktarılacak. Birleştirilsin mi?',
 jsonDone:'JSON yedek indirildi',csvDone:'CSV indirildi',noData:'Henüz kayıt yok',sessions:'şarj'},
 
-en:{navStats:'Stats',statsTitle:'Statistics',ice1:'Fuel per 1 {u}',unitCostTitle:'Unit cost — EV and fuel side by side',tcoExpEv:'EV fixed expenses (My Vehicle)',tcoExpIce:'Fuel car fixed cost (prorated)',tco1kmIce:'Fuel per 1 {u} (with expenses)',tcoExplain:'EV fixed expenses are the tax, insurance and maintenance items you entered in My Vehicle. On the fuel side, the yearly fixed cost you entered above is prorated to the tracked period — both cars are compared over the same period.',totalCostAll:'Total cost (charging + fixed)',fixedExpTotal:'Fixed expenses total',expChart:'Fixed expense chart',prorateLbl:'Prorate yearly expenses (tax, insurance) to the tracked period',prorateNote:'Yearly items counted at {p}% of the period; actually paid in total {r}.',exp_tax:'Tax',exp_insurance:'Insurance',exp_maintenance:'Maintenance / Service',exp_tire:'Tires',exp_inspection:'Inspection',exp_repair:'Repair / Damage',exp_parking:'Parking / Tolls',exp_equipment:'Equipment (home charger etc.)',exp_other:'Other',otherTypePh:'Type a title — e.g. Accessories, Car wash',addExpense:'Add expense',editExpense:'Edit expense',expType:'Expense type',expenses:'Vehicle expenses',expByCat:'Expenses by category',expTotal:'Total expenses',expAmount:'Amount',noteLbl:'Note',amountNeeded:'Enter an amount',noExpenses:'No expenses yet. Add tax, insurance and maintenance to see your true cost.',tcoTitle:'Total cost of ownership (charging + expenses)',tcoEv:'EV total (charging + expenses)',tcoIce:'Fuel car total (with expenses)',tcoSaved:'Total saved incl. expenses',tco1km:'EV per 1 {u} (with expenses)',tcoNote:'Tracked period {d} days. Fixed cost of the fuel car prorated for this period: {f}.',nonFuelTitle:'Non-fuel expense comparison',nonFuelKm:'Non-fuel cost per {u}',nonFuel100:'Non-fuel cost per 100 {u}',nonFuelYear:'Yearly non-fuel cost',nonFuelKwh:'Non-fuel cost per kWh',nonFuelDiffYear:'Yearly non-fuel cost difference',nonFuelChart:'Yearly non-fuel cost (EV / Fuel)',iceShort:'Fuel',chargePower:'Avg charging power',yearlyCompare:'Yearly comparison',yearlySpendLbl:'Total spend (this year)',yearlyKwhLbl:'Energy (this year)',yearlyPriceLbl:'Price per kWh (this year)',weekdayDist:'By day of week',vsLastYear:'vs last year',iceFixHint:'Optional. Enter the yearly tax, insurance and maintenance total of a comparable fuel car for a fair comparison.',ev1:'EV per 1 {u} ({x})',supportNote:'This app is developed completely free and ad-free. If you would like to support the project or buy a coffee, feel free to visit our GitHub page.',version:'Version',contactDev:'Questions & contributions',privacy:'Privacy Policy',rateApp:'Rate on Play Store',supportDev:'GitHub Project Page',kwhHint:'e.g. 45,27',distFromOdo:'Distance source: odometer (from vehicle info)',distFromRecords:'Distance source: per-record distances',back:'← Back',changeCar:'Change vehicle',navVehicle:'My Vehicle',vehicleTitle:'My Vehicle',odoAsk:'Current odometer reading',odometer:'Odometer',odoNow:'Odometer',odoTracked:'Driven since start',odoPrompt:'Current odometer ({u}):',odoStartPrompt:'Starting/purchase odometer ({u}):',odoSaved:'Odometer updated',theme:'Appearance',themeLight:'Light',themeDark:'Dark',spendChart:'Spending chart',cumTitle:'To date: same km with a fuel car',totalDist:'Total distance',evSpent:'EV total (net)',iceWould:'Would cost (fuel)',totalSaved:'Total saved',evLine:'EV (actual)',iceLine:'Fuel (same km)',archived:'Archive (sold/unused)',archivedTag:'archived — records kept',archivedToast:'Vehicle archived, its records are kept',restore:'Restore',newBank:'+ Add new bank…',newBankPrompt:'Bank name:',importAllDup:'All records in this backup already exist — nothing was added.',importPartial:'{n} new records added, {d} duplicates skipped',netPaid:'Paid (net)',typeSplit:'Charge type split (kWh)',detailStats:'Detail statistics',avgDuration:'Avg charge time',avgSocRange:'Avg SoC range',topBanks:'Banks (discount savings)',topLocations:'Most charged locations',bankCountries:'My Bank Countries',bankCountriesD:'Pick the countries your cards are from — the bank list in the form follows these. Your banks don’t change when the charging country does.',addCountry:'+ Add country',prevPeriod:'vs previous period',navHome:'Home',navHistory:'History',navCompare:'Compare',navSettings:'Settings',
+en:{navStats:'Stats',statsTitle:'Statistics',ice1:'Fuel per 1 {u}',unitCostTitle:'Unit cost — EV and fuel side by side',tcoExpEv:'EV fixed expenses (My Vehicle)',tcoExpIce:'Fuel car fixed cost (prorated)',tco1kmIce:'Fuel per 1 {u} (with expenses)',tcoExplain:'EV fixed expenses are the tax, insurance and maintenance items you entered in My Vehicle. On the fuel side, the yearly fixed cost you entered above is prorated to the tracked period — both cars are compared over the same period.',totalCostAll:'Total cost (charging + fixed)',fixedExpTotal:'Fixed expenses total',expChart:'Fixed expense chart',prorateLbl:'Prorate yearly expenses (tax, insurance) to the tracked period',prorateNote:'Yearly items counted at {p}% of the period; actually paid in total {r}.',exp_tax:'Tax',exp_insurance:'Insurance',exp_maintenance:'Maintenance / Service',exp_tire:'Tires',exp_inspection:'Inspection',exp_repair:'Repair / Damage',exp_parking:'Parking / Tolls',exp_equipment:'Equipment (home charger etc.)',exp_other:'Other',otherTypePh:'Type a title — e.g. Accessories, Car wash',addExpense:'Add expense',editExpense:'Edit expense',expType:'Expense type',expenses:'Vehicle expenses',expByCat:'Expenses by category',expTotal:'Total expenses',expAmount:'Amount',noteLbl:'Note',amountNeeded:'Enter an amount',noExpenses:'No expenses yet. Add tax, insurance and maintenance to see your true cost.',tcoTitle:'Total cost of ownership (charging + expenses)',tcoEv:'EV total (charging + expenses)',tcoIce:'Fuel car total (with expenses)',tcoSaved:'Total saved incl. expenses',tco1km:'EV per 1 {u} (with expenses)',tcoNote:'Tracked period {d} days. Fixed cost of the fuel car prorated for this period: {f}.',nonFuelTitle:'Non-fuel expense comparison',nonFuelKm:'Non-fuel cost per {u}',nonFuel100:'Non-fuel cost per 100 {u}',nonFuelYear:'Yearly non-fuel cost',nonFuelKwh:'Non-fuel cost per kWh',nonFuelDiffYear:'Yearly non-fuel cost difference',nonFuelChart:'Yearly non-fuel cost (EV / Fuel)',iceShort:'Fuel',chargePower:'Avg charging power',yearlyCompare:'Yearly comparison',yearlySpendLbl:'Total spend (this year)',yearlyKwhLbl:'Energy (this year)',yearlyPriceLbl:'Price per kWh (this year)',weekdayDist:'By day of week',vsLastYear:'vs last year',iceFixHint:'Optional. Enter the yearly tax, insurance and maintenance total of a comparable fuel car for a fair comparison.',ev1:'EV per 1 {u} ({x})',supportNote:'This app is developed completely free and ad-free. If you would like to support the project or buy a coffee, feel free to visit our GitHub page.',version:'Version',contactDev:'Questions & contributions',privacy:'Privacy Policy',rateApp:'Rate on Play Store',supportDev:'GitHub Project Page',kwhHint:'Left box whole part, right box 2-digit decimals — 45 , 27 = 45.27 kWh. Digits only.',distFromOdo:'Distance source: odometer (from vehicle info)',distFromRecords:'Distance source: per-record distances',back:'← Back',changeCar:'Change vehicle',navVehicle:'My Vehicle',vehicleTitle:'My Vehicle',odoAsk:'Current odometer reading',odometer:'Odometer',odoNow:'Odometer',odoTracked:'Driven since start',odoPrompt:'Current odometer ({u}):',odoStartPrompt:'Starting/purchase odometer ({u}):',odoSaved:'Odometer updated',theme:'Appearance',themeLight:'Light',themeDark:'Dark',spendChart:'Spending chart',cumTitle:'To date: same km with a fuel car',totalDist:'Total distance',evSpent:'EV total (net)',iceWould:'Would cost (fuel)',totalSaved:'Total saved',evLine:'EV (actual)',iceLine:'Fuel (same km)',archived:'Archive (sold/unused)',archivedTag:'archived — records kept',archivedToast:'Vehicle archived, its records are kept',restore:'Restore',newBank:'+ Add new bank…',newBankPrompt:'Bank name:',importAllDup:'All records in this backup already exist — nothing was added.',importPartial:'{n} new records added, {d} duplicates skipped',netPaid:'Paid (net)',typeSplit:'Charge type split (kWh)',detailStats:'Detail statistics',avgDuration:'Avg charge time',avgSocRange:'Avg SoC range',topBanks:'Banks (discount savings)',topLocations:'Most charged locations',bankCountries:'My Bank Countries',bankCountriesD:'Pick the countries your cards are from — the bank list in the form follows these. Your banks don’t change when the charging country does.',addCountry:'+ Add country',prevPeriod:'vs previous period',navHome:'Home',navHistory:'History',navCompare:'Compare',navSettings:'Settings',
 week:'Week',month:'Month',year:'Year',
 periodWeek:'This week total',periodMonth:'This month total',periodYear:'This year total',
 savings:'saved',avgPerKwh:'Per kWh',netLbl:'net',grossLbl:'w/o discount',
@@ -133,7 +131,7 @@ wiped:'All data deleted',imported:'Backup restored',
 importFail:'Not a valid WattTrack backup',importAsk:'records will be imported. Merge?',
 jsonDone:'JSON backup downloaded',csvDone:'CSV downloaded',noData:'No records yet',sessions:'sessions'},
 
-de:{navStats:'Statistik',statsTitle:'Statistiken',ice1:'Verbrenner 1 {u}',unitCostTitle:'Kosten pro Einheit — EV und Verbrenner nebeneinander',tcoExpEv:'EV-Fixkosten (Mein Auto)',tcoExpIce:'Fixkosten Verbrenner (anteilig)',tco1kmIce:'Verbrenner 1 {u} (mit Kosten)',tcoExplain:'Die EV-Fixkosten sind die unter „Mein Auto" eingetragenen Posten (Steuer, Versicherung, Wartung). Beim Verbrenner werden die oben eingegebenen jährlichen Fixkosten anteilig auf den Zeitraum umgelegt — beide Autos werden über denselben Zeitraum verglichen.',totalCostAll:'Gesamtkosten (Laden + fix)',fixedExpTotal:'Fixkosten gesamt',expChart:'Fixkosten-Diagramm',prorateLbl:'Jährliche Kosten (Steuer, Versicherung) anteilig rechnen',prorateNote:'Jährliche Posten zu {p}% angerechnet; tatsächlich gezahlt {r}.',exp_tax:'Steuer',exp_insurance:'Versicherung',exp_maintenance:'Wartung / Service',exp_tire:'Reifen',exp_inspection:'Hauptuntersuchung',exp_repair:'Reparatur / Schaden',exp_parking:'Parken / Maut',exp_equipment:'Ausstattung (Wallbox usw.)',exp_other:'Sonstiges',otherTypePh:'Titel eingeben — z.B. Zubehör, Autowäsche',addExpense:'Ausgabe hinzufügen',editExpense:'Ausgabe bearbeiten',expType:'Ausgabenart',expenses:'Fahrzeugkosten',expByCat:'Kosten nach Kategorie',expTotal:'Kosten gesamt',expAmount:'Betrag',noteLbl:'Notiz',amountNeeded:'Betrag eingeben',noExpenses:'Noch keine Kosten. Steuer, Versicherung und Wartung eintragen für die echten Kosten.',tcoTitle:'Gesamtkosten (Laden + Fixkosten)',tcoEv:'EV gesamt (Laden + Kosten)',tcoIce:'Verbrenner gesamt (mit Kosten)',tcoSaved:'Gesamtersparnis inkl. Kosten',tco1km:'EV pro 1 {u} (mit Kosten)',tcoNote:'Zeitraum {d} Tage. Fixkosten des Verbrenners anteilig: {f}.',nonFuelTitle:'Vergleich Nebenkosten (ohne Kraftstoff)',nonFuelKm:'Nebenkosten pro {u}',nonFuel100:'Nebenkosten pro 100 {u}',nonFuelYear:'Jährliche Nebenkosten',nonFuelKwh:'Nebenkosten pro kWh',nonFuelDiffYear:'Jährliche Nebenkosten-Differenz',nonFuelChart:'Jährliche Nebenkosten (EV / Verbrenner)',iceShort:'Verbrenner',chargePower:'Ø Ladeleistung',yearlyCompare:'Jahresvergleich',yearlySpendLbl:'Gesamtausgaben (dieses Jahr)',yearlyKwhLbl:'Energie (dieses Jahr)',yearlyPriceLbl:'Preis pro kWh (dieses Jahr)',weekdayDist:'Nach Wochentag',vsLastYear:'ggü. Vorjahr',iceFixHint:'Optional. Jährliche Steuer, Versicherung und Wartung eines vergleichbaren Verbrenners eintragen.',ev1:'EV pro 1 {u} ({x})',supportNote:'Diese App ist völlig kostenlos und werbefrei. Wenn Sie das Projekt unterstützen möchten, besuchen Sie gern unsere GitHub-Seite.',version:'Version',contactDev:'Fragen & Beiträge',privacy:'Datenschutz',rateApp:'Im Play Store bewerten',supportDev:'GitHub-Projektseite',kwhHint:'z.B. 45,27',distFromOdo:'Distanzquelle: Kilometerstand (Fahrzeugdaten)',distFromRecords:'Distanzquelle: Distanzen der Einträge',back:'← Zurück',changeCar:'Fahrzeug ändern',navVehicle:'Mein Auto',vehicleTitle:'Mein Auto',odoAsk:'Aktueller Kilometerstand',odometer:'Kilometerstand',odoNow:'Tachostand',odoTracked:'Seit Beginn gefahren',odoPrompt:'Aktueller Stand ({u}):',odoStartPrompt:'Anfangs-/Kaufstand ({u}):',odoSaved:'Kilometerstand aktualisiert',theme:'Darstellung',themeLight:'Hell',themeDark:'Dunkel',spendChart:'Ausgabendiagramm',cumTitle:'Bisher: gleiche km mit Verbrenner',totalDist:'Gesamtstrecke',evSpent:'EV gesamt (netto)',iceWould:'Verbrenner-Kosten',totalSaved:'Gesamt gespart',evLine:'EV (real)',iceLine:'Verbrenner (gleiche km)',archived:'Archiv (verkauft/ungenutzt)',archivedTag:'archiviert — Einträge bleiben',archivedToast:'Fahrzeug archiviert, Einträge bleiben erhalten',restore:'Wiederherstellen',newBank:'+ Neue Bank…',newBankPrompt:'Bankname:',importAllDup:'Alle Einträge existieren bereits — nichts hinzugefügt.',importPartial:'{n} neue Einträge, {d} Duplikate übersprungen',netPaid:'Bezahlt (netto)',typeSplit:'Ladetyp-Verteilung (kWh)',detailStats:'Detail-Statistiken',avgDuration:'Ø Ladedauer',avgSocRange:'Ø Ladebereich',topBanks:'Banken (Rabattersparnis)',topLocations:'Häufigste Ladeorte',bankCountries:'Meine Bankländer',bankCountriesD:'Wähle die Länder deiner Karten — die Bankliste im Formular folgt diesen. Deine Banken ändern sich nicht mit dem Ladeland.',addCountry:'+ Land hinzufügen',prevPeriod:'ggü. Vorperiode',navHome:'Start',navHistory:'Verlauf',navCompare:'Vergleich',navSettings:'Einstellungen',
+de:{navStats:'Statistik',statsTitle:'Statistiken',ice1:'Verbrenner 1 {u}',unitCostTitle:'Kosten pro Einheit — EV und Verbrenner nebeneinander',tcoExpEv:'EV-Fixkosten (Mein Auto)',tcoExpIce:'Fixkosten Verbrenner (anteilig)',tco1kmIce:'Verbrenner 1 {u} (mit Kosten)',tcoExplain:'Die EV-Fixkosten sind die unter „Mein Auto" eingetragenen Posten (Steuer, Versicherung, Wartung). Beim Verbrenner werden die oben eingegebenen jährlichen Fixkosten anteilig auf den Zeitraum umgelegt — beide Autos werden über denselben Zeitraum verglichen.',totalCostAll:'Gesamtkosten (Laden + fix)',fixedExpTotal:'Fixkosten gesamt',expChart:'Fixkosten-Diagramm',prorateLbl:'Jährliche Kosten (Steuer, Versicherung) anteilig rechnen',prorateNote:'Jährliche Posten zu {p}% angerechnet; tatsächlich gezahlt {r}.',exp_tax:'Steuer',exp_insurance:'Versicherung',exp_maintenance:'Wartung / Service',exp_tire:'Reifen',exp_inspection:'Hauptuntersuchung',exp_repair:'Reparatur / Schaden',exp_parking:'Parken / Maut',exp_equipment:'Ausstattung (Wallbox usw.)',exp_other:'Sonstiges',otherTypePh:'Titel eingeben — z.B. Zubehör, Autowäsche',addExpense:'Ausgabe hinzufügen',editExpense:'Ausgabe bearbeiten',expType:'Ausgabenart',expenses:'Fahrzeugkosten',expByCat:'Kosten nach Kategorie',expTotal:'Kosten gesamt',expAmount:'Betrag',noteLbl:'Notiz',amountNeeded:'Betrag eingeben',noExpenses:'Noch keine Kosten. Steuer, Versicherung und Wartung eintragen für die echten Kosten.',tcoTitle:'Gesamtkosten (Laden + Fixkosten)',tcoEv:'EV gesamt (Laden + Kosten)',tcoIce:'Verbrenner gesamt (mit Kosten)',tcoSaved:'Gesamtersparnis inkl. Kosten',tco1km:'EV pro 1 {u} (mit Kosten)',tcoNote:'Zeitraum {d} Tage. Fixkosten des Verbrenners anteilig: {f}.',nonFuelTitle:'Vergleich Nebenkosten (ohne Kraftstoff)',nonFuelKm:'Nebenkosten pro {u}',nonFuel100:'Nebenkosten pro 100 {u}',nonFuelYear:'Jährliche Nebenkosten',nonFuelKwh:'Nebenkosten pro kWh',nonFuelDiffYear:'Jährliche Nebenkosten-Differenz',nonFuelChart:'Jährliche Nebenkosten (EV / Verbrenner)',iceShort:'Verbrenner',chargePower:'Ø Ladeleistung',yearlyCompare:'Jahresvergleich',yearlySpendLbl:'Gesamtausgaben (dieses Jahr)',yearlyKwhLbl:'Energie (dieses Jahr)',yearlyPriceLbl:'Preis pro kWh (dieses Jahr)',weekdayDist:'Nach Wochentag',vsLastYear:'ggü. Vorjahr',iceFixHint:'Optional. Jährliche Steuer, Versicherung und Wartung eines vergleichbaren Verbrenners eintragen.',ev1:'EV pro 1 {u} ({x})',supportNote:'Diese App ist völlig kostenlos und werbefrei. Wenn Sie das Projekt unterstützen möchten, besuchen Sie gern unsere GitHub-Seite.',version:'Version',contactDev:'Fragen & Beiträge',privacy:'Datenschutz',rateApp:'Im Play Store bewerten',supportDev:'GitHub-Projektseite',kwhHint:'Links Ganzzahl, rechts 2 Dezimalstellen — 45 , 27 = 45,27 kWh. Nur Ziffern.',distFromOdo:'Distanzquelle: Kilometerstand (Fahrzeugdaten)',distFromRecords:'Distanzquelle: Distanzen der Einträge',back:'← Zurück',changeCar:'Fahrzeug ändern',navVehicle:'Mein Auto',vehicleTitle:'Mein Auto',odoAsk:'Aktueller Kilometerstand',odometer:'Kilometerstand',odoNow:'Tachostand',odoTracked:'Seit Beginn gefahren',odoPrompt:'Aktueller Stand ({u}):',odoStartPrompt:'Anfangs-/Kaufstand ({u}):',odoSaved:'Kilometerstand aktualisiert',theme:'Darstellung',themeLight:'Hell',themeDark:'Dunkel',spendChart:'Ausgabendiagramm',cumTitle:'Bisher: gleiche km mit Verbrenner',totalDist:'Gesamtstrecke',evSpent:'EV gesamt (netto)',iceWould:'Verbrenner-Kosten',totalSaved:'Gesamt gespart',evLine:'EV (real)',iceLine:'Verbrenner (gleiche km)',archived:'Archiv (verkauft/ungenutzt)',archivedTag:'archiviert — Einträge bleiben',archivedToast:'Fahrzeug archiviert, Einträge bleiben erhalten',restore:'Wiederherstellen',newBank:'+ Neue Bank…',newBankPrompt:'Bankname:',importAllDup:'Alle Einträge existieren bereits — nichts hinzugefügt.',importPartial:'{n} neue Einträge, {d} Duplikate übersprungen',netPaid:'Bezahlt (netto)',typeSplit:'Ladetyp-Verteilung (kWh)',detailStats:'Detail-Statistiken',avgDuration:'Ø Ladedauer',avgSocRange:'Ø Ladebereich',topBanks:'Banken (Rabattersparnis)',topLocations:'Häufigste Ladeorte',bankCountries:'Meine Bankländer',bankCountriesD:'Wähle die Länder deiner Karten — die Bankliste im Formular folgt diesen. Deine Banken ändern sich nicht mit dem Ladeland.',addCountry:'+ Land hinzufügen',prevPeriod:'ggü. Vorperiode',navHome:'Start',navHistory:'Verlauf',navCompare:'Vergleich',navSettings:'Einstellungen',
 week:'Woche',month:'Monat',year:'Jahr',
 periodWeek:'Diese Woche gesamt',periodMonth:'Dieser Monat gesamt',periodYear:'Dieses Jahr gesamt',
 savings:'gespart',avgPerKwh:'Pro kWh',netLbl:'netto',grossLbl:'ohne Rabatt',
@@ -184,7 +182,7 @@ wiped:'Alle Daten gelöscht',imported:'Backup wiederhergestellt',
 importFail:'Kein gültiges WattTrack-Backup',importAsk:'Einträge werden importiert. Zusammenführen?',
 jsonDone:'JSON-Backup heruntergeladen',csvDone:'CSV heruntergeladen',noData:'Noch keine Einträge',sessions:'Ladungen'},
 
-fr:{navStats:'Stats',statsTitle:'Statistiques',ice1:'Thermique 1 {u}',unitCostTitle:'Coût unitaire — VE et thermique côte à côte',tcoExpEv:'Frais fixes VE (Mon véhicule)',tcoExpIce:'Frais fixes thermique (au prorata)',tco1kmIce:'Thermique 1 {u} (avec dépenses)',tcoExplain:'Les frais fixes VE sont les postes (taxe, assurance, entretien) saisis dans Mon véhicule. Côté thermique, les frais fixes annuels saisis ci-dessus sont proratisés sur la période suivie — les deux voitures sont comparées sur la même période.',totalCostAll:'Coût total (recharge + fixes)',fixedExpTotal:'Total frais fixes',expChart:'Graphique des frais fixes',prorateLbl:'Proratiser les frais annuels (taxe, assurance) sur la période',prorateNote:'Postes annuels comptés à {p}% ; total réellement payé {r}.',exp_tax:'Taxe',exp_insurance:'Assurance',exp_maintenance:'Entretien / Révision',exp_tire:'Pneus',exp_inspection:'Contrôle technique',exp_repair:'Réparation',exp_parking:'Parking / Péage',exp_equipment:'Équipement (borne, etc.)',exp_other:'Autre',otherTypePh:'Saisir un titre — ex. Accessoires, Lavage',addExpense:'Ajouter une dépense',editExpense:'Modifier la dépense',expType:'Type de dépense',expenses:'Dépenses du véhicule',expByCat:'Dépenses par catégorie',expTotal:'Total des dépenses',expAmount:'Montant',noteLbl:'Note',amountNeeded:'Saisir un montant',noExpenses:'Aucune dépense. Ajoutez taxe, assurance et entretien pour voir le coût réel.',tcoTitle:'Coût total de possession (recharge + dépenses)',tcoEv:'VE total (recharge + dépenses)',tcoIce:'Thermique total (avec dépenses)',tcoSaved:'Économie totale avec dépenses',tco1km:'VE / 1 {u} (avec dépenses)',tcoNote:'Période suivie {d} jours. Coûts fixes du thermique au prorata : {f}.',nonFuelTitle:'Comparaison des frais hors carburant',nonFuelKm:'Frais hors carburant par {u}',nonFuel100:'Frais hors carburant par 100 {u}',nonFuelYear:'Frais hors carburant annuels',nonFuelKwh:'Frais hors carburant par kWh',nonFuelDiffYear:'Différence annuelle des frais hors carburant',nonFuelChart:'Frais hors carburant annuels (VE / Thermique)',iceShort:'Thermique',chargePower:'Puissance moy. de charge',yearlyCompare:'Comparaison annuelle',yearlySpendLbl:'Dépenses totales (cette année)',yearlyKwhLbl:'Énergie (cette année)',yearlyPriceLbl:'Prix au kWh (cette année)',weekdayDist:'Par jour de la semaine',vsLastYear:'vs année précédente',iceFixHint:'Facultatif. Indiquez le total annuel taxe, assurance et entretien d une voiture thermique comparable.',ev1:'VE / 1 {u} ({x})',supportNote:'Cette application est entièrement gratuite et sans publicité. Pour soutenir le projet, visitez notre page GitHub.',version:'Version',contactDev:'Questions et contributions',privacy:'Confidentialité',rateApp:'Noter sur le Play Store',supportDev:'Page GitHub du projet',kwhHint:'ex. 45,27',distFromOdo:'Source distance : compteur (infos véhicule)',distFromRecords:'Source distance : distances des charges',back:'← Retour',changeCar:'Changer de véhicule',navVehicle:'Mon véhicule',vehicleTitle:'Mon véhicule',odoAsk:'Kilométrage actuel',odometer:'Compteur',odoNow:'Compteur',odoTracked:'Parcourus depuis le début',odoPrompt:'Compteur actuel ({u}) :',odoStartPrompt:'Compteur initial ({u}) :',odoSaved:'Compteur mis à jour',theme:'Apparence',themeLight:'Clair',themeDark:'Sombre',spendChart:'Graphique des dépenses',cumTitle:'À ce jour : mêmes km en thermique',totalDist:'Distance totale',evSpent:'VE total (net)',iceWould:'Coût thermique',totalSaved:'Économie totale',evLine:'VE (réel)',iceLine:'Thermique (mêmes km)',archived:'Archive (vendu/inutilisé)',archivedTag:'archivé — charges conservées',archivedToast:'Véhicule archivé, ses charges sont conservées',restore:'Restaurer',newBank:'+ Nouvelle banque…',newBankPrompt:'Nom de la banque :',importAllDup:'Toutes les charges existent déjà — rien ajouté.',importPartial:'{n} nouvelles charges, {d} doublons ignorés',netPaid:'Payé (net)',typeSplit:'Répartition par type (kWh)',detailStats:'Statistiques détaillées',avgDuration:'Durée moy.',avgSocRange:'Plage moy.',topBanks:'Banques (gains remises)',topLocations:'Lieux les plus utilisés',bankCountries:'Mes pays bancaires',bankCountriesD:'Choisissez les pays de vos cartes — la liste des banques suit ces pays. Vos banques ne changent pas avec le pays de charge.',addCountry:'+ Ajouter un pays',prevPeriod:'vs période précédente',navHome:'Accueil',navHistory:'Historique',navCompare:'Comparer',navSettings:'Réglages',
+fr:{navStats:'Stats',statsTitle:'Statistiques',ice1:'Thermique 1 {u}',unitCostTitle:'Coût unitaire — VE et thermique côte à côte',tcoExpEv:'Frais fixes VE (Mon véhicule)',tcoExpIce:'Frais fixes thermique (au prorata)',tco1kmIce:'Thermique 1 {u} (avec dépenses)',tcoExplain:'Les frais fixes VE sont les postes (taxe, assurance, entretien) saisis dans Mon véhicule. Côté thermique, les frais fixes annuels saisis ci-dessus sont proratisés sur la période suivie — les deux voitures sont comparées sur la même période.',totalCostAll:'Coût total (recharge + fixes)',fixedExpTotal:'Total frais fixes',expChart:'Graphique des frais fixes',prorateLbl:'Proratiser les frais annuels (taxe, assurance) sur la période',prorateNote:'Postes annuels comptés à {p}% ; total réellement payé {r}.',exp_tax:'Taxe',exp_insurance:'Assurance',exp_maintenance:'Entretien / Révision',exp_tire:'Pneus',exp_inspection:'Contrôle technique',exp_repair:'Réparation',exp_parking:'Parking / Péage',exp_equipment:'Équipement (borne, etc.)',exp_other:'Autre',otherTypePh:'Saisir un titre — ex. Accessoires, Lavage',addExpense:'Ajouter une dépense',editExpense:'Modifier la dépense',expType:'Type de dépense',expenses:'Dépenses du véhicule',expByCat:'Dépenses par catégorie',expTotal:'Total des dépenses',expAmount:'Montant',noteLbl:'Note',amountNeeded:'Saisir un montant',noExpenses:'Aucune dépense. Ajoutez taxe, assurance et entretien pour voir le coût réel.',tcoTitle:'Coût total de possession (recharge + dépenses)',tcoEv:'VE total (recharge + dépenses)',tcoIce:'Thermique total (avec dépenses)',tcoSaved:'Économie totale avec dépenses',tco1km:'VE / 1 {u} (avec dépenses)',tcoNote:'Période suivie {d} jours. Coûts fixes du thermique au prorata : {f}.',nonFuelTitle:'Comparaison des frais hors carburant',nonFuelKm:'Frais hors carburant par {u}',nonFuel100:'Frais hors carburant par 100 {u}',nonFuelYear:'Frais hors carburant annuels',nonFuelKwh:'Frais hors carburant par kWh',nonFuelDiffYear:'Différence annuelle des frais hors carburant',nonFuelChart:'Frais hors carburant annuels (VE / Thermique)',iceShort:'Thermique',chargePower:'Puissance moy. de charge',yearlyCompare:'Comparaison annuelle',yearlySpendLbl:'Dépenses totales (cette année)',yearlyKwhLbl:'Énergie (cette année)',yearlyPriceLbl:'Prix au kWh (cette année)',weekdayDist:'Par jour de la semaine',vsLastYear:'vs année précédente',iceFixHint:'Facultatif. Indiquez le total annuel taxe, assurance et entretien d une voiture thermique comparable.',ev1:'VE / 1 {u} ({x})',supportNote:'Cette application est entièrement gratuite et sans publicité. Pour soutenir le projet, visitez notre page GitHub.',version:'Version',contactDev:'Questions et contributions',privacy:'Confidentialité',rateApp:'Noter sur le Play Store',supportDev:'Page GitHub du projet',kwhHint:'Gauche : entier, droite : 2 décimales — 45 , 27 = 45,27 kWh. Chiffres uniquement.',distFromOdo:'Source distance : compteur (infos véhicule)',distFromRecords:'Source distance : distances des charges',back:'← Retour',changeCar:'Changer de véhicule',navVehicle:'Mon véhicule',vehicleTitle:'Mon véhicule',odoAsk:'Kilométrage actuel',odometer:'Compteur',odoNow:'Compteur',odoTracked:'Parcourus depuis le début',odoPrompt:'Compteur actuel ({u}) :',odoStartPrompt:'Compteur initial ({u}) :',odoSaved:'Compteur mis à jour',theme:'Apparence',themeLight:'Clair',themeDark:'Sombre',spendChart:'Graphique des dépenses',cumTitle:'À ce jour : mêmes km en thermique',totalDist:'Distance totale',evSpent:'VE total (net)',iceWould:'Coût thermique',totalSaved:'Économie totale',evLine:'VE (réel)',iceLine:'Thermique (mêmes km)',archived:'Archive (vendu/inutilisé)',archivedTag:'archivé — charges conservées',archivedToast:'Véhicule archivé, ses charges sont conservées',restore:'Restaurer',newBank:'+ Nouvelle banque…',newBankPrompt:'Nom de la banque :',importAllDup:'Toutes les charges existent déjà — rien ajouté.',importPartial:'{n} nouvelles charges, {d} doublons ignorés',netPaid:'Payé (net)',typeSplit:'Répartition par type (kWh)',detailStats:'Statistiques détaillées',avgDuration:'Durée moy.',avgSocRange:'Plage moy.',topBanks:'Banques (gains remises)',topLocations:'Lieux les plus utilisés',bankCountries:'Mes pays bancaires',bankCountriesD:'Choisissez les pays de vos cartes — la liste des banques suit ces pays. Vos banques ne changent pas avec le pays de charge.',addCountry:'+ Ajouter un pays',prevPeriod:'vs période précédente',navHome:'Accueil',navHistory:'Historique',navCompare:'Comparer',navSettings:'Réglages',
 week:'Semaine',month:'Mois',year:'Année',
 periodWeek:'Total cette semaine',periodMonth:'Total ce mois',periodYear:'Total cette année',
 savings:'économisé',avgPerKwh:'Par kWh',netLbl:'net',grossLbl:'sans remise',
@@ -235,7 +233,7 @@ wiped:'Données supprimées',imported:'Sauvegarde restaurée',
 importFail:'Sauvegarde WattTrack invalide',importAsk:'charges à importer. Fusionner ?',
 jsonDone:'Sauvegarde JSON téléchargée',csvDone:'CSV téléchargé',noData:'Aucune charge',sessions:'charges'},
 
-es:{navStats:'Datos',statsTitle:'Estadísticas',ice1:'Combustión 1 {u}',unitCostTitle:'Coste unitario — EV y combustión lado a lado',tcoExpEv:'Gastos fijos EV (Mi vehículo)',tcoExpIce:'Coste fijo combustión (prorrateado)',tco1kmIce:'Combustión 1 {u} (con gastos)',tcoExplain:'Los gastos fijos del EV son los conceptos (impuesto, seguro, mantenimiento) introducidos en Mi vehículo. En el lado de combustión, el coste fijo anual introducido arriba se prorratea al periodo seguido — ambos coches se comparan en el mismo periodo.',totalCostAll:'Coste total (carga + fijos)',fixedExpTotal:'Total gastos fijos',expChart:'Gráfico de gastos fijos',prorateLbl:'Prorratear gastos anuales (impuesto, seguro) al periodo',prorateNote:'Partidas anuales al {p}% del periodo; total realmente pagado {r}.',exp_tax:'Impuesto',exp_insurance:'Seguro',exp_maintenance:'Mantenimiento / Taller',exp_tire:'Neumáticos',exp_inspection:'ITV',exp_repair:'Reparación',exp_parking:'Aparcamiento / Peaje',exp_equipment:'Equipamiento (cargador, etc.)',exp_other:'Otros',otherTypePh:'Escribe un título — ej. Accesorios, Lavado',addExpense:'Añadir gasto',editExpense:'Editar gasto',expType:'Tipo de gasto',expenses:'Gastos del vehículo',expByCat:'Gastos por categoría',expTotal:'Gastos totales',expAmount:'Importe',noteLbl:'Nota',amountNeeded:'Introduce un importe',noExpenses:'Sin gastos aún. Añade impuesto, seguro y mantenimiento para ver el coste real.',tcoTitle:'Coste total de propiedad (carga + gastos)',tcoEv:'EV total (carga + gastos)',tcoIce:'Combustión total (con gastos)',tcoSaved:'Ahorro total con gastos',tco1km:'EV por 1 {u} (con gastos)',tcoNote:'Periodo seguido {d} días. Costes fijos del coche de combustión prorrateados: {f}.',nonFuelTitle:'Comparación de gastos sin combustible',nonFuelKm:'Gastos sin combustible por {u}',nonFuel100:'Gastos sin combustible por 100 {u}',nonFuelYear:'Gastos anuales sin combustible',nonFuelKwh:'Gastos sin combustible por kWh',nonFuelDiffYear:'Diferencia anual de gastos sin combustible',nonFuelChart:'Gastos anuales sin combustible (EV / Combustión)',iceShort:'Combustión',chargePower:'Potencia media de carga',yearlyCompare:'Comparación anual',yearlySpendLbl:'Gasto total (este año)',yearlyKwhLbl:'Energía (este año)',yearlyPriceLbl:'Precio por kWh (este año)',weekdayDist:'Por día de la semana',vsLastYear:'vs año anterior',iceFixHint:'Opcional. Indica el total anual de impuesto, seguro y mantenimiento de un coche de combustión similar.',ev1:'EV por 1 {u} ({x})',supportNote:'Esta aplicación es totalmente gratuita y sin anuncios. Para apoyar el proyecto, visita nuestra página de GitHub.',version:'Versión',contactDev:'Preguntas y aportes',privacy:'Privacidad',rateApp:'Valorar en Play Store',supportDev:'Página del proyecto en GitHub',kwhHint:'ej. 45,27',distFromOdo:'Fuente de distancia: cuentakilómetros',distFromRecords:'Fuente de distancia: distancias por carga',back:'← Atrás',changeCar:'Cambiar vehículo',navVehicle:'Mi vehículo',vehicleTitle:'Mi vehículo',odoAsk:'Kilometraje actual',odometer:'Cuentakilómetros',odoNow:'Cuentakilómetros',odoTracked:'Recorridos desde el inicio',odoPrompt:'Lectura actual ({u}):',odoStartPrompt:'Lectura inicial ({u}):',odoSaved:'Kilometraje actualizado',theme:'Apariencia',themeLight:'Claro',themeDark:'Oscuro',spendChart:'Gráfico de gasto',cumTitle:'Hasta hoy: mismos km con combustión',totalDist:'Distancia total',evSpent:'EV total (neto)',iceWould:'Costaría (combustión)',totalSaved:'Ahorro total',evLine:'EV (real)',iceLine:'Combustión (mismos km)',archived:'Archivo (vendido/sin uso)',archivedTag:'archivado — cargas conservadas',archivedToast:'Vehículo archivado, sus cargas se conservan',restore:'Restaurar',newBank:'+ Añadir banco…',newBankPrompt:'Nombre del banco:',importAllDup:'Todas las cargas ya existen — no se añadió nada.',importPartial:'{n} cargas nuevas, {d} duplicadas omitidas',netPaid:'Pagado (neto)',typeSplit:'Reparto por tipo (kWh)',detailStats:'Estadísticas detalladas',avgDuration:'Duración media',avgSocRange:'Rango medio',topBanks:'Bancos (ahorro por dtos.)',topLocations:'Lugares más usados',bankCountries:'Mis países bancarios',bankCountriesD:'Elige los países de tus tarjetas — la lista de bancos del formulario los sigue. Tus bancos no cambian con el país de carga.',addCountry:'+ Añadir país',prevPeriod:'vs periodo anterior',navHome:'Inicio',navHistory:'Historial',navCompare:'Comparar',navSettings:'Ajustes',
+es:{navStats:'Datos',statsTitle:'Estadísticas',ice1:'Combustión 1 {u}',unitCostTitle:'Coste unitario — EV y combustión lado a lado',tcoExpEv:'Gastos fijos EV (Mi vehículo)',tcoExpIce:'Coste fijo combustión (prorrateado)',tco1kmIce:'Combustión 1 {u} (con gastos)',tcoExplain:'Los gastos fijos del EV son los conceptos (impuesto, seguro, mantenimiento) introducidos en Mi vehículo. En el lado de combustión, el coste fijo anual introducido arriba se prorratea al periodo seguido — ambos coches se comparan en el mismo periodo.',totalCostAll:'Coste total (carga + fijos)',fixedExpTotal:'Total gastos fijos',expChart:'Gráfico de gastos fijos',prorateLbl:'Prorratear gastos anuales (impuesto, seguro) al periodo',prorateNote:'Partidas anuales al {p}% del periodo; total realmente pagado {r}.',exp_tax:'Impuesto',exp_insurance:'Seguro',exp_maintenance:'Mantenimiento / Taller',exp_tire:'Neumáticos',exp_inspection:'ITV',exp_repair:'Reparación',exp_parking:'Aparcamiento / Peaje',exp_equipment:'Equipamiento (cargador, etc.)',exp_other:'Otros',otherTypePh:'Escribe un título — ej. Accesorios, Lavado',addExpense:'Añadir gasto',editExpense:'Editar gasto',expType:'Tipo de gasto',expenses:'Gastos del vehículo',expByCat:'Gastos por categoría',expTotal:'Gastos totales',expAmount:'Importe',noteLbl:'Nota',amountNeeded:'Introduce un importe',noExpenses:'Sin gastos aún. Añade impuesto, seguro y mantenimiento para ver el coste real.',tcoTitle:'Coste total de propiedad (carga + gastos)',tcoEv:'EV total (carga + gastos)',tcoIce:'Combustión total (con gastos)',tcoSaved:'Ahorro total con gastos',tco1km:'EV por 1 {u} (con gastos)',tcoNote:'Periodo seguido {d} días. Costes fijos del coche de combustión prorrateados: {f}.',nonFuelTitle:'Comparación de gastos sin combustible',nonFuelKm:'Gastos sin combustible por {u}',nonFuel100:'Gastos sin combustible por 100 {u}',nonFuelYear:'Gastos anuales sin combustible',nonFuelKwh:'Gastos sin combustible por kWh',nonFuelDiffYear:'Diferencia anual de gastos sin combustible',nonFuelChart:'Gastos anuales sin combustible (EV / Combustión)',iceShort:'Combustión',chargePower:'Potencia media de carga',yearlyCompare:'Comparación anual',yearlySpendLbl:'Gasto total (este año)',yearlyKwhLbl:'Energía (este año)',yearlyPriceLbl:'Precio por kWh (este año)',weekdayDist:'Por día de la semana',vsLastYear:'vs año anterior',iceFixHint:'Opcional. Indica el total anual de impuesto, seguro y mantenimiento de un coche de combustión similar.',ev1:'EV por 1 {u} ({x})',supportNote:'Esta aplicación es totalmente gratuita y sin anuncios. Para apoyar el proyecto, visita nuestra página de GitHub.',version:'Versión',contactDev:'Preguntas y aportes',privacy:'Privacidad',rateApp:'Valorar en Play Store',supportDev:'Página del proyecto en GitHub',kwhHint:'Izquierda entero, derecha 2 decimales — 45 , 27 = 45,27 kWh. Solo dígitos.',distFromOdo:'Fuente de distancia: cuentakilómetros',distFromRecords:'Fuente de distancia: distancias por carga',back:'← Atrás',changeCar:'Cambiar vehículo',navVehicle:'Mi vehículo',vehicleTitle:'Mi vehículo',odoAsk:'Kilometraje actual',odometer:'Cuentakilómetros',odoNow:'Cuentakilómetros',odoTracked:'Recorridos desde el inicio',odoPrompt:'Lectura actual ({u}):',odoStartPrompt:'Lectura inicial ({u}):',odoSaved:'Kilometraje actualizado',theme:'Apariencia',themeLight:'Claro',themeDark:'Oscuro',spendChart:'Gráfico de gasto',cumTitle:'Hasta hoy: mismos km con combustión',totalDist:'Distancia total',evSpent:'EV total (neto)',iceWould:'Costaría (combustión)',totalSaved:'Ahorro total',evLine:'EV (real)',iceLine:'Combustión (mismos km)',archived:'Archivo (vendido/sin uso)',archivedTag:'archivado — cargas conservadas',archivedToast:'Vehículo archivado, sus cargas se conservan',restore:'Restaurar',newBank:'+ Añadir banco…',newBankPrompt:'Nombre del banco:',importAllDup:'Todas las cargas ya existen — no se añadió nada.',importPartial:'{n} cargas nuevas, {d} duplicadas omitidas',netPaid:'Pagado (neto)',typeSplit:'Reparto por tipo (kWh)',detailStats:'Estadísticas detalladas',avgDuration:'Duración media',avgSocRange:'Rango medio',topBanks:'Bancos (ahorro por dtos.)',topLocations:'Lugares más usados',bankCountries:'Mis países bancarios',bankCountriesD:'Elige los países de tus tarjetas — la lista de bancos del formulario los sigue. Tus bancos no cambian con el país de carga.',addCountry:'+ Añadir país',prevPeriod:'vs periodo anterior',navHome:'Inicio',navHistory:'Historial',navCompare:'Comparar',navSettings:'Ajustes',
 week:'Semana',month:'Mes',year:'Año',
 periodWeek:'Total esta semana',periodMonth:'Total este mes',periodYear:'Total este año',
 savings:'ahorrado',avgPerKwh:'Por kWh',netLbl:'neto',grossLbl:'sin dto.',
@@ -286,7 +284,7 @@ wiped:'Datos borrados',imported:'Copia restaurada',
 importFail:'Copia WattTrack no válida',importAsk:'cargas se importarán. ¿Combinar?',
 jsonDone:'Copia JSON descargada',csvDone:'CSV descargado',noData:'Sin cargas aún',sessions:'cargas'},
 
-it:{navStats:'Statistiche',statsTitle:'Statistiche',ice1:'Termica 1 {u}',unitCostTitle:'Costo unitario — EV e termica affiancate',tcoExpEv:'Costi fissi EV (Il mio veicolo)',tcoExpIce:'Costi fissi termica (in proporzione)',tco1kmIce:'Termica 1 {u} (con spese)',tcoExplain:'I costi fissi EV sono le voci (bollo, assicurazione, manutenzione) inserite ne Il mio veicolo. Sul lato termica, il costo fisso annuo inserito sopra è ripartito sul periodo monitorato — le due auto sono confrontate sullo stesso periodo.',totalCostAll:'Costo totale (ricarica + fissi)',fixedExpTotal:'Totale costi fissi',expChart:'Grafico costi fissi',prorateLbl:'Ripartisci le spese annuali (bollo, assicurazione) sul periodo',prorateNote:'Voci annuali al {p}% del periodo; totale realmente pagato {r}.',exp_tax:'Bollo',exp_insurance:'Assicurazione',exp_maintenance:'Manutenzione / Tagliando',exp_tire:'Pneumatici',exp_inspection:'Revisione',exp_repair:'Riparazione',exp_parking:'Parcheggio / Pedaggi',exp_equipment:'Attrezzatura (wallbox ecc.)',exp_other:'Altro',otherTypePh:'Scrivi un titolo — es. Accessori, Lavaggio',addExpense:'Aggiungi spesa',editExpense:'Modifica spesa',expType:'Tipo di spesa',expenses:'Spese del veicolo',expByCat:'Spese per categoria',expTotal:'Spese totali',expAmount:'Importo',noteLbl:'Nota',amountNeeded:'Inserisci un importo',noExpenses:'Nessuna spesa. Aggiungi bollo, assicurazione e manutenzione per il costo reale.',tcoTitle:'Costo totale di possesso (ricarica + spese)',tcoEv:'EV totale (ricarica + spese)',tcoIce:'Termica totale (con spese)',tcoSaved:'Risparmio totale con spese',tco1km:'EV per 1 {u} (con spese)',tcoNote:'Periodo monitorato {d} giorni. Costi fissi della termica in proporzione: {f}.',nonFuelTitle:'Confronto spese non di carburante',nonFuelKm:'Spese non di carburante per {u}',nonFuel100:'Spese non di carburante per 100 {u}',nonFuelYear:'Spese annue non di carburante',nonFuelKwh:'Spese non di carburante per kWh',nonFuelDiffYear:'Differenza annua spese non di carburante',nonFuelChart:'Spese annue non di carburante (EV / Termica)',iceShort:'Termica',chargePower:'Potenza media di ricarica',yearlyCompare:'Confronto annuale',yearlySpendLbl:'Spesa totale (quest’anno)',yearlyKwhLbl:'Energia (quest’anno)',yearlyPriceLbl:'Prezzo per kWh (quest’anno)',weekdayDist:'Per giorno della settimana',vsLastYear:'vs anno precedente',iceFixHint:'Facoltativo. Inserisci il totale annuo di bollo, assicurazione e manutenzione di una termica simile.',ev1:'EV per 1 {u} ({x})',supportNote:'Questa app è completamente gratuita e senza pubblicità. Per sostenere il progetto, visita la nostra pagina GitHub.',version:'Versione',contactDev:'Domande e contributi',privacy:'Privacy',rateApp:'Valuta su Play Store',supportDev:'Pagina GitHub del progetto',kwhHint:'es. 45,27',distFromOdo:'Fonte distanza: contachilometri',distFromRecords:'Fonte distanza: distanze delle ricariche',back:'← Indietro',changeCar:'Cambia veicolo',navVehicle:'Il mio veicolo',vehicleTitle:'Il mio veicolo',odoAsk:'Chilometraggio attuale',odometer:'Contachilometri',odoNow:'Contachilometri',odoTracked:'Percorsi dall’inizio',odoPrompt:'Lettura attuale ({u}):',odoStartPrompt:'Lettura iniziale ({u}):',odoSaved:'Contachilometri aggiornato',theme:'Aspetto',themeLight:'Chiaro',themeDark:'Scuro',spendChart:'Grafico spese',cumTitle:'Finora: stessi km con termica',totalDist:'Distanza totale',evSpent:'EV totale (netto)',iceWould:'Costerebbe (termica)',totalSaved:'Risparmio totale',evLine:'EV (reale)',iceLine:'Termica (stessi km)',archived:'Archivio (venduto/inutilizzato)',archivedTag:'archiviato — ricariche conservate',archivedToast:'Veicolo archiviato, le ricariche restano',restore:'Ripristina',newBank:'+ Nuova banca…',newBankPrompt:'Nome banca:',importAllDup:'Tutte le ricariche esistono già — nulla aggiunto.',importPartial:'{n} nuove ricariche, {d} duplicati saltati',netPaid:'Pagato (netto)',typeSplit:'Ripartizione per tipo (kWh)',detailStats:'Statistiche dettagliate',avgDuration:'Durata media',avgSocRange:'Intervallo medio',topBanks:'Banche (risparmio sconti)',topLocations:'Luoghi più usati',bankCountries:'I miei paesi bancari',bankCountriesD:'Scegli i paesi delle tue carte — l’elenco banche nel modulo li segue. Le tue banche non cambiano col paese di ricarica.',addCountry:'+ Aggiungi paese',prevPeriod:'vs periodo precedente',navHome:'Home',navHistory:'Cronologia',navCompare:'Confronta',navSettings:'Impostazioni',
+it:{navStats:'Statistiche',statsTitle:'Statistiche',ice1:'Termica 1 {u}',unitCostTitle:'Costo unitario — EV e termica affiancate',tcoExpEv:'Costi fissi EV (Il mio veicolo)',tcoExpIce:'Costi fissi termica (in proporzione)',tco1kmIce:'Termica 1 {u} (con spese)',tcoExplain:'I costi fissi EV sono le voci (bollo, assicurazione, manutenzione) inserite ne Il mio veicolo. Sul lato termica, il costo fisso annuo inserito sopra è ripartito sul periodo monitorato — le due auto sono confrontate sullo stesso periodo.',totalCostAll:'Costo totale (ricarica + fissi)',fixedExpTotal:'Totale costi fissi',expChart:'Grafico costi fissi',prorateLbl:'Ripartisci le spese annuali (bollo, assicurazione) sul periodo',prorateNote:'Voci annuali al {p}% del periodo; totale realmente pagato {r}.',exp_tax:'Bollo',exp_insurance:'Assicurazione',exp_maintenance:'Manutenzione / Tagliando',exp_tire:'Pneumatici',exp_inspection:'Revisione',exp_repair:'Riparazione',exp_parking:'Parcheggio / Pedaggi',exp_equipment:'Attrezzatura (wallbox ecc.)',exp_other:'Altro',otherTypePh:'Scrivi un titolo — es. Accessori, Lavaggio',addExpense:'Aggiungi spesa',editExpense:'Modifica spesa',expType:'Tipo di spesa',expenses:'Spese del veicolo',expByCat:'Spese per categoria',expTotal:'Spese totali',expAmount:'Importo',noteLbl:'Nota',amountNeeded:'Inserisci un importo',noExpenses:'Nessuna spesa. Aggiungi bollo, assicurazione e manutenzione per il costo reale.',tcoTitle:'Costo totale di possesso (ricarica + spese)',tcoEv:'EV totale (ricarica + spese)',tcoIce:'Termica totale (con spese)',tcoSaved:'Risparmio totale con spese',tco1km:'EV per 1 {u} (con spese)',tcoNote:'Periodo monitorato {d} giorni. Costi fissi della termica in proporzione: {f}.',nonFuelTitle:'Confronto spese non di carburante',nonFuelKm:'Spese non di carburante per {u}',nonFuel100:'Spese non di carburante per 100 {u}',nonFuelYear:'Spese annue non di carburante',nonFuelKwh:'Spese non di carburante per kWh',nonFuelDiffYear:'Differenza annua spese non di carburante',nonFuelChart:'Spese annue non di carburante (EV / Termica)',iceShort:'Termica',chargePower:'Potenza media di ricarica',yearlyCompare:'Confronto annuale',yearlySpendLbl:'Spesa totale (quest’anno)',yearlyKwhLbl:'Energia (quest’anno)',yearlyPriceLbl:'Prezzo per kWh (quest’anno)',weekdayDist:'Per giorno della settimana',vsLastYear:'vs anno precedente',iceFixHint:'Facoltativo. Inserisci il totale annuo di bollo, assicurazione e manutenzione di una termica simile.',ev1:'EV per 1 {u} ({x})',supportNote:'Questa app è completamente gratuita e senza pubblicità. Per sostenere il progetto, visita la nostra pagina GitHub.',version:'Versione',contactDev:'Domande e contributi',privacy:'Privacy',rateApp:'Valuta su Play Store',supportDev:'Pagina GitHub del progetto',kwhHint:'Sinistra intero, destra 2 decimali — 45 , 27 = 45,27 kWh. Solo cifre.',distFromOdo:'Fonte distanza: contachilometri',distFromRecords:'Fonte distanza: distanze delle ricariche',back:'← Indietro',changeCar:'Cambia veicolo',navVehicle:'Il mio veicolo',vehicleTitle:'Il mio veicolo',odoAsk:'Chilometraggio attuale',odometer:'Contachilometri',odoNow:'Contachilometri',odoTracked:'Percorsi dall’inizio',odoPrompt:'Lettura attuale ({u}):',odoStartPrompt:'Lettura iniziale ({u}):',odoSaved:'Contachilometri aggiornato',theme:'Aspetto',themeLight:'Chiaro',themeDark:'Scuro',spendChart:'Grafico spese',cumTitle:'Finora: stessi km con termica',totalDist:'Distanza totale',evSpent:'EV totale (netto)',iceWould:'Costerebbe (termica)',totalSaved:'Risparmio totale',evLine:'EV (reale)',iceLine:'Termica (stessi km)',archived:'Archivio (venduto/inutilizzato)',archivedTag:'archiviato — ricariche conservate',archivedToast:'Veicolo archiviato, le ricariche restano',restore:'Ripristina',newBank:'+ Nuova banca…',newBankPrompt:'Nome banca:',importAllDup:'Tutte le ricariche esistono già — nulla aggiunto.',importPartial:'{n} nuove ricariche, {d} duplicati saltati',netPaid:'Pagato (netto)',typeSplit:'Ripartizione per tipo (kWh)',detailStats:'Statistiche dettagliate',avgDuration:'Durata media',avgSocRange:'Intervallo medio',topBanks:'Banche (risparmio sconti)',topLocations:'Luoghi più usati',bankCountries:'I miei paesi bancari',bankCountriesD:'Scegli i paesi delle tue carte — l’elenco banche nel modulo li segue. Le tue banche non cambiano col paese di ricarica.',addCountry:'+ Aggiungi paese',prevPeriod:'vs periodo precedente',navHome:'Home',navHistory:'Cronologia',navCompare:'Confronta',navSettings:'Impostazioni',
 week:'Settimana',month:'Mese',year:'Anno',
 periodWeek:'Totale settimana',periodMonth:'Totale mese',periodYear:'Totale anno',
 savings:'risparmiato',avgPerKwh:'Per kWh',netLbl:'netto',grossLbl:'senza sconto',
@@ -364,73 +362,18 @@ const t = (key, vars) => {
   if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
   return s;
 };
-// ---------- WT-02: tek sayı kuralı ----------
-// ONDALIK: virgül (,)  ·  BİNLİK: nokta (.)  ·  2 basamak
-// Kural dil ayarından BAĞIMSIZ, tüm dillerde aynı — ürün kararı.
-// Girişte hem "43,57" hem "43.57" kabul edilir; ikisi de 43.57 olur.
-// dec: saklanacak ondalık basamak. Varsayılan 2; kur alanı gibi hassas
-// alanlar pf(v, 6) ile çağrılır (2'ye yuvarlamak kuru bozardı).
-function pf(str, dec = 2) {
-  if (str == null) return NaN;
-  let s = String(str).trim().replace(/[^\d.,\-]/g, '');   // para simgesi, boşluk, birim at
-  if (!s) return NaN;
-  const sonNokta = s.lastIndexOf('.');
-  const sonVirgul = s.lastIndexOf(',');
-  if (sonNokta > -1 && sonVirgul > -1) {
-    // İkisi de var → SONUNCUSU ondalık, diğeri binlik
-    const ond = Math.max(sonNokta, sonVirgul);
-    s = s.slice(0, ond).replace(/[.,]/g, '') + '.' + s.slice(ond + 1).replace(/[.,]/g, '');
-  } else if (sonNokta > -1 || sonVirgul > -1) {
-    // Tek ayraç → kullanıcı girişinde HER ZAMAN ondalık kabul et
-    s = s.replace(',', '.');
-  }
-  const n = parseFloat(s);
-  if (isNaN(n)) return NaN;
-  const p = Math.pow(10, dec);
-  return Math.round(n * p) / p;
-}
-// Tüm sayı gösteriminin TEK noktası. Dile göre biçimlendirme istenirse
-// değiştirilecek tek yer burası.
-function fmtNum(v, dec = 0) {
-  if (v == null || isNaN(v)) return '—';
-  const neg = v < 0;
-  const [tam, ond] = Math.abs(v).toFixed(dec).split('.');
-  const tamStr = tam.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return (neg ? '−' : '') + tamStr + (ond ? ',' + ond : '');
-}
-// Giriş kutusuna yazılacak biçim: fmtNum ile aynı kural, ama eksi işareti
-// normal tire (kutuya geri yazılınca pf() okuyabilsin) ve kur gibi çok
-// ondalıklı alanlarda gereksiz sıfırlar atılır.
-function fmtInput(v, dec = 2) {
-  if (v == null || isNaN(v)) return '';
-  let s = fmtNum(v, dec).replace('−', '-');
-  if (dec > 2 && s.indexOf(',') > -1) s = s.replace(/0+$/, '').replace(/,$/, '');
-  return s;
-}
-// WT-02/C: alandan çıkarken değeri kuralın kendisiyle geri yaz —
-// kullanıcı "43.57" yazıp çıkınca kutuda "43,57" görür, kural görünür olur.
-function bindDecimalInput(id, dec = 2) {
-  const el = $(id);
-  if (!el) return;
-  el.addEventListener('blur', () => {
-    if (!el.value.trim()) return;
-    const n = pf(el.value, dec);
-    el.value = isNaN(n) ? '' : fmtInput(n, dec);
-  });
-}
+// virgül toleranslı sayı okuma ("45,5" → 45.5)
+const pf = v => {
+  const n = parseFloat(String(v ?? '').trim().replace(',', '.'));
+  return isNaN(n) ? NaN : n;
+};
 const symOf = code => CURRENCY_SYMBOLS[code] || code;
 const sym = () => symOf(S.currency);
 // Harf içeren semboller (L, kr, Kč, Ft…) sayının SONUNA boşlukla gelir: "1.250 L";
 // işaret semboller (₺ € $ £) başa gelir: "₺1.250"
 const fm = (s, str) => /^[A-Za-z]/.test(s) ? str + ' ' + s : s + str;
-const money = v => (v < 0 ? '−' : '') + fm(sym(), fmtNum(Math.abs(v || 0), 0));
-const money2 = v => (v < 0 ? '−' : '') + fm(sym(), fmtNum(Math.abs(v || 0), 2));
-// WT-01: toISOString() UTC'ye çevirir; TR (UTC+3) gibi doğu saat dilimlerinde
-// gece yarısından sonra DÜNÜN tarihini verir. Tüm tarih anahtarları yerel
-// saate göre üretilmeli.
-const localISO = (d = new Date()) =>
-  new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-const localMonth = (d = new Date()) => localISO(d).slice(0, 7);
+const money = v => (v < 0 ? '−' : '') + fm(sym(), Math.abs(Math.round(v || 0)).toLocaleString('tr-TR'));
+const money2 = v => (v < 0 ? '−' : '') + fm(sym(), Math.abs(v || 0).toLocaleString('tr-TR', {maximumFractionDigits: 2}));
 const monthKey = iso => iso.slice(0, 7);
 const distDisp = km => S.unit === 'mi' ? km / MI : km;
 const distFactor = () => S.unit === 'mi' ? MI : 1;   // 100 birim = 100*factor km
@@ -605,7 +548,7 @@ function resizePhoto(file) {
 // ---------- döviz kuru (frankfurter — ECB) ----------
 // Bir para biriminin o günkü TÜM kur tablosunu çek (çift yönlü dönüşüm için)
 async function fetchTable(from, date) {
-  const day = date && date < localISO() ? date : 'latest';
+  const day = date && date < new Date().toISOString().slice(0, 10) ? date : 'latest';
   const urls = [
     `https://api.frankfurter.dev/v1/${day}?base=${from}`,
     `https://api.frankfurter.app/${day}?from=${from}`
@@ -640,7 +583,7 @@ async function backfillRates() {
   }
 }
 async function fetchRate(from, to, date) {
-  const day = date && date < localISO() ? date : 'latest';
+  const day = date && date < new Date().toISOString().slice(0, 10) ? date : 'latest';
   const urls = [
     `https://api.frankfurter.dev/v1/${day}?base=${from}&symbols=${to}`,
     `https://api.frankfurter.app/${day}?from=${from}&to=${to}`
@@ -746,19 +689,19 @@ function periodFilter(all) {
   const now = new Date();
   if (S.period === 'week') {
     const from = new Date(now); from.setDate(now.getDate() - 6);
-    const key = localISO(from);
+    const key = from.toISOString().slice(0, 10);
     return all.filter(r => r.tarih.slice(0, 10) >= key);
   }
   if (S.period === 'year')
     return all.filter(r => r.tarih.slice(0, 4) === String(now.getFullYear()));
-  return all.filter(r => monthKey(r.tarih) === localMonth(now));
+  return all.filter(r => monthKey(r.tarih) === now.toISOString().slice(0, 7));
 }
 function prevPeriodFilter(all) {
   const now = new Date();
   if (S.period === 'week') {
     const to = new Date(now); to.setDate(now.getDate() - 7);
     const from = new Date(now); from.setDate(now.getDate() - 13);
-    const a = localISO(from), b = localISO(to);
+    const a = from.toISOString().slice(0, 10), b = to.toISOString().slice(0, 10);
     return all.filter(r => { const d = r.tarih.slice(0, 10); return d >= a && d <= b; });
   }
   if (S.period === 'year')
@@ -844,7 +787,7 @@ async function renderDashboard() {
       ['d-1km','d-1km-g','d-100','d-100-g'].forEach(id => $(id).textContent = '—');
     }
   }
-  $('d-kwh').textContent = fmtNum(kwh, 0);
+  $('d-kwh').textContent = kwh.toLocaleString('tr-TR', {maximumFractionDigits: 0});
   $('d-sess').textContent = cur.length + ' / ' + new Set(cur.map(r => r.firma)).size;
   $('d-disc').textContent = money(sav);
   $('d-free').textContent = cur.filter(r => r.free).length;
@@ -856,9 +799,9 @@ async function renderDashboard() {
   const odoWrap = $('d-odo-wrap');
   if (odoV && odoV.kmNow) {
     odoWrap.style.display = '';
-    $('d-odo').textContent = fmtNum(distDisp(odoV.kmNow), 0) + ' ' + S.unit;
+    $('d-odo').textContent = Math.round(distDisp(odoV.kmNow)).toLocaleString('tr-TR') + ' ' + S.unit;
     $('d-odo-total').textContent = odoV.kmStart != null
-      ? fmtNum(distDisp(odoV.kmNow - odoV.kmStart), 0) + ' ' + S.unit : '—';
+      ? Math.round(distDisp(odoV.kmNow - odoV.kmStart)).toLocaleString('tr-TR') + ' ' + S.unit : '—';
   } else odoWrap.style.display = 'none';
 
   // detay: ortalama süre & SoC aralığı (Tümü/DC/AC filtresiyle)
@@ -886,7 +829,7 @@ async function renderDashboard() {
   const yKwhThis = yThisArr.reduce((s, r) => s + r.kwh, 0), yKwhLast = yLastArr.reduce((s, r) => s + r.kwh, 0);
   const yPriceThis = yKwhThis ? ySumThis / yKwhThis : 0, yPriceLast = yKwhLast ? ySumLast / yKwhLast : 0;
   $('d-yr-spend').textContent = money(ySumThis);
-  $('d-yr-kwh').textContent = fmtNum(yKwhThis, 0) + ' kWh';
+  $('d-yr-kwh').textContent = yKwhThis.toLocaleString('tr-TR', {maximumFractionDigits: 0}) + ' kWh';
   $('d-yr-price').textContent = yKwhThis ? fm(sym(), yPriceThis.toFixed(2)) : '—';
   const yDelta = (curV, prevV, id) => {
     const el = $(id);
@@ -933,7 +876,7 @@ async function renderStats() {
   if (S.gran === 'week') {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now); d.setDate(now.getDate() - i);
-      const key = localISO(d);
+      const key = d.toISOString().slice(0, 10);
       bars.push({
         label: DAYS[S.lang][(d.getDay() + 6) % 7],
         year: String(d.getFullYear()),
@@ -1064,8 +1007,8 @@ function rowHTML(r, withDelete) {
       <div class="sub">${shortDate(r.tarih)} · ${r.kwh} kWh · ${r.tip || 'DC'}${r.mesafeKm ? ' · ' + Math.round(distDisp(r.mesafeKm)) + ' ' + S.unit : ''}</div>
     </div>
     <div class="right">
-      <div class="amt">${r.free ? '<span class="free-tag">' + t('free') + '</span>' : fm(cs, fmtNum(r.odenen, 0))}</div>
-      <div class="sav">${s > 0 ? '−' + fm(cs, fmtNum(s, 0)) : ''}</div>
+      <div class="amt">${r.free ? '<span class="free-tag">' + t('free') + '</span>' : fm(cs, Math.round(r.odenen).toLocaleString('tr-TR'))}</div>
+      <div class="sav">${s > 0 ? '−' + fm(cs, Math.round(s).toLocaleString('tr-TR')) : ''}</div>
     </div>
     ${withDelete ? `<button class="del" data-del="${r.id}">×</button>` : ''}
   </div>`;
@@ -1180,9 +1123,9 @@ async function renderCompare() {
     $('c-vehsel').value = cur;
   }
   if (S.cmp) {
-    $('c-price').value = fmtInput(S.cmp.price, 2);
-    $('c-cons').value = fmtInput(S.cmp.cons, 2);
-    $('c-icefix').value = S.cmp.icefix ? fmtInput(S.cmp.icefix, 2) : '';
+    $('c-price').value = String(S.cmp.price).replace('.', ',');
+    $('c-cons').value = String(S.cmp.cons).replace('.', ',');
+    $('c-icefix').value = S.cmp.icefix ? String(S.cmp.icefix).replace('.', ',') : '';
     $('c-prorate').checked = S.cmp.prorate !== false;
     $('c-fuel').querySelectorAll('button').forEach(x =>
       x.classList.toggle('sel', x.dataset.v === S.cmp.fuel));
@@ -1254,7 +1197,7 @@ async function renderCompare() {
   // --- bugüne kadar kümülatif: EV gerçek vs yakıtlı (aynı km) ---
   const iceTot = distKm * icePerKm;
   $('c-dist-lbl').textContent = t('totalDist');
-  $('c-dist').textContent = fmtNum(distDisp(distKm), 0) + ' ' + S.unit;
+  $('c-dist').textContent = Math.round(distDisp(distKm)).toLocaleString('tr-TR') + ' ' + S.unit;
   $('c-evtot').textContent = money(net);
   $('c-icetot').textContent = money(iceTot);
   $('c-savetot').textContent = '+' + money(Math.max(0, iceTot - net));
@@ -1388,7 +1331,7 @@ async function renderVehiclePage() {
   const vehicles = allV.filter(v => !v.archived);
   const archived = allV.filter(v => v.archived);
   $('set-vehicles').innerHTML = vehicles.length ? vehicles.map(v => {
-    const kmTxt = v.kmNow ? fmtNum(distDisp(v.kmNow), 0) + ' ' + S.unit : '';
+    const kmTxt = v.kmNow ? Math.round(distDisp(v.kmNow)).toLocaleString('tr-TR') + ' ' + S.unit : '';
     const sub = [v.batt ? `${v.trim || ''} · ${v.batt} kWh` : '', kmTxt].filter(Boolean).join(' · ');
     const isDef = v.id === S.defaultVehicleId || (!S.defaultVehicleId && vehicles[0].id === v.id);
     const thumb = v.photo ? `<img class="vthumb" src="${v.photo}" alt="">` : '';
@@ -1541,7 +1484,7 @@ async function renderVehiclePage() {
           <div class="name">${e.altAd ? esc(e.altAd) : t('exp_' + e.tur)}</div>
           <div class="sub">${shortDate(e.tarih + 'T00:00')}${e.not ? ' · ' + esc(e.not) : ''}</div>
         </div>
-        <div class="right"><div class="amt">${fm(symOf(e.cur || S.currency), fmtNum(e.tutar, 0))}</div></div>
+        <div class="right"><div class="amt">${fm(symOf(e.cur || S.currency), Math.round(e.tutar).toLocaleString('tr-TR'))}</div></div>
       </div>`).join('');
     expList.querySelectorAll('[data-exp]').forEach(el =>
       el.addEventListener('click', async () =>
@@ -1807,14 +1750,16 @@ function updateNetLine() {
   const type = $('in-disc-type').querySelector('.sel').dataset.v;
   const net = netFromGross(g, type, pf($('in-disc-val').value) || 0);
   $('calc-net').textContent = fm(symOf(c ? c[3] : S.currency),
-    fmtNum(net, 2));
+    net.toLocaleString('tr-TR', {maximumFractionDigits: 2}));
 }
 ['in-amount', 'in-disc-val'].forEach(id => $(id).addEventListener('input', updateNetLine));
-// WT-02/C: ondalıklı alanlarda blur'da virgüllü geri yazma
-[['in-amount', 2], ['in-disc-val', 2], ['in-rate', 6], ['in-exp-amount', 2],
- ['c-price', 2], ['c-cons', 2], ['c-icefix', 2]].forEach(([id, d]) => bindDecimalInput(id, d));
-// WT-03: kWh tek alan — çift kutu %1'lik sessiz hata üretiyordu (45,5 -> 45,05)
-bindDecimalInput('in-kwh', 2);
+// kWh kutuları: yalnız rakam, tam=3 / ondalık=2 hane
+$('in-kwh-int').addEventListener('input', () => {
+  $('in-kwh-int').value = $('in-kwh-int').value.replace(/\D/g, '').slice(0, 3);
+});
+$('in-kwh-dec').addEventListener('input', () => {
+  $('in-kwh-dec').value = $('in-kwh-dec').value.replace(/\D/g, '').slice(0, 2);
+});
 $('in-firm').addEventListener('change', () => {
   $('in-firm-other').style.display = $('in-firm').value === '__other' ? '' : 'none';
 });
@@ -1923,7 +1868,7 @@ async function formCountryChanged(keepRate) {
       $('in-rate').value = '';
       const got = await fetchRate(c[3], S.currency, $('in-date').value);
       if (got && $('in-country').value === code) {
-        $('in-rate').value = fmtInput(got.rate, 6);
+        $('in-rate').value = String(Math.round(got.rate * 10000) / 10000).replace('.', ',');
         $('rate-note').textContent = t('rateAuto', {d: got.date}) + ' — ' + t('rateNote', {b: S.currency});
       }
     }
@@ -1940,22 +1885,25 @@ async function openAdd(id) {
   $('in-country').innerHTML = COUNTRIES.map(c =>
     `<option value="${c[0]}" ${c[0] === selCode ? 'selected' : ''}>${c[1]} ${c[2]} (${c[3]})</option>`).join('');
 
-  $('in-date').value = r ? r.tarih.slice(0, 10) : localISO();
+  $('in-date').value = r ? r.tarih.slice(0, 10) : new Date().toISOString().slice(0, 10);
   $('in-tip').querySelectorAll('button').forEach(b =>
     b.classList.toggle('sel', b.dataset.v === (r?.tip || 'DC')));
 
-  // kWh: tek alan (WT-03)
-  $('in-kwh').value = r?.kwh ? fmtInput(r.kwh, 2) : '';
+  // kWh: tam + ondalık kutuları
+  const kwh = r?.kwh ?? '';
+  $('in-kwh-int').value = (kwh === '' || !kwh) ? '' : Math.floor(kwh);
+  $('in-kwh-dec').value = (kwh === '' || !kwh) ? ''
+    : String(Math.round((kwh - Math.floor(kwh)) * 100)).padStart(2, '0');
   $('in-dist').value = r?.mesafeKm ? Math.round(distDisp(r.mesafeKm)) : '';
   $('in-free').checked = !!r?.free;
   const grossVal = r && !r.free
     ? (r.tutar != null ? r.tutar : (r.odenen || 0) + savingsOf(r)) : null;
   $('in-amount').value = grossVal != null && !isNaN(grossVal)
-    ? fmtInput(grossVal, 2) : '';
+    ? String(Math.round(grossVal * 100) / 100).replace('.', ',') : '';
   const dt = r?.indirimTip === 'percent' ? 'percent' : 'amount';
   $('in-disc-type').querySelectorAll('button').forEach(b =>
     b.classList.toggle('sel', b.dataset.v === dt));
-  $('in-disc-val').value = r?.indirimDeger ? fmtInput(r.indirimDeger, 2) : '';
+  $('in-disc-val').value = r?.indirimDeger ? String(r.indirimDeger).replace('.', ',') : '';
   const durMin = r?.dur || 0;
   $('in-dur-h').value = durMin ? Math.floor(durMin / 60) : '';
   $('in-dur-m').value = durMin ? durMin % 60 : '';
@@ -1963,7 +1911,7 @@ async function openAdd(id) {
   $('in-socb').value = r?.socB ?? '';
   $('in-soca').value = r?.socA ?? '';
   $('in-note').value = r?.not || '';
-  $('in-rate').value = r?.rate ? fmtInput(r.rate, 6) : '';
+  $('in-rate').value = r?.rate ? String(r.rate).replace('.', ',') : '';
   $('in-free').dispatchEvent(new Event('change'));
 
   // firma / banka / kur — ülkeye göre (düzenlemede firmayı koru)
@@ -2024,7 +1972,9 @@ async function openAdd(id) {
 $('btn-save').addEventListener('click', async () => {
   const firmSel = $('in-firm').value;
   const firma = firmSel === '__other' ? $('in-firm-other').value.trim() : firmSel;
-  const kwh = pf($('in-kwh').value) || 0;
+  const kInt = parseInt($('in-kwh-int').value) || 0;
+  const kDec = Math.min(99, parseInt($('in-kwh-dec').value) || 0);
+  const kwh = kInt + kDec / 100;
   const free = $('in-free').checked;
   const amount = free ? 0 : pf($('in-amount').value);
   if (!firma || kwh <= 0 || (!free && (isNaN(amount) || amount < 0))) {
@@ -2035,7 +1985,7 @@ $('btn-save').addEventListener('click', async () => {
   const code = $('in-country').value;
   const c = COUNTRIES.find(x => x[0] === code);
   const foreign = c[3] !== S.currency;
-  const rate = pf($('in-rate').value, 6);
+  const rate = pf($('in-rate').value);
   if (foreign && (isNaN(rate) || rate <= 0)) {
     $('form-err').textContent = t('rateNeeded');
     $('form-err').classList.add('show');
@@ -2113,9 +2063,9 @@ async function openExpense(rec) {
   $('in-exp-altad').placeholder = t('otherTypePh');
   $('in-exp-altad').value = rec?.altAd || '';
   $('in-exp-altad').style.display = $('in-exp-type').value === 'other' ? '' : 'none';
-  $('in-exp-date').value = (rec?.tarih || '').slice(0, 10) || localISO();
+  $('in-exp-date').value = (rec?.tarih || new Date().toISOString()).slice(0, 10);
   $('in-exp-cur').value = rec?.cur || S.currency;
-  $('in-exp-amount').value = rec ? fmtInput(rec.tutar, 2) : '';
+  $('in-exp-amount').value = rec ? String(rec.tutar).replace('.', ',') : '';
   $('in-exp-veh').value = rec?.aracId || '';
   $('in-exp-note').value = rec?.not || '';
   $('in-exp-amt-lbl').textContent = t('expAmount') + ' (' + symOf($('in-exp-cur').value) + ')';
@@ -2144,7 +2094,7 @@ $('btn-save-exp').addEventListener('click', async () => {
   const cur = $('in-exp-cur').value;
   const tur = $('in-exp-type').value;
   const rec = {
-    tarih: $('in-exp-date').value || localISO(),
+    tarih: $('in-exp-date').value || new Date().toISOString().slice(0, 10),
     tur,
     altAd: tur === 'other' ? $('in-exp-altad').value.trim() : '',
     tutar, cur,
@@ -2265,7 +2215,7 @@ async function finishOnboarding(withCar) {
 // ============================================================
 // YEDEKLEME
 // ============================================================
-function today() { return localISO(); }
+function today() { return new Date().toISOString().slice(0, 10); }
 function download(content, name, type) {
   const blob = new Blob([content], {type});
   const a = document.createElement('a');
@@ -2276,8 +2226,7 @@ function download(content, name, type) {
 }
 $('btn-export-json').addEventListener('click', async () => {
   const payload = {
-    app: 'WattTrack', version: SCHEMA_VERSION, appVersion: APP_VERSION,
-    exportedAt: new Date().toISOString(),
+    app: 'WattTrack', version: 8, exportedAt: new Date().toISOString(),
     sessions: await db.sessions.toArray(),
     vehicles: await db.vehicles.toArray(),
     expenses: await db.expenses.toArray(),

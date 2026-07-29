@@ -11,7 +11,6 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script src="version.js"></script>
 <script src="dexie.min.js"></script>
 <script src="evdata.js"></script>
 <style>
@@ -218,6 +217,9 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .sw input:checked+i{background:var(--accent)}
 .sw input:checked+i::after{transform:translateX(19px)}
 
+.kwh-split{display:flex;align-items:center;gap:6px}
+.kwh-split input{text-align:center}
+.kwh-split .comma{font-size:22px;font-weight:700;color:var(--muted)}
 .loc-row{display:flex;gap:8px}
 .loc-row input{flex:1}
 .gps-btn{flex-shrink:0;width:48px;border-radius:12px;background:var(--chip);color:var(--accent-text);font-size:18px;border:1px solid var(--border)}
@@ -757,8 +759,12 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div class="row2">
       <div>
         <div class="lbl" data-i18n="kwh">Enerji (kWh)</div>
-        <input type="text" inputmode="decimal" id="in-kwh" placeholder="45,27" aria-label="Enerji (kWh)">
-        <div class="about" style="margin:5px 0 0;font-size:11px" data-i18n="kwhHint">Örn. 45,27</div>
+        <div class="kwh-split">
+          <input type="text" id="in-kwh-int" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="45" aria-label="kWh tam kısım">
+          <span class="comma">,</span>
+          <input type="text" id="in-kwh-dec" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="27" aria-label="kWh ondalık kısım">
+        </div>
+        <div class="about" style="margin:5px 0 0;font-size:11px" data-i18n="kwhHint">Sol kutu tam kısım, sağ kutu 2 haneli ondalık — 45,27 = 45,27 kWh. Sadece rakam.</div>
       </div>
       <div>
         <div class="lbl" id="in-dist-lbl">Sürülen mesafe (km)</div>
