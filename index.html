@@ -131,7 +131,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 @keyframes barGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 .mb .bar{transform-origin:bottom;animation:barGrow .5s ease both}
 @keyframes donutIn{from{opacity:0;transform:rotate(-40deg) scale(.85)}to{opacity:1;transform:none}}
-#d-donut{animation:donutIn .55s ease both;transform-origin:center}
+#d-donut,#d-donut2{animation:donutIn .55s ease both;transform-origin:center}
 @keyframes dashIn{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 .chart-card path{stroke-dasharray:1;animation:dashIn 1s ease .1s both}
 .chart-card circle{opacity:0;animation:fadeUp .3s ease .8s both}
@@ -507,10 +507,19 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   <div class="h2" data-i18n="firmDist">Firma dağılımı</div>
   <div class="rows" id="d-firms" style="margin-bottom:14px"></div>
 
+  <!-- WT-16/5: iki AYRI boyut, iki ayrı donut.
+       DC/AC bir teknoloji boyutu; Ev-İş / Şarj firması bir yer boyutu.
+       Eskiden tek donutta karışıyorlardı (ev şarjı fiziksel olarak AC'dir). -->
   <div class="h2" data-i18n="typeSplit">Şarj tipi dağılımı</div>
   <div class="donut-wrap">
     <svg viewBox="0 0 42 42" id="d-donut"></svg>
     <div class="legend" id="d-donut-legend"></div>
+  </div>
+
+  <div class="h2" data-i18n="placeSplit">Şarj yeri dağılımı (kWh)</div>
+  <div class="donut-wrap">
+    <svg viewBox="0 0 42 42" id="d-donut2"></svg>
+    <div class="legend" id="d-donut2-legend"></div>
   </div>
 
   <div class="h2" data-i18n="topBanks">Bankalar (indirim kazancı)</div>
@@ -755,6 +764,12 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <label class="sw"><input type="checkbox" id="set-adv" aria-labelledby="adv-sw-lbl"><i></i></label>
   </div>
 
+  <!-- WT-16/C1: TEK bir kWh fiyatı. Tarife dilimi / T1-T2-T3 / puant-gece
+       ayrımı KASITLI olarak yok — kullanıcı vergiler dahil tek fiyatı biliyor. -->
+  <label class="lbl" id="set-homekwh-lbl" for="set-homekwh">Ev/İş elektrik birim fiyatı (kWh başına)</label>
+  <input type="text" inputmode="decimal" id="set-homekwh" placeholder="0,00" aria-describedby="set-homekwh-d">
+  <div class="about" id="set-homekwh-d" style="margin:5px 0 20px" data-i18n="homeKwhPriceD">Vergiler dahil tek bir kWh fiyatı yeter. Ev-İş şarjlarında tutar bundan hesaplanır.</div>
+
   <div class="section-lbl" data-i18n="dataSection">Veri</div>
   <button class="setting-btn" id="btn-export-json" data-i18n="exportJson">Dışa Aktar (JSON)</button>
   <button class="setting-btn" id="btn-export-csv" data-i18n="exportCsv">Dışa Aktar (CSV — Excel/Power BI)</button>
@@ -814,7 +829,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     </div>
 
     <div>
-      <label class="lbl" data-i18n="company" for="in-firm">Ev ya da Şarj Firması</label>
+      <label class="lbl" data-i18n="company" for="in-firm">Ev-İş ya da Şarj Firması</label>
       <select id="in-firm" aria-label="Şarj firması"></select>
       <input type="text" id="in-firm-other" maxlength="40" style="display:none;margin-top:8px" placeholder="">
     </div>
@@ -831,9 +846,17 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       </div>
     </div>
 
+    <!-- WT-16/C: kullanıcı ev şarjını faturadan ayıramıyor ama kWh başına ne
+         ödediğini biliyor. Bu alan yalnız firma "Ev-İş" iken görünür. -->
+    <div id="wrap-unitprice" style="display:none">
+      <label class="lbl" id="in-unitprice-lbl" for="in-unitprice">kWh birim fiyatı</label>
+      <input type="text" inputmode="decimal" id="in-unitprice" placeholder="0,00">
+    </div>
+
     <div id="wrap-paid">
       <label class="lbl" id="in-amount-lbl" for="in-amount">Ödenen Tutar</label>
       <input type="text" inputmode="decimal" id="in-amount" placeholder="0,00">
+      <div class="about" id="amount-src-note" style="margin:5px 0 0;font-size:11px"></div>
     </div>
 
     <div id="wrap-disc">
