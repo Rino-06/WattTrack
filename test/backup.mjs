@@ -19,7 +19,7 @@ async function boot() {
   const vc = new VirtualConsole();
   vc.on('jsdomError', e => {
     // location.reload() jsdom'da yok; gerçek bir uygulama hatası değil
-    if (/navigation to another Document/.test(e.message || '')) return;
+    if (/Not implemented: navigation/.test(e.message || '')) return;   // location.reload()
     errors.push('jsdomError: ' + (e.stack || e.message));
   });
   vc.on('error', (...a) => errors.push('console.error: ' + a.join(' ')));
@@ -45,7 +45,8 @@ async function boot() {
   const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
     + `\n;window.__app = {db, S, applyI18n, applyTheme, importBackupText,
-         deleteVehicleFlow, scanOrphans, warnings, SETTING_KEYS, saveSetting};`;
+         deleteVehicleFlow, moveRecordsFlow, scanOrphans, warnings,
+         SETTING_KEYS, saveSetting, renderVehiclePage};`;
   window.eval(bundle);
   await new Promise(r => setTimeout(r, 1200));
   return window;
@@ -164,6 +165,55 @@ check('WT-09: "arşivle" seçeneği aracı arşivledi',
   (await B.db.vehicles.get(existing))?.archived === true);
 check('WT-09: arşivlenen aracın kayıtları duruyor',
   (await B.db.sessions.where('aracId').equals(existing).count()) === 1);
+
+// ---------------- WT-09/B: toplu kayıt taşıma + geri al ----------------
+// Kabul kriteri: "İki araç arasında toplu taşıma yap → tüm kayıtlar hedefte
+// olmalı, geri alınabilmeli."
+{
+  await B.db.vehicles.update(existing, { archived: false });
+  const src = await B.db.vehicles.add({ ad: 'Taşıma Kaynak', batt: 60 });
+  const dst = await B.db.vehicles.add({ ad: 'Taşıma Hedef', batt: 70 });
+  await B.db.sessions.bulkAdd([
+    { tarih: '2026-05-01T12:00', firma: 'ZES', tip: 'DC', kwh: 30, tutar: 300, odenen: 300, aracId: src, cur: 'TRY' },
+    { tarih: '2026-05-08T12:00', firma: 'ZES', tip: 'DC', kwh: 35, tutar: 350, odenen: 350, aracId: src, cur: 'TRY' }
+  ]);
+  await B.db.expenses.add({ tarih: '2026-05-03', tur: 'tire', tutar: 8000, cur: 'TRY', aracId: src });
+
+  // diyalog açılınca hedefi seç ve onay butonuna bas
+  setTimeout(() => {
+    const back = w.document.querySelector('.dlg-back');
+    if (!back) return;
+    const to = back.querySelector('#mv-to');
+    to.value = String(dst);
+    to.dispatchEvent(new w.Event('change', { bubbles: true }));
+    setTimeout(() => back.querySelector('.dlg-opt').click(), 40);
+  }, 40);
+
+  const moved = await B.moveRecordsFlow(src);
+  await sleep(300);
+  check('WT-09/B: taşıma tamamlandı', moved === true);
+  check('WT-09/B KABUL: tüm şarj kayıtları hedefte',
+    (await B.db.sessions.where('aracId').equals(dst).count()) === 2 &&
+    (await B.db.sessions.where('aracId').equals(src).count()) === 0,
+    `hedef=${await B.db.sessions.where('aracId').equals(dst).count()} kaynak=${await B.db.sessions.where('aracId').equals(src).count()}`);
+  check('WT-09/B: gider de taşındı',
+    (await B.db.expenses.where('aracId').equals(dst).count()) === 1);
+
+  // "Geri al" butonu toast'ta duruyor mu, çalışıyor mu?
+  const undoBtn = w.document.querySelector('#toast .toast-undo');
+  check('WT-09/B: toast\'ta "Geri al" butonu var', !!undoBtn,
+    'toast: ' + w.document.getElementById('toast').textContent);
+  if (undoBtn) {
+    undoBtn.click();
+    await sleep(350);
+    check('WT-09/B KABUL: geri alma kayıtları kaynağa döndürdü',
+      (await B.db.sessions.where('aracId').equals(src).count()) === 2 &&
+      (await B.db.sessions.where('aracId').equals(dst).count()) === 0,
+      `kaynak=${await B.db.sessions.where('aracId').equals(src).count()} hedef=${await B.db.sessions.where('aracId').equals(dst).count()}`);
+    check('WT-09/B: geri alma gideri de döndürdü',
+      (await B.db.expenses.where('aracId').equals(src).count()) === 1);
+  }
+}
 
 // ---------------- WT-09/C: öksüz kayıt tespiti ----------------
 await B.db.sessions.add({ tarih: '2026-04-01T12:00', firma: 'ZES', tip: 'DC',

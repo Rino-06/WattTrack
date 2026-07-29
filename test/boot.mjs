@@ -15,7 +15,10 @@ const errors = [];
 const logs = [];
 
 const vc = new VirtualConsole();
-vc.on('jsdomError', e => errors.push('jsdomError: ' + (e.stack || e.message)));
+vc.on('jsdomError', e => {
+    if (/Not implemented: navigation/.test(e.message || '')) return;   // location.reload()
+    errors.push('jsdomError: ' + (e.stack || e.message));
+  });
 vc.on('error', (...a) => errors.push('console.error: ' + a.join(' ')));
 vc.on('warn', (...a) => logs.push('warn: ' + a.join(' ')));
 

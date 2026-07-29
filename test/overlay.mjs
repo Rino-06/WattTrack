@@ -12,7 +12,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const vc = new VirtualConsole();
 vc.on('jsdomError', e => {
-  if (/navigation to another Document/.test(e.message || '')) return;
+  if (/Not implemented: navigation/.test(e.message || '')) return;   // location.reload()
   errors.push('jsdomError: ' + (e.stack || e.message));
 });
 vc.on('error', (...a) => errors.push('console.error: ' + a.join(' ')));
@@ -35,7 +35,9 @@ window.URL.revokeObjectURL = () => {};
 
 window.eval(['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
-  + `\n;window.__app = {db, S, openAdd, overlayOpen, overlayClose, overlayStack, saveSetting};`);
+  + `\n;window.__app = {db, S, openAdd, openExpense, overlayOpen, overlayClose,
+       overlayStack, saveSetting, showScreen, markFormClean,
+       get screen() { return screen; }};`);
 await sleep(1200);
 
 const A = window.__app;
@@ -120,6 +122,48 @@ const items = [...$('page-country').querySelectorAll(
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')];
 check('WT-24/3: overlay içinde odaklanabilir öğe var', items.length > 0, items.length + ' öğe');
 await A.overlayClose('page-country', { force: true });
+
+// --- WT-24/7: DÜZENLEME modunda değişiklik yoksa onay SORULMAMALI ---
+{
+  const id = await A.db.sessions.add({ tarih: '2026-06-01T12:00', firma: 'ZES', tip: 'DC',
+    kwh: 42.5, tutar: 480, odenen: 480, aracId: null, cur: 'TRY', loc: 'Ankara', not: 'test notu' });
+  let asked2 = false;
+  window.confirm = () => { asked2 = true; return true; };
+  await A.openAdd(id);                       // alanlar DOLU gelir
+  await sleep(150);
+  check('düzenleme modu alanları doldurdu', $('in-kwh').value !== '', 'in-kwh=' + $('in-kwh').value);
+  await A.overlayClose('page-add');          // hiçbir şey değiştirmeden kapat
+  await sleep(120);
+  check('WT-24/7: değişiklik yoksa onay SORULMUYOR', !asked2);
+  check('WT-24/7: overlay kapandı', !$('page-add').classList.contains('active'));
+
+  // şimdi gerçekten değiştir → onay sorulmalı
+  await A.openAdd(id);
+  await sleep(150);
+  $('in-kwh').value = '99';
+  asked2 = false;
+  window.confirm = () => { asked2 = true; return true; };
+  await A.overlayClose('page-add');
+  await sleep(120);
+  check('WT-24/7: değişiklik VARSA onay soruluyor', asked2);
+}
+
+// --- WT-24/6: sekme geçişleri de geri tuşuna bağlı ---
+{
+  A.showScreen('dashboard');
+  await sleep(120);
+  A.showScreen('history');
+  await sleep(150);
+  check('WT-24/6: sekme geçişi geçmişe yazıldı',
+    window.history.state?.page === 'history',
+    'history.state=' + JSON.stringify(window.history.state));
+  window.history.back();
+  await sleep(250);
+  check('WT-24/6: geri tuşu önceki sekmeye döndü (uygulamadan çıkmadı)',
+    $('page-dashboard').classList.contains('active')
+      && !$('page-history').classList.contains('active'),
+    'aktif: ' + [...doc.querySelectorAll('.content .page.active')].map(p => p.id).join(','));
+}
 
 const failed = results.filter(r => !r).length;
 console.log('\n' + (failed ? `${failed} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ') + ` (${results.length} kontrol)`);

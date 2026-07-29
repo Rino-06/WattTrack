@@ -828,7 +828,19 @@ const RENDER = {dashboard: renderDashboard, stats: renderStats, history: renderH
   compare: renderCompare, vehicle: renderVehiclePage, settings: renderSettings};
 document.querySelectorAll('nav button[data-page]').forEach(b =>
   b.addEventListener('click', () => showScreen(b.dataset.page)));
-function showScreen(name) {
+// WT-24/6: "Aynı mantığı sekme geçişlerine de uygula" — sekme değişimi de
+// geçmişe yazılır, böylece Geçmiş/İstatistik sekmesindeyken geri tuşu
+// uygulamadan çıkmak yerine önceki sekmeye döner. Ana sayfa taban: oradan
+// geri basmak uygulamadan çıkar (beklenen Android davranışı).
+function showScreen(name, {push = true} = {}) {
+  if (push && name !== screen) {
+    if (name === 'dashboard') {
+      // tabana dönüş: yeni yığın kurmak yerine geçmişi tabana sıfırla
+      history.replaceState({page: 'dashboard'}, '');
+    } else {
+      history.pushState({page: name}, '');
+    }
+  }
   screen = name;
   document.querySelectorAll('.content .page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button[data-page]').forEach(b => {
@@ -851,11 +863,25 @@ function showScreen(name) {
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),' +
   'select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 const overlayStack = [];          // en üstteki en sonda
-// Kapatmadan önce onay isteyen overlay'ler: dolu formu kazara kaybetmeyelim
+// Kapatmadan önce onay isteyen overlay'ler: dolu formu kazara kaybetmeyelim.
+// "Boş mu?" diye bakmak yetmez — düzenleme modunda alanlar zaten doludur ve
+// hiçbir şey değiştirmeden × basan kullanıcıya her seferinde onay sorulur.
+// Bu yüzden açılıştaki değerler bir anlık görüntüye alınıp onunla kıyaslanır.
+const WATCHED = {
+  'page-add': ['in-date', 'in-kwh', 'in-amount', 'in-disc-val', 'in-dist',
+               'in-loc', 'in-note', 'in-rate', 'in-socb', 'in-soca',
+               'in-dur-h', 'in-dur-m'],
+  'page-expense': ['in-exp-date', 'in-exp-amount', 'in-exp-note', 'in-exp-altad']
+};
+const formSnapshot = id => (WATCHED[id] || []).map(f => $(f)?.value ?? '').join(' ');
+// openAdd/openExpense sonunda çağrılır — "temiz" durumu buradan sabitlenir
+function markFormClean(id) {
+  const el = $(id);
+  if (el) el._clean = formSnapshot(id);
+}
 const DIRTY_CHECK = {
-  'page-add': () => ['in-kwh', 'in-amount', 'in-loc', 'in-note', 'in-dist']
-    .some(id => $(id)?.value.trim()),
-  'page-expense': () => ['in-exp-amount', 'in-exp-note'].some(id => $(id)?.value.trim())
+  'page-add': () => $('page-add')._clean !== formSnapshot('page-add'),
+  'page-expense': () => $('page-expense')._clean !== formSnapshot('page-expense')
 };
 
 function overlayOpen(id) {
@@ -916,10 +942,16 @@ document.addEventListener('keydown', e => {
 });
 
 // Android donanım geri tuşu / tarayıcı geri: en üstteki overlay'i kapat
-window.addEventListener('popstate', () => {
+window.addEventListener('popstate', e => {
   if (suppressPop > 0) { suppressPop--; return; }
-  if (!overlayStack.length) return;
-  overlayClose(overlayStack[overlayStack.length - 1], {fromPop: true});
+  // Overlay açıksa önce o kapanır
+  if (overlayStack.length) {
+    overlayClose(overlayStack[overlayStack.length - 1], {fromPop: true});
+    return;
+  }
+  // Sekme geçmişi: hedef sekmeye dön (yeniden pushState YAPMA)
+  const page = e.state?.page;
+  if (page && page !== screen) showScreen(page, {push: false});
 });
 
 // ============================================================
@@ -2392,6 +2424,7 @@ async function openAdd(id) {
   $('btn-adv').textContent = advOpen ? t('advancedHide') : t('advanced');
 
   overlayOpen('page-add');
+  markFormClean('page-add');   // WT-24/7: 'temiz' referansı
   $('page-add').querySelector('.ov-body').scrollTop = 0;
 }
 
@@ -2531,6 +2564,7 @@ async function openExpense(rec) {
   $('in-exp-note').value = rec?.not || '';
   $('in-exp-amt-lbl').textContent = t('expAmount') + ' (' + symOf($('in-exp-cur').value) + ')';
   overlayOpen('page-expense');
+  markFormClean('page-expense');   // WT-24/7: 'temiz' referansı
 }
 $('btn-add-exp').addEventListener('click', () => openExpense(null));
 $('in-exp-type').addEventListener('change', () => {
@@ -2953,6 +2987,7 @@ const SETTING_KEYS = ['country','currency','unit','lang','advOpen','defaultVehic
     const row = await db.settings.get(key);
     if (row) S[key] = row.value;
   }
+  history.replaceState({page: 'dashboard'}, '');   // WT-24/6 taban durum
   initOnboarding();
   applyI18n();
   applyTheme();
@@ -2969,7 +3004,7 @@ const SETTING_KEYS = ['country','currency','unit','lang','advOpen','defaultVehic
   }
   else if (S.onboarded && q.get('action') === 'add') openAdd();
   else if (S.onboarded && ['stats','history','compare','vehicle','settings'].includes(q.get('page')))
-    showScreen(q.get('page'));
+    showScreen(q.get('page'));   // pushState yapar: geri tuşu ana sayfaya döner
   backfillRates().then(() => { if (screen === 'dashboard') renderDashboard(); });
   hideSplash();
 })();
