@@ -42,7 +42,7 @@ w.alert = () => {};
 w.eval(['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
   + `\n;window.__app = {db, S, t, openAdd, tureMesafe, odoNowOf, odoNeighbourCheck,
-       saveSetting, renderVehiclePage, renderDashboard};`);
+       saveSetting, renderVehiclePage, renderDashboard, looksLikeMissedCharge};`);
 await sleep(1300);
 
 const A = w.__app;
@@ -177,6 +177,70 @@ check('WT-19: hata mesajı GÖSTERİM biriminde (mi) yazılıyor',
   !nb.ok && /mi/.test(nb.msg) && /10\.100/.test(nb.msg),
   'mesaj: ' + nb.msg);
 A.S.unit = 'km';
+
+// ---------- WT-20: atlanan şarj kaydı ----------
+{
+  await A.db.sessions.clear();
+  await A.db.vehicles.update(vid, { kmStart: 0, kmNow: 0 });
+  A.S.unit = 'km';
+  A.S.period = 'year';
+
+  // Normal geçmiş: 6 kayıt, her biri 20 kWh / 100 km -> 20 kWh/100km
+  for (let i = 1; i <= 6; i++) {
+    await A.db.sessions.add({
+      tarih: `2026-01-0${i}T12:00`, firma: 'ZES', tip: 'DC', kwh: 20, tutar: 200,
+      odenen: 200, cur: 'TRY', aracId: vid, mesafeKm: 100
+    });
+  }
+  check('WT-20/4: normal tüketimde sezgi tetiklenmiyor',
+    (await A.looksLikeMissedCharge(vid, 100, 20, null)) === false);
+  // aynı 20 kWh ile 300 km -> 6,7 kWh/100km, ortalamanın yarısının altında
+  check('WT-20/4 KABUL: aynı enerjiyle anormal çok yol -> sezgi tetikleniyor',
+    (await A.looksLikeMissedCharge(vid, 300, 20, null)) === true);
+
+  // 5'ten az geçmişte sormamalı
+  await A.db.sessions.clear();
+  for (let i = 1; i <= 3; i++) {
+    await A.db.sessions.add({
+      tarih: `2026-02-0${i}T12:00`, firma: 'ZES', tip: 'DC', kwh: 20, tutar: 200,
+      odenen: 200, cur: 'TRY', aracId: vid, mesafeKm: 100
+    });
+  }
+  check('WT-20/4: 5 geçmiş kayıt yoksa sorulmuyor',
+    (await A.looksLikeMissedCharge(vid, 300, 20, null)) === false);
+
+  // --- KABUL: atlanan kayıt ortalamayı bozmasın, harcamaya girsin ---
+  await A.db.sessions.clear();
+  for (let i = 1; i <= 4; i++) {
+    await A.db.sessions.add({
+      tarih: `2026-03-0${i}T12:00`, firma: 'ZES', tip: 'DC', kwh: 20, tutar: 200,
+      odenen: 200, cur: 'TRY', aracId: vid, mesafeKm: 100
+    });
+  }
+  A.S.dashVeh = '';
+  await A.renderDashboard();
+  await sleep(350);
+  const kmCostBefore = $('d-1km').textContent;
+  const spendBefore = $('d-total').textContent;
+  const kwhBefore = $('d-kwh').textContent;
+
+  // atlanan işaretli kayıt: 20 kWh, 300 km, 200 TL
+  await A.db.sessions.add({
+    tarih: '2026-03-10T12:00', firma: 'ZES', tip: 'DC', kwh: 20, tutar: 200,
+    odenen: 200, cur: 'TRY', aracId: vid, mesafeKm: 300, atlanan: true
+  });
+  await A.renderDashboard();
+  await sleep(350);
+  check('WT-20 KABUL: atlanan kayıt km maliyeti ortalamasını BOZMADI',
+    $('d-1km').textContent === kmCostBefore,
+    `önce=${kmCostBefore} sonra=${$('d-1km').textContent}`);
+  check('WT-20 KABUL: harcama toplamı yine de arttı',
+    $('d-total').textContent !== spendBefore,
+    `önce=${spendBefore} sonra=${$('d-total').textContent}`);
+  check('WT-20: enerji toplamı da arttı',
+    $('d-kwh').textContent !== kwhBefore,
+    `önce=${kwhBefore} sonra=${$('d-kwh').textContent}`);
+}
 
 const failed = results.filter(r => !r).length;
 console.log('\n' + (failed ? `${failed} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ') + ` (${results.length} kontrol)`);

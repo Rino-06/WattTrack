@@ -925,6 +925,15 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
         <label class="lbl" data-i18n="note" for="in-note">Not</label>
         <input type="text" id="in-note" maxlength="200">
       </div>
+      <!-- WT-20: iki kayıt arasındaki sayaç farkı iki şarjla kat edilmiş
+           mesafeyi içerirken kWh tek şarjınki olunca tüketim bozuluyor -->
+      <div class="switchrow" style="box-shadow:none;border:1px solid var(--border);margin-top:12px">
+        <div>
+          <div class="t" id="missed-sw-lbl" data-i18n="missedLog">Bu şarjdan öncekini girmeyi unuttum</div>
+          <div class="d" data-i18n="missedLogD">İşaretlersen bu kaydın mesafesi tüketim ve km maliyeti ortalamalarına katılmaz; harcama ve enerji toplamlarına katılmaya devam eder.</div>
+        </div>
+        <label class="sw"><input type="checkbox" id="in-missed" aria-labelledby="missed-sw-lbl"><i></i></label>
+      </div>
     </div>
 
     <div class="form-err" id="form-err" data-i18n="formError">Firma, kWh ve tutar gerekli</div>
