@@ -523,7 +523,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
   <div class="card">
     <div id="wrap-c-veh" style="display:none;margin-bottom:14px">
-      <div class="lbl" data-i18n="vehicle">Araç</div>
+      <label class="lbl" data-i18n="vehicle" for="c-vehsel">Araç</label>
       <select id="c-vehsel" aria-label="Araç filtresi"></select>
     </div>
     <div class="lbl" data-i18n="fuelType">Diğer aracın yakıt tipi</div>
@@ -536,16 +536,16 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div class="about" id="c-hybrid-note" style="display:none;margin-bottom:10px;font-size:12px" data-i18n="hybridNote">Şarj edilmeyen (tam) hibritler de litre/100km ile ölçülür — sadece tüketimi düşüktür (~4-5 lt). Şarjlı hibrit (PHEV) için ortalama karma tüketimi gir.</div>
     <div class="row2" style="margin-bottom:14px;margin-top:8px">
       <div>
-        <div class="lbl" id="c-price-lbl">Yakıt fiyatı (lt)</div>
+        <label class="lbl" id="c-price-lbl" for="c-price">Yakıt fiyatı (lt)</label>
         <input type="text" inputmode="decimal" id="c-price" placeholder="47,50">
       </div>
       <div>
-        <div class="lbl" id="c-cons-lbl">Tüketim (lt/100km)</div>
+        <label class="lbl" id="c-cons-lbl" for="c-cons">Tüketim (lt/100km)</label>
         <input type="text" inputmode="decimal" id="c-cons" placeholder="6,5">
       </div>
     </div>
     <div style="margin-bottom:14px">
-      <div class="lbl" id="c-icefix-lbl">Yakıtlı aracın yıllık sabit gideri (vergi + sigorta + bakım)</div>
+      <label class="lbl" id="c-icefix-lbl" for="c-icefix">Yakıtlı aracın yıllık sabit gideri (vergi + sigorta + bakım)</label>
       <input type="text" inputmode="decimal" id="c-icefix" placeholder="0">
       <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;cursor:pointer">
         <input type="checkbox" id="c-prorate" checked style="width:16px;height:16px">
@@ -665,7 +665,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
   <div class="card" style="margin-top:20px">
     <div id="wrap-veh-exp" style="display:none;margin-bottom:14px">
-      <div class="lbl" data-i18n="vehicle">Araç</div>
+      <label class="lbl" data-i18n="vehicle" for="veh-exp-sel">Araç</label>
       <select id="veh-exp-sel" aria-label="Araç filtresi"></select>
     </div>
     <div class="h2row" style="margin-top:0">
@@ -702,14 +702,14 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   <button class="setting-btn" id="btn-country" style="display:flex;justify-content:space-between;align-items:center">
     <span data-i18n="country">Ülke</span><span id="set-country-val" style="color:var(--muted)"></span>
   </button>
-  <div class="lbl" style="margin-top:6px" data-i18n="currency">Para Birimi</div>
+  <label class="lbl" style="margin-top:6px" data-i18n="currency" for="set-currency">Para Birimi</label>
   <select id="set-currency" aria-label="Para birimi" style="margin-bottom:12px"></select>
   <div class="lbl" data-i18n="unit">Mesafe Birimi</div>
   <div class="seg" id="set-unit" style="margin-bottom:12px">
     <button data-v="km">km</button>
     <button data-v="mi">mi</button>
   </div>
-  <div class="lbl" data-i18n="language">Dil</div>
+  <label class="lbl" data-i18n="language" for="set-lang">Dil</label>
   <select id="set-lang" aria-label="Dil" style="margin-bottom:12px"></select>
   <div class="lbl" data-i18n="theme">Görünüm</div>
   <div class="seg" id="set-theme" style="margin-bottom:20px">
@@ -725,10 +725,10 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   <div class="section-lbl" data-i18n="formSection">Kayıt Formu</div>
   <div class="switchrow" style="margin-bottom:20px">
     <div>
-      <div class="t" data-i18n="advAlways">Gelişmiş alanlar hep açık</div>
+      <div class="t" id="adv-sw-lbl" data-i18n="advAlways">Gelişmiş alanlar hep açık</div>
       <div class="d" data-i18n="advAlwaysD">Banka, süre, lokasyon ve şarj aralığı formda açık gelsin</div>
     </div>
-    <label class="sw"><input type="checkbox" id="set-adv"><i></i></label>
+    <label class="sw"><input type="checkbox" id="set-adv" aria-labelledby="adv-sw-lbl"><i></i></label>
   </div>
 
   <div class="section-lbl" data-i18n="dataSection">Veri</div>
@@ -766,18 +766,18 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
     <div class="row2">
       <div>
-        <div class="lbl" data-i18n="date">Tarih</div>
+        <label class="lbl" data-i18n="date" for="in-date">Tarih</label>
         <input type="date" id="in-date">
       </div>
       <div>
-        <div class="lbl" data-i18n="country">Ülke</div>
+        <label class="lbl" data-i18n="country" for="in-country">Ülke</label>
         <select id="in-country" aria-label="Ülke"></select>
       </div>
     </div>
 
     <div id="wrap-rate" style="display:none">
-      <div class="lbl" id="rate-lbl">Kur</div>
-      <input type="text" inputmode="decimal" id="in-rate" placeholder="—">
+      <label class="lbl" id="rate-lbl" for="in-rate">Kur</label>
+      <input type="text" inputmode="decimal" id="in-rate" placeholder="—" aria-describedby="rate-note">
       <div class="about" style="margin:6px 0 0;font-size:11.5px" id="rate-note"></div>
     </div>
 
@@ -790,25 +790,25 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     </div>
 
     <div>
-      <div class="lbl" data-i18n="company">Ev ya da Şarj Firması</div>
+      <label class="lbl" data-i18n="company" for="in-firm">Ev ya da Şarj Firması</label>
       <select id="in-firm" aria-label="Şarj firması"></select>
       <input type="text" id="in-firm-other" maxlength="40" style="display:none;margin-top:8px" placeholder="">
     </div>
 
     <div class="row2">
       <div>
-        <div class="lbl" data-i18n="kwh">Enerji (kWh)</div>
-        <input type="text" inputmode="decimal" id="in-kwh" placeholder="45,27" aria-label="Enerji (kWh)">
-        <div class="about" style="margin:5px 0 0;font-size:11px" data-i18n="kwhHint">Örn. 45,27</div>
+        <label class="lbl" data-i18n="kwh" for="in-kwh">Enerji (kWh)</label>
+        <input type="text" inputmode="decimal" id="in-kwh" placeholder="45,27" aria-describedby="kwhHint">
+        <div class="about" id="kwhHint" style="margin:5px 0 0;font-size:11px" data-i18n="kwhHint">Örn. 45,27</div>
       </div>
       <div>
-        <div class="lbl" id="in-dist-lbl">Sürülen mesafe (km)</div>
+        <label class="lbl" id="in-dist-lbl" for="in-dist">Sürülen mesafe (km)</label>
         <input type="number" id="in-dist" inputmode="decimal" min="0" placeholder="0">
       </div>
     </div>
 
     <div id="wrap-paid">
-      <div class="lbl" id="in-amount-lbl">Ödenen Tutar</div>
+      <label class="lbl" id="in-amount-lbl" for="in-amount">Ödenen Tutar</label>
       <input type="text" inputmode="decimal" id="in-amount" placeholder="0,00">
     </div>
 
@@ -825,24 +825,24 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 
     <div class="switchrow" style="box-shadow:none;border:1px solid var(--border)">
       <div>
-        <div class="t" data-i18n="freeCharge">Ücretsiz şarj</div>
+        <div class="t" id="free-sw-lbl" data-i18n="freeCharge">Ücretsiz şarj</div>
         <div class="d" data-i18n="freeChargeD">Kampanya, ev güneş vb. — tutar 0 kaydedilir</div>
       </div>
-      <label class="sw"><input type="checkbox" id="in-free"><i></i></label>
+      <label class="sw"><input type="checkbox" id="in-free" aria-labelledby="free-sw-lbl"><i></i></label>
     </div>
 
     <div id="wrap-vehicle" style="display:none">
-      <div class="lbl" data-i18n="vehicle">Araç</div>
+      <label class="lbl" data-i18n="vehicle" for="in-vehicle">Araç</label>
       <select id="in-vehicle" aria-label="Araç"></select>
     </div>
 
     <button class="details-toggle" id="btn-adv" type="button">+ Gelişmiş</button>
     <div id="adv-fields">
       <div>
-        <div class="lbl" data-i18n="duration">Şarj süresi</div>
-        <div class="row2">
-          <input type="number" id="in-dur-h" inputmode="numeric" min="0" max="48" placeholder="0">
-          <input type="number" id="in-dur-m" inputmode="numeric" min="0" max="59" placeholder="35">
+        <div class="lbl" id="dur-lbl" data-i18n="duration">Şarj süresi</div>
+        <div class="row2" role="group" aria-labelledby="dur-lbl">
+          <input type="number" id="in-dur-h" inputmode="numeric" min="0" max="48" placeholder="0" data-i18n-aria="fldDurH" aria-label="Şarj süresi (saat)">
+          <input type="number" id="in-dur-m" inputmode="numeric" min="0" max="59" placeholder="35" data-i18n-aria="fldDurM" aria-label="Şarj süresi (dakika)">
         </div>
         <div class="row2" style="margin-top:4px">
           <div class="lbl" style="text-align:center" data-i18n="hours">saat</div>
@@ -850,11 +850,11 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
         </div>
       </div>
       <div id="wrap-bank">
-        <div class="lbl" data-i18n="bank">Banka / Kampanya</div>
+        <label class="lbl" data-i18n="bank" for="in-bank">Banka / Kampanya</label>
         <select id="in-bank" aria-label="Banka"></select>
       </div>
       <div>
-        <div class="lbl" data-i18n="location">Lokasyon</div>
+        <label class="lbl" data-i18n="location" for="in-loc">Lokasyon</label>
         <div class="loc-row">
           <input type="text" id="in-loc" maxlength="60" placeholder="Ankara" list="loc-list" autocomplete="off">
           <button class="gps-btn" id="btn-gps" type="button" title="GPS">📍</button>
@@ -863,15 +863,15 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
         <div class="chips" id="loc-chips"></div>
       </div>
       <div>
-        <div class="lbl" data-i18n="socRange">Şarj aralığı (%)</div>
-        <div class="row2">
-          <input type="number" id="in-socb" inputmode="numeric" min="0" max="100" placeholder="20">
-          <input type="number" id="in-soca" inputmode="numeric" min="0" max="100" placeholder="80">
+        <div class="lbl" id="soc-lbl" data-i18n="socRange">Şarj aralığı (%)</div>
+        <div class="row2" role="group" aria-labelledby="soc-lbl">
+          <input type="number" id="in-socb" inputmode="numeric" min="0" max="100" placeholder="20" data-i18n-aria="socStart" aria-label="Başlangıç şarj yüzdesi">
+          <input type="number" id="in-soca" inputmode="numeric" min="0" max="100" placeholder="80" data-i18n-aria="socEnd" aria-label="Bitiş şarj yüzdesi">
         </div>
         <div class="chips" id="soc-chips"></div>
       </div>
       <div>
-        <div class="lbl" data-i18n="note">Not</div>
+        <label class="lbl" data-i18n="note" for="in-note">Not</label>
         <input type="text" id="in-note" maxlength="200">
       </div>
     </div>
@@ -892,11 +892,11 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div id="ob-step1">
       <div class="ob-title" data-i18n="obWelcome">Hoş geldin!</div>
       <div class="ob-sub" data-i18n="obCountryQ">Hangi ülkede şarj oluyorsun? Para birimi ve mesafe birimini buna göre ayarlayalım.</div>
-      <div class="lbl" data-i18n="country">Ülke</div>
+      <label class="lbl" data-i18n="country" for="ob-country">Ülke</label>
       <select id="ob-country" aria-label="Ülke" style="margin-bottom:14px"></select>
       <div class="row2">
         <div>
-          <div class="lbl" data-i18n="currency">Para Birimi</div>
+          <label class="lbl" data-i18n="currency" for="ob-currency">Para Birimi</label>
           <select id="ob-currency" aria-label="Para birimi"></select>
         </div>
         <div>
@@ -907,7 +907,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
           </div>
         </div>
       </div>
-      <div class="lbl" style="margin-top:14px" data-i18n="language">Dil</div>
+      <label class="lbl" style="margin-top:14px" data-i18n="language" for="ob-lang">Dil</label>
       <select id="ob-lang" aria-label="Dil"></select>
       <button class="save-btn" id="ob-next" style="margin-top:20px" data-i18n="continue">Devam</button>
     </div>
@@ -920,7 +920,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       <div id="ob-ev-summary" style="display:none;margin-top:14px"></div>
       <button type="button" class="details-toggle" id="ob-change-car" style="display:none" data-i18n="changeCar">Aracı değiştir</button>
       <div id="ob-km-wrap" style="display:none;margin-top:14px">
-        <div class="lbl" id="ob-km-lbl" data-i18n="odoAsk">Aracın güncel kilometresi (sayaç)</div>
+        <label class="lbl" id="ob-km-lbl" data-i18n="odoAsk" for="ob-km">Aracın güncel kilometresi (sayaç)</label>
         <input type="number" id="ob-km" inputmode="numeric" min="0" placeholder="13614">
       </div>
       <div class="row2" style="margin-top:16px">
@@ -942,30 +942,30 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   </div>
   <div class="ov-body">
     <div>
-      <div class="lbl" data-i18n="expType">Gider türü</div>
+      <label class="lbl" data-i18n="expType" for="in-exp-type">Gider türü</label>
       <select id="in-exp-type" aria-label="Gider türü"></select>
       <input type="text" id="in-exp-altad" style="display:none;margin-top:8px" maxlength="30" placeholder="">
     </div>
     <div class="row2">
       <div>
-        <div class="lbl" data-i18n="date">Tarih</div>
+        <label class="lbl" data-i18n="date" for="in-exp-date">Tarih</label>
         <input type="date" id="in-exp-date" aria-label="Tarih">
       </div>
       <div>
-        <div class="lbl" data-i18n="currency">Para birimi</div>
+        <label class="lbl" data-i18n="currency" for="in-exp-cur">Para birimi</label>
         <select id="in-exp-cur" aria-label="Para birimi"></select>
       </div>
     </div>
     <div>
-      <div class="lbl" id="in-exp-amt-lbl">Tutar</div>
+      <label class="lbl" id="in-exp-amt-lbl" for="in-exp-amount">Tutar</label>
       <input type="text" inputmode="decimal" id="in-exp-amount" placeholder="0">
     </div>
     <div id="wrap-exp-veh" style="display:none">
-      <div class="lbl" data-i18n="vehicle">Araç</div>
+      <label class="lbl" data-i18n="vehicle" for="in-exp-veh">Araç</label>
       <select id="in-exp-veh" aria-label="Araç"></select>
     </div>
     <div>
-      <div class="lbl" data-i18n="noteLbl">Not</div>
+      <label class="lbl" data-i18n="noteLbl" for="in-exp-note">Not</label>
       <input type="text" id="in-exp-note" maxlength="200" placeholder="">
     </div>
     <button class="save-btn" id="btn-save-exp" data-i18n="save">Kaydet</button>
