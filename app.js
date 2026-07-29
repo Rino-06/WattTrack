@@ -376,6 +376,12 @@ const sym = () => symOf(S.currency);
 const fm = (s, str) => /^[A-Za-z]/.test(s) ? str + ' ' + s : s + str;
 const money = v => (v < 0 ? '−' : '') + fm(sym(), Math.abs(Math.round(v || 0)).toLocaleString('tr-TR'));
 const money2 = v => (v < 0 ? '−' : '') + fm(sym(), Math.abs(v || 0).toLocaleString('tr-TR', {maximumFractionDigits: 2}));
+// WT-01: toISOString() UTC'ye çevirir; TR (UTC+3) gibi doğu saat dilimlerinde
+// gece yarısından sonra DÜNÜN tarihini verir. Tüm tarih anahtarları yerel
+// saate göre üretilmeli.
+const localISO = (d = new Date()) =>
+  new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const localMonth = (d = new Date()) => localISO(d).slice(0, 7);
 const monthKey = iso => iso.slice(0, 7);
 const distDisp = km => S.unit === 'mi' ? km / MI : km;
 const distFactor = () => S.unit === 'mi' ? MI : 1;   // 100 birim = 100*factor km
@@ -550,7 +556,7 @@ function resizePhoto(file) {
 // ---------- döviz kuru (frankfurter — ECB) ----------
 // Bir para biriminin o günkü TÜM kur tablosunu çek (çift yönlü dönüşüm için)
 async function fetchTable(from, date) {
-  const day = date && date < new Date().toISOString().slice(0, 10) ? date : 'latest';
+  const day = date && date < localISO() ? date : 'latest';
   const urls = [
     `https://api.frankfurter.dev/v1/${day}?base=${from}`,
     `https://api.frankfurter.app/${day}?from=${from}`
@@ -585,7 +591,7 @@ async function backfillRates() {
   }
 }
 async function fetchRate(from, to, date) {
-  const day = date && date < new Date().toISOString().slice(0, 10) ? date : 'latest';
+  const day = date && date < localISO() ? date : 'latest';
   const urls = [
     `https://api.frankfurter.dev/v1/${day}?base=${from}&symbols=${to}`,
     `https://api.frankfurter.app/${day}?from=${from}&to=${to}`
@@ -691,19 +697,19 @@ function periodFilter(all) {
   const now = new Date();
   if (S.period === 'week') {
     const from = new Date(now); from.setDate(now.getDate() - 6);
-    const key = from.toISOString().slice(0, 10);
+    const key = localISO(from);
     return all.filter(r => r.tarih.slice(0, 10) >= key);
   }
   if (S.period === 'year')
     return all.filter(r => r.tarih.slice(0, 4) === String(now.getFullYear()));
-  return all.filter(r => monthKey(r.tarih) === now.toISOString().slice(0, 7));
+  return all.filter(r => monthKey(r.tarih) === localMonth(now));
 }
 function prevPeriodFilter(all) {
   const now = new Date();
   if (S.period === 'week') {
     const to = new Date(now); to.setDate(now.getDate() - 7);
     const from = new Date(now); from.setDate(now.getDate() - 13);
-    const a = from.toISOString().slice(0, 10), b = to.toISOString().slice(0, 10);
+    const a = localISO(from), b = localISO(to);
     return all.filter(r => { const d = r.tarih.slice(0, 10); return d >= a && d <= b; });
   }
   if (S.period === 'year')
@@ -878,7 +884,7 @@ async function renderStats() {
   if (S.gran === 'week') {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now); d.setDate(now.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
+      const key = localISO(d);
       bars.push({
         label: DAYS[S.lang][(d.getDay() + 6) % 7],
         year: String(d.getFullYear()),
@@ -1887,7 +1893,7 @@ async function openAdd(id) {
   $('in-country').innerHTML = COUNTRIES.map(c =>
     `<option value="${c[0]}" ${c[0] === selCode ? 'selected' : ''}>${c[1]} ${c[2]} (${c[3]})</option>`).join('');
 
-  $('in-date').value = r ? r.tarih.slice(0, 10) : new Date().toISOString().slice(0, 10);
+  $('in-date').value = r ? r.tarih.slice(0, 10) : localISO();
   $('in-tip').querySelectorAll('button').forEach(b =>
     b.classList.toggle('sel', b.dataset.v === (r?.tip || 'DC')));
 
@@ -2065,7 +2071,7 @@ async function openExpense(rec) {
   $('in-exp-altad').placeholder = t('otherTypePh');
   $('in-exp-altad').value = rec?.altAd || '';
   $('in-exp-altad').style.display = $('in-exp-type').value === 'other' ? '' : 'none';
-  $('in-exp-date').value = (rec?.tarih || new Date().toISOString()).slice(0, 10);
+  $('in-exp-date').value = (rec?.tarih || '').slice(0, 10) || localISO();
   $('in-exp-cur').value = rec?.cur || S.currency;
   $('in-exp-amount').value = rec ? String(rec.tutar).replace('.', ',') : '';
   $('in-exp-veh').value = rec?.aracId || '';
@@ -2096,7 +2102,7 @@ $('btn-save-exp').addEventListener('click', async () => {
   const cur = $('in-exp-cur').value;
   const tur = $('in-exp-type').value;
   const rec = {
-    tarih: $('in-exp-date').value || new Date().toISOString().slice(0, 10),
+    tarih: $('in-exp-date').value || localISO(),
     tur,
     altAd: tur === 'other' ? $('in-exp-altad').value.trim() : '',
     tutar, cur,
@@ -2217,7 +2223,7 @@ async function finishOnboarding(withCar) {
 // ============================================================
 // YEDEKLEME
 // ============================================================
-function today() { return new Date().toISOString().slice(0, 10); }
+function today() { return localISO(); }
 function download(content, name, type) {
   const blob = new Blob([content], {type});
   const a = document.createElement('a');
