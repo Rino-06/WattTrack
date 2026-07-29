@@ -200,6 +200,68 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     $('d-kwh-note').textContent.trim() !== '', 'not=' + JSON.stringify($('d-kwh-note').textContent));
 }
 
+// --- WT-14: ana sayfa dönem seçicisi tüm ekranı kapsıyor mu? ---
+{
+  await app().db.sessions.clear();
+  // biri BU HAFTA, biri 5 ay önce — 'Hafta' seçilince detaylar daralmalı
+  const today = new Date();
+  const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const oldD = new Date(today); oldD.setMonth(oldD.getMonth() - 5);
+  await app().db.sessions.bulkAdd([
+    { tarih: iso(today) + 'T12:00', firma: 'ZES', tip: 'DC', kwh: 40, tutar: 400,
+      odenen: 400, cur: 'TRY', dur: 30, socB: 20, socA: 80, aracId: null },
+    { tarih: iso(oldD) + 'T12:00', firma: 'ZES', tip: 'DC', kwh: 50, tutar: 500,
+      odenen: 500, cur: 'TRY', dur: 120, socB: 10, socA: 90, aracId: null }
+  ]);
+
+  app().S.period = 'year';
+  await app().renderDashboard();
+  await sleep(300);
+  const durYear = $('d-dur').textContent, socYear = $('d-soc').textContent;
+
+  app().S.period = 'week';
+  await app().renderDashboard();
+  await sleep(300);
+  const durWeek = $('d-dur').textContent, socWeek = $('d-soc').textContent;
+
+  check('WT-14/A KABUL: "Detay istatistikler" dönem seçicisine bağlandı',
+    durYear !== durWeek, `yıl=${durYear} hafta=${durWeek}`);
+  check('WT-14/A: ort. şarj aralığı da daraldı',
+    socYear !== socWeek, `yıl=${socYear} hafta=${socWeek}`);
+  check('WT-14/A: detay bloğu kapsam rozeti taşıyor',
+    $('d-dstat-scope').textContent.trim() !== '',
+    'rozet=' + JSON.stringify($('d-dstat-scope').textContent));
+  check('WT-14: kasıtlı tüm-zamanlar olan yıllık blok da rozetli',
+    $('d-yr-scope').textContent.trim() !== '',
+    'rozet=' + JSON.stringify($('d-yr-scope').textContent));
+}
+
+// --- WT-14/B: 1 km sayaç moduna düşünce kapsamı yazıyor mu? ---
+{
+  await app().db.sessions.clear();
+  await app().db.vehicles.clear();
+  const vid = await app().db.vehicles.add({ ad: 'Test EV', kmStart: 10000, kmNow: 15000 });
+  app().S.period = 'year';
+  // mesafesi OLMAYAN kayıt -> distKm < 20 -> sayaç moduna düşer
+  await app().db.sessions.add({ tarih: '2026-07-15T12:00', firma: 'ZES', tip: 'DC',
+    kwh: 40, tutar: 400, odenen: 400, cur: 'TRY', aracId: vid });
+  await app().renderDashboard();
+  await sleep(350);
+  check('WT-14/B KABUL: sayaç moduna düşünce kutunun altında açıklama var',
+    /sayac|sayaç|tüm zamanlar/i.test($('d-dist-scope').textContent),
+    'not=' + JSON.stringify($('d-dist-scope').textContent));
+
+  // şimdi kayda mesafe ekle -> kayıt moduna dön
+  const r = (await app().db.sessions.toArray())[0];
+  await app().db.sessions.update(r.id, { mesafeKm: 250 });
+  await app().renderDashboard();
+  await sleep(350);
+  check('WT-14/B: kayıt mesafesi varken kaynak "kayıtlar" diyor',
+    $('d-dist-scope').textContent.trim() !== '' &&
+      !/tüm zamanlar/i.test($('d-dist-scope').textContent),
+    'not=' + JSON.stringify($('d-dist-scope').textContent));
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);

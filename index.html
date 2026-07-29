@@ -202,6 +202,11 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .calcline{display:flex;justify-content:space-between;align-items:center;margin-top:10px;background:var(--pill);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--accent-text);font-weight:600}
 .calcline b{font-size:16px;color:var(--accent-dark)}
 .form-err{color:var(--red);font-size:13px;font-weight:600;display:none}
+/* WT-14: kapsam rozeti / notu — bir bloğun dönem seçicisine bağlı olup
+   olmadığını görünür kılar */
+.scope-note{font-size:11.5px;color:var(--muted2);margin:-6px 0 12px;line-height:1.35}
+.scope-badge{display:inline-block;font-size:10.5px;font-weight:700;color:var(--muted);
+  background:var(--circle);border-radius:100px;padding:2px 8px;vertical-align:middle}
 /* WT-09: seçim diyaloğu (araç silme, kayıt taşıma) */
 .dlg-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;
   display:flex;align-items:flex-end;justify-content:center}
@@ -427,6 +432,8 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div class="tile"><div class="k"><span id="d-100-lbl">100 km</span> · <span data-i18n="netLbl">net</span></div><div class="v" id="d-100">—</div></div>
     <div class="tile"><div class="k"><span id="d-100-lbl2">100 km</span> · <span data-i18n="grossLbl">indirimsiz</span></div><div class="v" id="d-100-g">—</div></div>
   </div>
+  <!-- WT-14/B: mesafe kaynağı dönem seçicisinden bağımsızsa burada söylenir -->
+  <div class="scope-note" id="d-dist-scope"></div>
   <div class="tiles">
     <div class="tile"><div class="k"><span data-i18n="totalKwhP">Enerji (kWh)</span><span id="d-kwh-note"></span></div><div class="v" id="d-kwh">0</div></div>
     <div class="tile"><div class="k" data-i18n="sessionsCompanies">Şarj / Firma</div><div class="v" id="d-sess">0 / 0</div></div>
@@ -437,7 +444,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   </div>
 
   <div class="h2row" style="margin-top:0">
-    <div class="h2" data-i18n="detailStats">Detay istatistikler</div>
+    <div class="h2"><span data-i18n="detailStats">Detay istatistikler</span> <span class="scope-badge" id="d-dstat-scope"></span></div>
     <div class="seg mini" id="d-dstat-type" style="width:170px">
       <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
       <button data-v="DC">DC</button>
@@ -452,7 +459,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div class="tile"><div class="k" data-i18n="chargePower">Ort. şarj gücü</div><div class="v" id="d-power">—</div></div>
   </div>
 
-  <div class="h2" data-i18n="yearlyCompare">Yıllık karşılaştırma</div>
+  <div class="h2"><span data-i18n="yearlyCompare">Yıllık karşılaştırma</span> <span class="scope-badge" id="d-yr-scope"></span></div>
   <div class="tiles">
     <div class="tile"><div class="k" data-i18n="yearlySpendLbl">Toplam harcama (bu yıl)</div><div class="v" id="d-yr-spend">—</div><div class="yd" id="d-yr-spend-d"></div></div>
     <div class="tile"><div class="k" data-i18n="yearlyKwhLbl">Enerji (bu yıl)</div><div class="v" id="d-yr-kwh">—</div><div class="yd" id="d-yr-kwh-d"></div></div>
