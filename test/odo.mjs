@@ -42,7 +42,8 @@ w.alert = () => {};
 w.eval(['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
   + `\n;window.__app = {db, S, t, openAdd, tureMesafe, odoNowOf, odoNeighbourCheck,
-       saveSetting, renderVehiclePage, renderDashboard, looksLikeMissedCharge};`);
+       saveSetting, renderVehiclePage, renderDashboard, looksLikeMissedCharge,
+       renderCompare};`);
 await sleep(1300);
 
 const A = w.__app;
@@ -240,6 +241,42 @@ A.S.unit = 'km';
   check('WT-20: enerji toplamı da arttı',
     $('d-kwh').textContent !== kwhBefore,
     `önce=${kwhBefore} sonra=${$('d-kwh').textContent}`);
+}
+
+// ---------- WT-17: sayaç modunda kıyas grafiği ----------
+{
+  await A.db.sessions.clear();
+  A.S.cmpVeh = '';
+  A.S.cmp = { price: 45, cons: 7, fuel: 'petrol', icefix: 0, prorate: true };
+  await A.saveSetting('cmp', A.S.cmp);
+  // mesafesi OLMAYAN kayıtlar + sayaçlı araç -> odoMode
+  await A.db.vehicles.update(vid, { kmStart: 10000, kmNow: 15000 });
+  for (let i = 1; i <= 3; i++) {
+    await A.db.sessions.add({
+      tarih: `2026-04-0${i}T12:00`, firma: 'ZES', tip: 'DC', kwh: 40, tutar: 400,
+      odenen: 400, cur: 'TRY', aracId: vid
+    });
+  }
+  await A.renderCompare();
+  await sleep(400);
+  check('WT-17: sayaç modunda kıyas grafiği gizlendi',
+    $('c-line-card').style.display === 'none',
+    'display=' + $('c-line-card').style.display);
+  check('WT-17: yerine açıklama gösteriliyor',
+    $('c-line-note').style.display !== 'none' && $('c-line-note').textContent.trim() !== '',
+    'not=' + $('c-line-note').textContent.slice(0, 70));
+  check('WT-17: toplam rakamlar görünmeye devam ediyor',
+    $('c-dist').textContent !== '—' && $('c-savetot').textContent !== '—',
+    `mesafe=${$('c-dist').textContent} kazanç=${$('c-savetot').textContent}`);
+
+  // kayıtlara gerçek mesafe ver -> grafik geri gelmeli
+  for (const r of await A.db.sessions.toArray())
+    await A.db.sessions.update(r.id, { mesafeKm: 200 });
+  await A.renderCompare();
+  await sleep(400);
+  check('WT-17: gerçek mesafe varken grafik geri geliyor (silinmedi)',
+    $('c-line-card').style.display !== 'none' && $('c-line-note').style.display === 'none',
+    'display=' + $('c-line-card').style.display);
 }
 
 const failed = results.filter(r => !r).length;

@@ -621,13 +621,16 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       <div class="tile"><div class="k" data-i18n="totalSaved">Toplam kazanç</div><div class="v" id="c-savetot" style="color:var(--accent-dark)">—</div></div>
     </div>
     <div class="about" id="c-dist-src" style="margin:-6px 0 10px;font-size:11.5px"></div>
-    <div class="chart-card">
+    <div class="chart-card" id="c-line-card">
       <svg id="c-line" viewBox="0 0 340 170" preserveAspectRatio="none"></svg>
       <div class="legend" style="flex-direction:row;justify-content:center;gap:18px;margin-top:8px">
         <div class="li"><span class="dot" style="background:var(--accent)"></span><span data-i18n="evLine">EV (gerçek)</span></div>
         <div class="li"><span class="dot" style="background:var(--blue)"></span><span data-i18n="iceLine">Yakıtlı (aynı km)</span></div>
       </div>
     </div>
+    <!-- WT-17: sayaç modunda grafik yapay veri gösteriyordu; gizlenip
+         yerine açıklama konur. Grafik SİLİNMİYOR — WT-43'ten sonra anlamlı. -->
+    <div class="scope-note" id="c-line-note" style="display:none"></div>
 
     <div class="h2" data-i18n="tcoTitle">Toplam sahip olma maliyeti (şarj + giderler)</div>
     <div class="about" data-i18n="tcoExplain" style="margin:-4px 0 10px;font-size:11.5px">Giderler toplamı, Aracım sekmesine girdiğin vergi, sigorta, bakım gibi kalemlerdir.</div>
