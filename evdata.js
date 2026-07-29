@@ -63,6 +63,10 @@ const CURRENCY_SYMBOLS = {
   RSD:'дин', BAM:'KM', MKD:'ден', ALL:'L', MDL:'L'
 };
 
+// WT-10: ECB/frankfurter tablosunda bulunmayan para birimleri. Bu ülkeler
+// seçildiğinde kur otomatik gelmez, kullanıcının elle girmesi gerekir.
+const NO_AUTO_FX = ['RSD', 'BAM', 'MKD', 'ALL', 'MDL'];
+
 // ---------- ülke bazlı şarj operatörleri (yaygınlık sırasıyla) ----------
 const PAN_EU = ['Ionity','Tesla Supercharger','Fastned','Allego','Shell Recharge','TotalEnergies','EVBox'];
 const CHARGERS = {
