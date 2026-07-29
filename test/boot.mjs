@@ -55,7 +55,8 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
   + `\n;window.__app = {db, S, APP_VERSION, openAdd, showScreen, pf, fmtNum,
        fmtInput, checkNum, isValidDate, localISO, renderDashboard, scanBadData,
        isConv, amtB, renderStats, applyI18n, T, LANG_NAMES, CHARGERS,
-       COUNTRIES, HOME_NAMES, PAN_EU, BANKS_BY, BANKS_DEFAULT, overlayClose};`;
+       COUNTRIES, HOME_NAMES, PAN_EU, BANKS_BY, BANKS_DEFAULT, overlayClose,
+       initSegments};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -498,6 +499,61 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     window.document.querySelectorAll('nav button[data-page]').length
       + window.document.querySelectorAll('nav button.plus, nav .plus').length >= 7,
     'sekme=' + window.document.querySelectorAll('nav button').length);
+}
+
+// --- WT-27: görünür odak göstergesi ---
+{
+  const css = [...window.document.querySelectorAll('style')].map(x => x.textContent).join('\n');
+  check('WT-27: :focus-visible için outline tanımlı',
+    /:focus-visible\s*\{[^}]*outline\s*:\s*2px/.test(css));
+  check('WT-27: koyu temada odak rengi ayrıca tanımlı',
+    /\[data-theme="dark"\][^{]*:focus-visible\s*\{[^}]*outline-color/.test(css));
+  check('WT-27: dokunmada :active geri bildirimi var (tap-highlight kapalı)',
+    /button:active[^{]*\{[^}]*(opacity|transform)/.test(css));
+}
+
+// --- WT-28: segment kontrolleri seçili durumu bildiriyor mu? ---
+{
+  const doc = window.document;
+  const segs = [...doc.querySelectorAll('.seg')];
+  check('WT-28: tüm segmentler role=radiogroup',
+    segs.length > 0 && segs.every(s2 => s2.getAttribute('role') === 'radiogroup'),
+    'segment=' + segs.length);
+  check('WT-28: segment butonları role=radio',
+    segs.every(s2 => [...s2.querySelectorAll('button')]
+      .every(b => b.getAttribute('role') === 'radio')));
+  check('WT-28: her segmentin erişilebilir adı var',
+    segs.every(s2 => s2.getAttribute('aria-label') || s2.getAttribute('aria-labelledby')),
+    segs.filter(s2 => !s2.getAttribute('aria-label') && !s2.getAttribute('aria-labelledby'))
+      .map(s2 => s2.id).join(', ') || '(hepsi tamam)');
+
+  const seg = doc.getElementById('d-period');
+  const btns = [...seg.querySelectorAll('button')];
+  const checked = () => btns.map(b => b.getAttribute('aria-checked')).join(',');
+  check('WT-28: seçili butonda aria-checked=true, diğerlerinde false',
+    btns.filter(b => b.getAttribute('aria-checked') === 'true').length === 1,
+    'aria-checked: ' + checked());
+
+  // sınıf değişince aria-checked de değişmeli (MutationObserver)
+  const before = checked();
+  btns[0].click();
+  await sleep(250);
+  check('WT-28: seçim değişince aria-checked güncelleniyor',
+    btns[0].getAttribute('aria-checked') === 'true' && checked() !== before,
+    `önce=${before} sonra=${checked()}`);
+
+  // dolaşan tabindex
+  check('WT-28: gruba tek Tab ile girilir (dolaşan tabindex)',
+    btns.filter(b => b.tabIndex === 0).length === 1,
+    'tabindex: ' + btns.map(b => b.tabIndex).join(','));
+
+  // ok tuşu gezinmesi
+  btns[0].focus();
+  seg.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await sleep(250);
+  check('WT-28: sağ ok bir sonraki seçeneğe geçiyor',
+    doc.activeElement === btns[1] && btns[1].getAttribute('aria-checked') === 'true',
+    'odak=' + (doc.activeElement === btns[1] ? 'btns[1]' : 'başka') + ' checked=' + checked());
 }
 
 const failed = results.filter(r => !r.pass);

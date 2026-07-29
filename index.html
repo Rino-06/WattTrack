@@ -325,6 +325,22 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 8px 20px rgba(0,104,42,.35);margin-top:-30px;border:3px solid var(--accent)}
 
+/* ============ WT-27: görünür odak göstergesi (WCAG 2.4.7) ============
+   Yalnız input/select için outline tanımlıydı; buton, segment, çip, alt menü
+   ve overlay kapatma butonlarında hiçbir odak stili yoktu. Ayrıca
+   *{-webkit-tap-highlight-color:transparent} dokunma geri bildirimini de
+   kaldırıyordu. */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:inherit}
+[data-theme="dark"] :focus-visible{outline-color:var(--accent-dark)}
+/* ::after ile genişletilmiş dokunma alanlarında çerçeve görselin etrafında
+   kalsın, görünmez katmanın değil */
+.crow .del:focus-visible, .vlist .cam:focus-visible,
+.ov-head .close:focus-visible, .theme-btn:focus-visible{outline-offset:1px}
+/* dokunmada görsel geri bildirim (tap-highlight kapalı olduğu için) */
+button:active, .chip:active, .seg button:active,
+.setting-btn:active, nav button:active{opacity:.65;transform:scale(.97)}
+button, .chip{transition:opacity .12s, transform .12s}
+
 /* ============ WT-25: dokunma hedefleri (WCAG 2.5.5, min 44x44) ============
    Küçük ikon butonlarında GÖRSEL boyut korunur, dokunma alanı görünmez bir
    ::after katmanıyla genişletilir. Komşusuyla bitişik olan öğelerde (segment
@@ -420,7 +436,7 @@ nav button{min-height:48px;justify-content:center}
   <!-- WT-04 / WT-10: veri bütünlüğü uyarı şeritleri buraya basılır -->
   <div id="d-warnings" class="warn-host"></div>
 
-  <div class="seg mini" id="d-period" style="margin-bottom:12px">
+  <div class="seg mini" id="d-period" data-i18n-aria="ariaPeriod" style="margin-bottom:12px">
     <button data-v="week" data-i18n="week">Hafta</button>
     <button data-v="month" data-i18n="month">Ay</button>
     <button data-v="year" class="sel" data-i18n="year">Yıl</button>
@@ -475,7 +491,7 @@ nav button{min-height:48px;justify-content:center}
 
   <div class="h2row" style="margin-top:0">
     <h2 class="h2"><span data-i18n="detailStats">Detay istatistikler</span> <span class="scope-badge" id="d-dstat-scope"></span></h2>
-    <div class="seg mini" id="d-dstat-type" style="width:170px">
+    <div class="seg mini" id="d-dstat-type" data-i18n-aria="ariaTypeFilter" style="width:170px">
       <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
       <button data-v="DC">DC</button>
       <button data-v="AC">AC</button>
@@ -595,7 +611,7 @@ nav button{min-height:48px;justify-content:center}
       </label>
     </div>
     <div class="lbl" data-i18n="fuelType">Diğer aracın yakıt tipi</div>
-    <div class="seg mini" id="c-fuel" style="margin-bottom:6px">
+    <div class="seg mini" id="c-fuel" data-i18n-aria="fuelType" style="margin-bottom:6px">
       <button data-v="petrol" class="sel" data-i18n="petrol">Benzin</button>
       <button data-v="diesel" data-i18n="diesel">Dizel</button>
       <button data-v="hybrid" data-i18n="hybrid">Hibrit</button>
@@ -754,7 +770,7 @@ nav button{min-height:48px;justify-content:center}
     <div id="v-exp-chart-wrap" style="display:none">
       <div class="h2row" style="margin-top:6px">
         <h2 class="h2" data-i18n="expChart">Sabit gider grafiği</h2>
-        <div class="seg mini" id="v-exp-gran" style="width:120px">
+        <div class="seg mini" id="v-exp-gran" data-i18n-aria="ariaPeriod" style="width:120px">
           <button data-v="month" class="sel" data-i18n="month">Ay</button>
           <button data-v="year" data-i18n="year">Yıl</button>
         </div>
@@ -783,14 +799,14 @@ nav button{min-height:48px;justify-content:center}
   <label class="lbl" style="margin-top:6px" data-i18n="currency" for="set-currency">Para Birimi</label>
   <select id="set-currency" style="margin-bottom:12px"></select>
   <div class="lbl" data-i18n="unit">Mesafe Birimi</div>
-  <div class="seg" id="set-unit" style="margin-bottom:12px">
+  <div class="seg" id="set-unit" data-i18n-aria="unit" style="margin-bottom:12px">
     <button data-v="km">km</button>
     <button data-v="mi">mi</button>
   </div>
   <label class="lbl" data-i18n="language" for="set-lang">Dil</label>
   <select id="set-lang" style="margin-bottom:12px"></select>
   <div class="lbl" data-i18n="theme">Görünüm</div>
-  <div class="seg" id="set-theme" style="margin-bottom:20px">
+  <div class="seg" id="set-theme" data-i18n-aria="theme" style="margin-bottom:20px">
     <button data-v="light" data-i18n="themeLight">Açık</button>
     <button data-v="dark" data-i18n="themeDark">Koyu</button>
   </div>
@@ -867,7 +883,7 @@ nav button{min-height:48px;justify-content:center}
 
     <div>
       <div class="lbl" data-i18n="chargeType">Şarj Tipi</div>
-      <div class="seg" id="in-tip">
+      <div class="seg" id="in-tip" data-i18n-aria="chargeType">
         <button data-v="DC" class="sel">DC</button>
         <button data-v="AC">AC</button>
       </div>
@@ -910,7 +926,7 @@ nav button{min-height:48px;justify-content:center}
 
     <div id="wrap-disc">
       <div class="lbl" data-i18n="discountType">İndirim Türü</div>
-      <div class="seg" id="in-disc-type" style="margin-bottom:8px">
+      <div class="seg" id="in-disc-type" data-i18n-aria="discountType" style="margin-bottom:8px">
         <button data-v="amount" class="sel" data-i18n="amountType">Tutar</button>
         <button data-v="percent" data-i18n="percentType">Yüzde (%)</button>
       </div>
@@ -1006,7 +1022,7 @@ nav button{min-height:48px;justify-content:center}
         </div>
         <div>
           <div class="lbl" data-i18n="unit">Mesafe</div>
-          <div class="seg" id="ob-unit">
+          <div class="seg" id="ob-unit" data-i18n-aria="unit">
             <button data-v="km" class="sel">km</button>
             <button data-v="mi">mi</button>
           </div>
