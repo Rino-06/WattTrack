@@ -202,6 +202,15 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .calcline{display:flex;justify-content:space-between;align-items:center;margin-top:10px;background:var(--pill);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--accent-text);font-weight:600}
 .calcline b{font-size:16px;color:var(--accent-dark)}
 .form-err{color:var(--red);font-size:13px;font-weight:600;display:none}
+/* WT-04 / WT-10: veri bütünlüğü uyarı şeridi */
+.warn-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:#FFF4E0;border:1px solid #E9C46A;border-radius:12px;
+  padding:10px 12px;margin-bottom:12px;font-size:12.5px;color:#7A5B12}
+[data-theme="dark"] .warn-strip{background:#3A2E12;border-color:#8A6D1F;color:#F3D99B}
+.warn-strip .msg{flex:1;min-width:150px;line-height:1.35}
+.warn-strip button{width:auto;min-height:34px;padding:6px 12px;font-size:12.5px;
+  font-weight:700;border-radius:9px;border:1px solid #E9C46A;background:transparent;
+  color:inherit;cursor:pointer}
 .form-err.show{display:block}
 .save-btn{background:var(--accent);color:#fff;text-align:center;padding:15px;border-radius:14px;font-weight:600;font-size:15px;box-shadow:var(--shadow-big);width:100%}
 .save-btn:disabled{opacity:.45}
@@ -340,6 +349,9 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       <button class="theme-btn" data-themetoggle aria-label="Tema">🌙</button>
     </div>
   </div>
+
+  <!-- WT-04 / WT-10: veri bütünlüğü uyarı şeritleri buraya basılır -->
+  <div id="d-warnings"></div>
 
   <div class="seg mini" id="d-period" style="margin-bottom:12px">
     <button data-v="week" data-i18n="week">Hafta</button>
@@ -751,7 +763,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div>
       <div class="lbl" data-i18n="company">Ev ya da Şarj Firması</div>
       <select id="in-firm" aria-label="Şarj firması"></select>
-      <input type="text" id="in-firm-other" style="display:none;margin-top:8px" placeholder="">
+      <input type="text" id="in-firm-other" maxlength="40" style="display:none;margin-top:8px" placeholder="">
     </div>
 
     <div class="row2">
@@ -815,7 +827,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       <div>
         <div class="lbl" data-i18n="location">Lokasyon</div>
         <div class="loc-row">
-          <input type="text" id="in-loc" placeholder="Ankara" list="loc-list" autocomplete="off">
+          <input type="text" id="in-loc" maxlength="60" placeholder="Ankara" list="loc-list" autocomplete="off">
           <button class="gps-btn" id="btn-gps" type="button" title="GPS">📍</button>
         </div>
         <datalist id="loc-list"></datalist>
@@ -831,7 +843,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
       </div>
       <div>
         <div class="lbl" data-i18n="note">Not</div>
-        <input type="text" id="in-note">
+        <input type="text" id="in-note" maxlength="200">
       </div>
     </div>
 
@@ -925,7 +937,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     </div>
     <div>
       <div class="lbl" data-i18n="noteLbl">Not</div>
-      <input type="text" id="in-exp-note" maxlength="120" placeholder="">
+      <input type="text" id="in-exp-note" maxlength="200" placeholder="">
     </div>
     <button class="save-btn" id="btn-save-exp" data-i18n="save">Kaydet</button>
   </div>
