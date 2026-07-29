@@ -1,8 +1,10 @@
 /* WattTrack service worker — çevrimdışı çalışma */
-const CACHE = 'watttrack-v19';
+importScripts('./version.js');   // WT-52: sürüm tek kaynaktan
+const CACHE = WT_CACHE;
 const ASSETS = [
   './',
   './index.html',
+  './version.js',
   './app.js',
   './manifest.json',
   './icon-192.png',

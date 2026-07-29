@@ -24,8 +24,10 @@ const EXP_ICON = {tax: '🧾', insurance: '🛡️', maintenance: '🔧', tire: 
 
 const AVATAR_COLORS = ['#1C8742', '#007DAA', '#C87B00', '#A54C8B', '#C25C5F'];
 const MI = 1.60934;
-const APP_VERSION = 'v19';
-const APP_DATE = '26.07.2026';
+// Sürüm bilgisi version.js'ten gelir (WT-52) — tek kaynak.
+const APP_VERSION = WT_VERSION;
+const APP_DATE = WT_DATE;
+const SCHEMA_VERSION = WT_SCHEMA;
 
 // ---------- Çeviriler ----------
 const T = {
@@ -2226,7 +2228,8 @@ function download(content, name, type) {
 }
 $('btn-export-json').addEventListener('click', async () => {
   const payload = {
-    app: 'WattTrack', version: 8, exportedAt: new Date().toISOString(),
+    app: 'WattTrack', version: SCHEMA_VERSION, appVersion: APP_VERSION,
+    exportedAt: new Date().toISOString(),
     sessions: await db.sessions.toArray(),
     vehicles: await db.vehicles.toArray(),
     expenses: await db.expenses.toArray(),
