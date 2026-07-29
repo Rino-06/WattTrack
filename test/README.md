@@ -1,0 +1,24 @@
+# Doğrulama koşumları
+
+Uygulamayı jsdom + fake-indexeddb içinde gerçekten **açar**, form doldurur,
+kaydeder ve IndexedDB'ye yazılan değerleri kontrol eder. `node --check`
+yalnızca sözdizimi bakar; buradaki koşumlar davranışa bakar.
+
+```bash
+cd test
+npm install
+npm test
+```
+
+| Dosya | Kapsam |
+|---|---|
+| `boot.mjs` | Açılışta konsol hatası, WT-01 saat dilimi, WT-02 sayı biçimi, WT-03 kWh tek alan, WT-04 sınırlar, WT-05 tarih, tüm sekmelerin çizimi |
+| `backup.mjs` | WT-06 sıfırlama, WT-07 ayar geri yükleme, WT-08 aracId eşleme, WT-09 araç silme + öksüz kayıt |
+| `overlay.mjs` | WT-24 dialog semantiği, odak, Escape, geri tuşu, kirli form onayı |
+
+**Not:** Bu, WT-51'in (birim testleri + CI) yerine geçmez — o madde saf
+fonksiyonları izole test edecek ve GitHub Actions'a bağlanacak. Buradakiler
+Faz 1-2 kabul kriterlerini doğrulamak için yazıldı.
+
+Gerçek cihaz testleri (TalkBack, Lighthouse, iOS Safari) hâlâ elle yapılmalı —
+`watttrack-calisma-sirasi.md` içindeki test listesine bakın.
