@@ -46,7 +46,8 @@ async function boot() {
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
     + `\n;window.__app = {db, S, applyI18n, applyTheme, importBackupText,
          deleteVehicleFlow, moveRecordsFlow, scanOrphans, warnings,
-         SETTING_KEYS, saveSetting, renderVehiclePage};`;
+         SETTING_KEYS, saveSetting, renderVehiclePage, openExpense,
+         migrateExpenseVehicles, renderCompare};`;
   window.eval(bundle);
   await new Promise(r => setTimeout(r, 1200));
   return window;
@@ -239,6 +240,62 @@ dlgPick('__yok__');   // hiçbir seçenekle eşleşmez → Vazgeç butonuna bas�
     res === false && (await B.db.vehicles.count()) === beforeV
       && (await B.db.sessions.count()) === beforeS,
     `res=${res} araç=${await B.db.vehicles.count()}/${beforeV}`);
+}
+
+// ---------------- WT-18: gider araç zorunluluğu ----------------
+{
+  await B.db.expenses.clear();
+  await B.db.vehicles.clear();
+  await B.db.sessions.clear();
+  const only = await B.db.vehicles.add({ ad: 'Tek Araç', batt: 60 });
+  B.S.defaultVehicleId = only;
+
+  // TEK araçlı kullanıcı: seçici gizli kalır ama aracId OTOMATİK atanmalı
+  await B.openExpense();
+  await sleep(200);
+  const sel = w.document.getElementById('in-exp-veh');
+  check('WT-18/2: "Tüm araçlar" seçeneği FORMDAN kaldırıldı',
+    ![...sel.options].some(o => o.value === ''),
+    'seçenekler: ' + [...sel.options].map(o => `${o.value}:${o.textContent}`).join(' | '));
+  check('WT-18/1: tek araçta seçici gizli', w.document.getElementById('wrap-exp-veh').style.display === 'none');
+  check('WT-18/1: tek araçta id otomatik seçili', sel.value === String(only), 'value=' + sel.value);
+
+  w.document.getElementById('in-exp-date').value = '2026-06-01';
+  w.document.getElementById('in-exp-amount').value = '3000';
+  w.document.getElementById('btn-save-exp').click();
+  await sleep(400);
+  const saved = await B.db.expenses.toArray();
+  check('WT-18 KABUL: tek araçla gider eklendi ve aracId DOLU',
+    saved.length === 1 && saved[0].aracId === only,
+    'aracId=' + (saved[0] && saved[0].aracId));
+
+  // migration: elle null aracId'li gider bırak, açılış taramasını çalıştır
+  await B.db.expenses.add({ tarih: '2026-01-01', tur: 'tax', tutar: 500, cur: 'TRY', aracId: null });
+  await B.migrateExpenseVehicles();
+  await sleep(250);
+  check('WT-18/3: aracId null olan eski gider varsayılan araca atandı',
+    (await B.db.expenses.toArray()).every(e => e.aracId != null),
+    'null kalan: ' + (await B.db.expenses.toArray()).filter(e => e.aracId == null).length);
+
+  // iki araç + bir gider -> gider TEK sayılmalı (eskiden her araca sayılıyordu)
+  const second = await B.db.vehicles.add({ ad: 'İkinci Araç', batt: 70 });
+  const exps = await B.db.expenses.toArray();
+  const forOnly = exps.filter(e => e.aracId === only).length;
+  const forSecond = exps.filter(e => e.aracId === second).length;
+  check('WT-18 KABUL: iki araç + giderler -> her gider tek araca ait',
+    forOnly === exps.length && forSecond === 0,
+    `tek=${forOnly} ikinci=${forSecond} toplam=${exps.length}`);
+
+  // hiç araç yokken gider formu açılmamalı
+  await B.db.vehicles.clear();
+  let toasted = '';
+  const toastEl = w.document.getElementById('toast');
+  await B.openExpense();
+  await sleep(200);
+  toasted = toastEl.textContent;
+  check('WT-18: hiç araç yokken gider formu açılmıyor',
+    !w.document.getElementById('page-expense').classList.contains('active') && toasted !== '',
+    'toast=' + toasted);
 }
 
 const failed = results.filter(r => !r.pass);

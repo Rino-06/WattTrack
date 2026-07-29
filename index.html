@@ -543,6 +543,11 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
     <div id="wrap-c-veh" style="display:none;margin-bottom:14px">
       <label class="lbl" data-i18n="vehicle" for="c-vehsel">Araç</label>
       <select id="c-vehsel" aria-label="Araç filtresi"></select>
+      <!-- WT-18/4: arşivlenmiş araçların giderleri varsayılan olarak HARİÇ -->
+      <label id="wrap-c-arch" style="display:none;align-items:center;gap:8px;margin-top:8px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="c-inclarch" style="width:16px;height:16px">
+        <span data-i18n="inclArchived">Arşivdeki araçların giderlerini de dahil et</span>
+      </label>
     </div>
     <div class="lbl" data-i18n="fuelType">Diğer aracın yakıt tipi</div>
     <div class="seg mini" id="c-fuel" style="margin-bottom:6px">
@@ -575,6 +580,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
   </div>
 
   <div id="c-result" style="display:none">
+  <div class="scope-note" id="c-veh-note" style="margin:0 0 10px"></div>
     <div class="h2" data-i18n="unitCostTitle">Birim maliyet — EV ve Yakıtlı yan yana</div>
     <div class="tiles">
       <div class="tile"><div class="k" id="c-1km-lbl">EV 1 km (net)</div><div class="v" id="c-1km" style="color:var(--accent-dark)">—</div></div>
