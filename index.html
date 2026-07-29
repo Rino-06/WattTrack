@@ -756,7 +756,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 </div>
 
 <!-- ============ YENİ KAYIT / DÜZENLE ============ -->
-<section class="overlay" id="page-add">
+<section class="overlay" id="page-add" role="dialog" aria-modal="true" aria-labelledby="add-title">
   <div class="ov-head">
     <button class="close" id="btn-close-add">×</button>
     <div class="title" id="add-title" data-i18n="addTitle">Yeni Şarj Kaydı</div>
@@ -882,9 +882,9 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 </section>
 
 <!-- ============ ONBOARDING ============ -->
-<section class="overlay" id="ob">
+<section class="overlay" id="ob" role="dialog" aria-modal="true" aria-labelledby="ob-title">
   <div class="ov-head" style="justify-content:center">
-    <div class="title" style="font-size:18px">⚡ WattTrack</div>
+    <div class="title" id="ob-title" style="font-size:18px">⚡ WattTrack</div>
   </div>
   <div class="ob-progress"><div class="on" id="obp1"></div><div id="obp2"></div></div>
   <div class="ov-body">
@@ -934,7 +934,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 </section>
 
 <!-- ============ GİDER FORMU ============ -->
-<section class="overlay" id="page-expense">
+<section class="overlay" id="page-expense" role="dialog" aria-modal="true" aria-labelledby="exp-title">
   <div class="ov-head">
     <button class="close" id="btn-close-exp">×</button>
     <div class="title" id="exp-title" data-i18n="addExpense">Gider ekle</div>
@@ -973,10 +973,10 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 </section>
 
 <!-- ============ ÜLKE SEÇİCİ ============ -->
-<section class="overlay" id="page-country">
+<section class="overlay" id="page-country" role="dialog" aria-modal="true" aria-labelledby="country-title">
   <div class="ov-head">
     <button class="close" id="btn-close-country">×</button>
-    <div class="title" data-i18n="country">Ülke</div>
+    <div class="title" id="country-title" data-i18n="country">Ülke</div>
     <div style="width:32px"></div>
   </div>
   <div class="ov-body">
@@ -986,7 +986,7 @@ nav .plus>div{width:58px;height:58px;border-radius:50%;background:var(--card);
 </section>
 
 <!-- ============ ARAÇ EKLE / DÜZENLE ============ -->
-<section class="overlay" id="page-addcar">
+<section class="overlay" id="page-addcar" role="dialog" aria-modal="true" aria-labelledby="addcar-title">
   <div class="ov-head">
     <button class="close" id="btn-close-addcar">×</button>
     <div class="title" id="addcar-title" data-i18n="addVehicle">+ Araç ekle</div>
