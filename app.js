@@ -404,7 +404,15 @@ function fmtNum(v, dec = 0) {
 function fmtInput(v, dec = 2) {
   if (v == null || isNaN(v)) return '';
   let s = fmtNum(v, dec).replace('−', '-');
-  if (dec > 2 && s.indexOf(',') > -1) s = s.replace(/0+$/, '').replace(/,$/, '');
+  // Kur gibi çok ondalıklı alanlarda gereksiz sıfırlar atılır. Bu durumda
+  // binlik ayracı da KULLANILMAZ: ondalık kısım kırpılınca geriye "1.000"
+  // kalır ve pf() tek ayracı her zaman ondalık kabul ettiği için bunu 1,0
+  // diye okur. Kurlar küçük sayılar, gruplama zaten bir şey katmıyor.
+  if (dec > 2) {
+    const [tam, ond = ''] = s.split(',');
+    const kirp = ond.replace(/0+$/, '');
+    s = tam.split('.').join('') + (kirp ? ',' + kirp : '');
+  }
   return s;
 }
 // WT-02/C: alandan çıkarken değeri kuralın kendisiyle geri yaz —
@@ -2069,15 +2077,22 @@ $('btn-save').addEventListener('click', async () => {
   const firmSel = $('in-firm').value;
   const firma = firmSel === '__other' ? $('in-firm-other').value.trim() : firmSel;
   const free = $('in-free').checked;
-  const showErr = msg => {
+  // Hatalı alan "Gelişmiş" bloğunun içindeyse blok kapalıyken focus() hiçbir
+  // şey yapmaz ve kullanıcı neyi düzelteceğini göremez — önce bloğu aç.
+  const showErr = (msg, id) => {
     $('form-err').textContent = msg;
     $('form-err').classList.add('show');
+    if (id) {
+      const el = $(id);
+      if (el && $('adv-fields').contains(el)) $('adv-fields').classList.add('open');
+      el?.focus();
+    }
   };
   if (!firma) { showErr(t('formError')); return; }
 
   // WT-05: boş tarih "T12:00" üretir ve slice(0,4) ile tüm yıl/ay grupları bozulur
   const dateStr = $('in-date').value;
-  if (!isValidDate(dateStr)) { showErr(t('dateNeeded')); $('in-date').focus(); return; }
+  if (!isValidDate(dateStr)) { showErr(t('dateNeeded'), 'in-date'); return; }
   if (dateStr > localISO()) toast(t('futureDate'));   // uyar ama ENGELLEME
 
   // WT-04: her sayısal alan tek doğrulama katmanından geçer
@@ -2095,7 +2110,7 @@ $('btn-save').addEventListener('click', async () => {
   const v = {};
   for (const [kural, id, required] of alanlar) {
     const r = checkNum(kural, free && id === 'in-amount' ? '' : $(id).value, {required});
-    if (!r.ok) { showErr(r.msg); $(id).focus(); return; }
+    if (!r.ok) { showErr(r.msg, id); return; }
     v[id] = r.value;
   }
   const kwh = v['in-kwh'];
@@ -2107,7 +2122,7 @@ $('btn-save').addEventListener('click', async () => {
   let rate = null;
   if (foreign) {
     const rr = checkNum('kur', $('in-rate').value, {required: true});
-    if (!rr.ok || rr.value <= 0) { showErr(t('rateNeeded')); $('in-rate').focus(); return; }
+    if (!rr.ok || rr.value <= 0) { showErr(t('rateNeeded'), 'in-rate'); return; }
     rate = rr.value;
   }
   const distIn = v['in-dist'] || 0;
@@ -2116,7 +2131,7 @@ $('btn-save').addEventListener('click', async () => {
   const net = free ? 0 : Math.round(netFromGross(gross, discType, discVal) * 100) / 100;
   // socB >= socA sessizce yer değiştirmek veri uydurmaktır — reddet (WT-04/4)
   const a = v['in-socb'], b = v['in-soca'];
-  if (a != null && b != null && a >= b) { showErr(t('socOrder')); $('in-soca').focus(); return; }
+  if (a != null && b != null && a >= b) { showErr(t('socOrder'), 'in-soca'); return; }
   const durH = v['in-dur-h'] || 0;
   const durM = v['in-dur-m'] || 0;
   const rec = {
@@ -2212,9 +2227,9 @@ $('btn-save-exp').addEventListener('click', async () => {
   const expDate = $('in-exp-date').value;
   if (!isValidDate(expDate)) { toast(t('dateNeeded')); $('in-exp-date').focus(); return; }
   if (expDate > localISO()) toast(t('futureDate'));
-  const tr = checkNum('tutar', $('in-exp-amount').value, {required: true});   // WT-04
-  if (!tr.ok) { toast(tr.msg); $('in-exp-amount').focus(); return; }
-  const tutar = tr.value;
+  const amtChk = checkNum('tutar', $('in-exp-amount').value, {required: true});   // WT-04
+  if (!amtChk.ok) { toast(amtChk.msg); $('in-exp-amount').focus(); return; }
+  const tutar = amtChk.value;
   if (tutar <= 0) { toast(t('amountNeeded')); return; }
   const cur = $('in-exp-cur').value;
   const tur = $('in-exp-type').value;
