@@ -178,7 +178,8 @@ async function renderVehiclePage() {
       <button class="star ${isDef ? 'on' : ''}" data-star="${v.id}" title="varsayılan">★</button>
       ${thumb}
       <div class="vn">${esc(vehName(v))}<div class="vd">${esc(sub)}</div></div>
-      <button class="cam" data-odo="${v.id}" title="kilometre güncelle" style="font-size:11px;font-weight:800;width:36px">km✎</button>
+      <button class="cam" data-odo="${v.id}" title="kilometre güncelle" style="font-size:12px;font-weight:800;width:36px">km✎</button>
+      <button class="cam" data-spec="${v.id}" title="${esc(t('evEditSpecs'))}">⚙</button>
       <button class="cam" data-cam="${v.id}" title="fotoğraf">📷</button>
       <button class="cam" data-move="${v.id}" title="${esc(t('moveRecords'))}">⇄</button>
       <button class="rm" data-rm="${v.id}" title="arşivle">×</button>
@@ -257,6 +258,13 @@ async function renderVehiclePage() {
       await db.vehicles.update(v.id, upd);
       toast(t('odoSaved'));
       renderVehiclePage();
+    }));
+
+  // WT-40/C3: ⚙ → teknik değerleri elle düzelt (EV_DB'yi ezer)
+  $('set-vehicles').querySelectorAll('[data-spec]').forEach(li =>
+    li.addEventListener('click', e => {
+      e.stopPropagation();
+      openEvSpecs(+li.dataset.spec);
     }));
 
   // ---- Araç giderleri (araç filtreli) ----
@@ -485,12 +493,22 @@ $('btn-close-photo').addEventListener('click', () => overlayClose('photo-view'))
 $('country-search').addEventListener('input', e => renderCountryList(e.target.value));
 
 // ---------- araç arama (ortak) ----------
+// WT-40/A: 400V/800V mimarisi son kullanıcı için anlamsız; menzil gösteriliyor.
+// Menzil ÜRETİCİ BEYANI (WLTP) — uygulamada hiçbir hesapta kullanılmıyor,
+// yalnız doğru sürümü ayırt etmeye yarıyor.
+const rangeTxt = km => km ? Math.round(distDisp(km)) + ' ' + S.unit + ' ' + t('rangeShort') : '—';
+
+function evRec(e, i) {
+  return {i, brand: e[0], model: e[1], trim: e[2], y1: e[3], y2: e[4],
+    batt: e[5], arch: e[6], dc: e[7], ac: e[8], range: e[9], body: e[10],
+    guncelleme: e[11] || EV_DB_TARIH};
+}
 function searchEV(q) {
   q = (q || '').toLocaleLowerCase('tr').trim();
   if (q.length < 2) return [];
-  return EV_DB
-    .map((e, i) => ({i, brand: e[0], model: e[1], trim: e[2], y1: e[3], y2: e[4],
-      batt: e[5], arch: e[6], dc: e[7], ac: e[8], range: e[9], body: e[10]}))
+  // WT-40/C5: aynı model-yılda birden çok batarya sürümü olabiliyor; sonuç
+  // KIRPILMADAN önce eleniyor ki kullanıcı doğru sürümü görebilsin.
+  return EV_DB.map(evRec)
     .filter(v => (v.brand + ' ' + v.model + ' ' + v.trim).toLocaleLowerCase('tr').includes(q))
     .slice(0, 14);
 }
@@ -524,16 +542,14 @@ function bindEVSearch(inputId, resultsId, summaryId, onSel, withPhoto) {
       const yr = v.y1 + (v.y2 ? '–' + v.y2 : '+');
       return `<div class="ev-item" data-i="${v.i}">
         <div class="n">${esc(v.brand)} ${esc(v.model)}</div>
-        <div class="d">${esc(v.trim)} · ${yr} · ${v.batt} kWh · ${v.arch}V</div>
+        <div class="d"><b>${esc(v.trim)}</b> · ${yr} · ${v.batt} kWh · ${rangeTxt(v.range)}</div>
       </div>`;
     }).join('');
     box.querySelectorAll('.ev-item').forEach(el =>
       el.addEventListener('click', () => {
         box.querySelectorAll('.ev-item').forEach(x =>
           x.classList.toggle('sel', x === el));
-        const e = EV_DB[+el.dataset.i];
-        const v = {brand: e[0], model: e[1], trim: e[2], y1: e[3], y2: e[4],
-          batt: e[5], arch: e[6], dc: e[7], ac: e[8], range: e[9], body: e[10]};
+        const v = evRec(EV_DB[+el.dataset.i], +el.dataset.i);
         $(summaryId).innerHTML = evSummaryHTML(v) + (withPhoto ? photoBtnHTML(false) : '');
         $(summaryId).style.display = '';
         if (withPhoto) bindPhotoBtn();
@@ -569,7 +585,7 @@ function vehicleRec(v) {
   const rec = v.brand
     ? {ad: v.brand + ' ' + v.model, brand: v.brand, model: v.model, trim: v.trim,
        y1: v.y1, y2: v.y2, batt: v.batt, arch: v.arch, dc: v.dc, ac: v.ac,
-       range: v.range, body: v.body}
+       range: v.range, body: v.body, evVeriTarih: v.guncelleme || EV_DB_TARIH}
     : {ad: v.ad, body: v.body || 'suv'};
   if (v.photo) rec.photo = v.photo;
   return rec;
@@ -669,4 +685,74 @@ $('btn-save-exp').addEventListener('click', async () => {
     if (got) db.expenses.update(id, {fxTable: got.rates, fxDate: got.date})
       .then(() => { renderVehiclePage(); renderCompare(); });
   });
+});
+
+
+/* ---- WT-40/C3: teknik değerlerin elle düzeltilmesi ---- */
+// EV_DB hiçbir zaman %100 doğru olmayacak; asıl çözüm kullanıcının kendi
+// aracının gerçek değerini girebilmesi. Girilen değer vehicles kaydına
+// yazılıyor ve EV_DB'den gelen değerin YERİNE geçiyor.
+let specVid = null;
+async function openEvSpecs(vid) {
+  const v = await db.vehicles.get(vid);
+  if (!v) return;
+  specVid = vid;
+  $('ev-range-lbl').textContent = t('rangeWltp') + ' (' + S.unit + ')';
+  $('ev-batt').value = v.batt != null ? fmtInput(v.batt, 2) : '';
+  $('ev-range').value = v.range != null ? fmtNum(Math.round(distDisp(v.range)), 0) : '';
+  $('ev-dc').value = v.dc != null ? fmtNum(v.dc, 0) : '';
+  $('ev-ac').value = v.ac != null ? fmtInput(v.ac, 1) : '';
+  // Kaynağı söyle: değer üretici listesinden mi geldi, kullanıcı mı düzeltti?
+  $('ev-spec-note').textContent = v.specElle
+    ? t('evSpecManual')
+    : t('evDataDate', {d: v.evVeriTarih || EV_DB_TARIH});
+  $('evspec-reset').style.display = (v.specElle && v.brand) ? '' : 'none';
+  $('evspec-err').classList.remove('show');
+  overlayOpen('page-evspecs');
+}
+$('btn-close-evspecs').addEventListener('click', () => overlayClose('page-evspecs'));
+['ev-batt', 'ev-ac'].forEach(id => bindDecimalInput(id, 2));
+['ev-range', 'ev-dc'].forEach(id => bindDecimalInput(id, 0));
+
+$('evspec-save').addEventListener('click', async () => {
+  if (specVid == null) return;
+  const err = $('evspec-err');
+  const alanlar = [['ev-batt', 'batt'], ['ev-range', 'range'], ['ev-dc', 'dc'], ['ev-ac', 'ac']];
+  const upd = {};
+  for (const [id, alan] of alanlar) {
+    const r = checkNum('spec_' + alan, $(id).value);
+    if (!r.ok) {   // WT-04: sessizce kırpma yok, hata söylenir
+      err.textContent = r.msg; err.classList.add('show');
+      $(id).focus();
+      return;
+    }
+    if (r.value != null)
+      upd[alan] = alan === 'range' && S.unit === 'mi' ? Math.round(r.value * MI) : r.value;
+  }
+  err.classList.remove('show');
+  upd.specElle = true;   // artık üretici listesi değil kullanıcı değeri geçerli
+  const w = await safeWrite(() => db.vehicles.update(specVid, upd));
+  if (!w.ok) return;
+  toast(t('savedLocal'));
+  await overlayClose('page-evspecs', {force: true});
+  renderVehiclePage();
+  renderDashboard();
+});
+
+// Üretici değerlerine dönüş: EV_DB'de aynı marka/model/donanım/yıl kaydını bul
+$('evspec-reset').addEventListener('click', async () => {
+  const v = await db.vehicles.get(specVid);
+  if (!v?.brand) return;
+  const e = EV_DB.find(x => x[0] === v.brand && x[1] === v.model && x[2] === v.trim
+    && x[3] === v.y1);
+  if (!e) { toast(t('noData')); return; }
+  const r = evRec(e, 0);
+  await safeWrite(() => db.vehicles.update(specVid, {
+    batt: r.batt, range: r.range, dc: r.dc, ac: r.ac,
+    specElle: false, evVeriTarih: r.guncelleme
+  }));
+  toast(t('savedLocal'));
+  await overlayClose('page-evspecs', {force: true});
+  renderVehiclePage();
+  renderDashboard();
 });

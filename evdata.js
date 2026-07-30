@@ -126,6 +126,18 @@ const BANKS_DEFAULT = ['Visa','Mastercard','Amex','Revolut','N26','Wise'];
     mimari V, maks DC kW, AC kW, WLTP menzil km, kasa]
    kasa: hatch | sedan | suv | pickup | van
    ============================================================ */
+/* WT-40/C2: EV_DB'nin derlendiği tarih. Araç kartında "Veri: 2025-07" olarak
+   görünüyor ki kullanıcı değerin ne kadar eski olduğunu bilsin.
+   Kayıt başına 12. alan (guncelleme, 'YYYY-MM') isteğe bağlıdır; yoksa bu
+   sabit geçerlidir — tek tek doğrulanan kayıtlar kendi tarihini taşır.
+
+   DİKKAT — 169 kaydın üretici kaynaklarıyla TEK TEK doğrulanması (WT-40/C1)
+   YAPILMADI. Bu yüzden tarih ileri alınmadı: doğrulanmamış veriye taze
+   damgası vurmak kullanıcıyı yanıltır. Asıl çözüm WT-40/C3'teki kullanıcı
+   düzeltmesidir — her teknik değer araç kartından düzenlenebilir ve
+   girilen değer buradaki listeyi EZER. */
+const EV_DB_TARIH = '2025-07';
+
 const EV_DB = [
   // --- Togg ---
   ['Togg','T10X','V1 Standart Menzil',2023,0,52.4,400,150,11,314,'suv'],

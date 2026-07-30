@@ -150,17 +150,35 @@ function carSVG(body, color) {
 function specChip(label, value) {
   return value ? `<div class="spec"><span class="sr-only">${esc(label)}: </span>${esc(value)}</div>` : '';
 }
+// WT-40/C4: "Bu bilgi yanlış mı?" -> marka/model/donanım/yıl önceden dolu
+// GitHub issue şablonu.
+function evIssueURL(v) {
+  const yr = v.y1 ? (v.y1 + (v.y2 ? '–' + v.y2 : '+')) : '';
+  const govde = [
+    `Marka: ${v.brand || ''}`, `Model: ${v.model || ''}`,
+    `Donanım: ${v.trim || ''}`, `Yıl: ${yr}`,
+    `Uygulamadaki değerler: ${v.batt || '?'} kWh · ${v.range || '?'} km · `
+      + `${v.dc || '?'} kW DC · ${v.ac || '?'} kW AC`,
+    '', 'Doğru değerler:', 'Kaynak (üretici sayfası / veri tabanı bağlantısı):'
+  ].join('\n');
+  return 'https://github.com/rino-06/WattTrack/issues/new?title='
+    + encodeURIComponent(`EV verisi düzeltme: ${v.brand || ''} ${v.model || ''}`)
+    + '&body=' + encodeURIComponent(govde);
+}
 function evSummaryHTML(v) {
   const yr = v.y1 ? (v.y1 + (v.y2 ? '–' + v.y2 : '+')) : '—';
   const visual = v.photo
     ? `<img class="carphoto" src="${v.photo}" alt="${esc(t('vehiclePhoto'))}" role="button" tabindex="0">`
     : carSVG(v.body, colorFor(v.brand || v.ad || ''));
+  // WT-40/A: "Mimari (400 V)" çipi kaldırıldı — son kullanıcı için anlamsız.
+  // `arch` alanı veride DURUYOR (ileride lazım olabilir), yalnız gösterilmiyor;
+  // bu yüzden t('arch') anahtarı da silinmedi.
+  // WT-40/B: menzil etiketi "WLTP menzil (üretici beyanı)".
   const chips = [
     specChip(t('battery'), v.batt ? v.batt + ' kWh' : ''),
-    specChip(t('range'), v.range ? Math.round(distDisp(v.range)) + ' ' + S.unit : ''),
+    specChip(t('rangeWltp'), v.range ? Math.round(distDisp(v.range)) + ' ' + S.unit : ''),
     specChip(t('dcMax'), v.dc ? v.dc + ' kW DC' : ''),
-    specChip(t('acMax'), v.ac ? v.ac + ' kW AC' : ''),
-    specChip(t('arch'), v.arch ? v.arch + ' V' : '')
+    specChip(t('acMax'), v.ac ? v.ac + ' kW AC' : '')
   ].join('');
   return `<div class="ev-summary">
     <div class="ev-top">
@@ -171,6 +189,13 @@ function evSummaryHTML(v) {
       </div>
     </div>
     ${chips ? `<div class="spec-grid">${chips}</div>` : ''}
+    ${v.range ? `<div class="ev-note">${esc(t('rangeNote'))}</div>` : ''}
+    ${v.brand ? `<div class="ev-foot">
+      <span>${esc(t('evDataDate', {d: v.evVeriTarih || v.guncelleme || EV_DB_TARIH}))}</span>
+      <button type="button" class="ev-fix" data-ev-edit="${v.id ?? ''}">${esc(t('evEditSpecs'))}</button>
+      <a class="ev-fix" target="_blank" rel="noopener"
+         href="${evIssueURL(v)}">${esc(t('evWrongInfo'))}</a>
+    </div>` : ''}
   </div>`;
 }
 // fotoğrafa dokununca tam ekran (WT-38/5) — overlay altyapısı WT-24'ten.

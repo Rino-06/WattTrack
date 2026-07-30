@@ -317,6 +317,12 @@ h1,h2{font-size:inherit;font-weight:inherit}
 /* teknik değerler tek satır, yatay kaydırılabilir çipler */
 .spec-grid{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px;padding-bottom:2px}
 .spec{background:var(--bg);border-radius:100px;padding:5px 9px;font-size:12px;font-weight:600;white-space:nowrap;flex:none}
+/* WT-40/B: WLTP beklentisini yönet · C2: veri tarihi · C3-C4: düzelt/bildir */
+.ev-summary .ev-note{font-size:12px;color:var(--muted2);line-height:1.35;margin-top:8px}
+.ev-summary .ev-foot{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;
+  margin-top:8px;font-size:12px;color:var(--faint)}
+.ev-summary .ev-fix{font-size:12px;color:var(--accent);font-weight:600;
+  text-decoration:none;background:none;padding:0;min-height:44px;display:inline-flex;align-items:center}
 /* fotoğraf tam ekran görüntüleyici (WT-38/5) */
 #photo-view .ov-body{display:flex;align-items:center;justify-content:center;padding:16px}
 #photo-view img{max-width:100%;max-height:100%;object-fit:contain;border-radius:12px}
@@ -1186,6 +1192,45 @@ nav button{min-height:48px;justify-content:center}
   <div class="ov-body">
     <input type="text" id="country-search" data-i18n-ph="phCountrySearch" placeholder="Ülke ara…">
     <div class="country-list" id="country-list"></div>
+  </div>
+</section>
+
+<!-- ============ TEKNİK DEĞERLER (WT-40/C3) ============
+     EV_DB hiçbir zaman %100 doğru olmayacak. Kullanıcının girdiği değer
+     araç kaydında saklanır ve EV_DB'yi EZER — WT-42'nin şarj kaybı hesabı
+     doğru batarya kapasitesine bağlı. -->
+<section class="overlay" id="page-evspecs" role="dialog" aria-modal="true" aria-labelledby="evspecs-title">
+  <div class="ov-head">
+    <button class="close" id="btn-close-evspecs">×</button>
+    <div class="title" id="evspecs-title" data-i18n="evEditSpecs">Teknik değerleri düzenle</div>
+    <div style="width:32px"></div>
+  </div>
+  <div class="ov-body">
+    <div class="about" data-i18n="evEditSpecsD" style="margin-bottom:14px">Aracının gerçek değerlerini gir — buradaki değerler üretici listesindekilerin yerine geçer.</div>
+    <div class="row2">
+      <div>
+        <label class="lbl" data-i18n="battery" for="ev-batt">Batarya</label>
+        <input type="text" inputmode="decimal" id="ev-batt" placeholder="0,00">
+      </div>
+      <div>
+        <label class="lbl" id="ev-range-lbl" for="ev-range">WLTP menzil</label>
+        <input type="text" inputmode="decimal" id="ev-range" placeholder="0">
+      </div>
+    </div>
+    <div class="row2" style="margin-top:12px">
+      <div>
+        <label class="lbl" data-i18n="dcMax" for="ev-dc">Maks DC</label>
+        <input type="text" inputmode="decimal" id="ev-dc" placeholder="0">
+      </div>
+      <div>
+        <label class="lbl" data-i18n="acMax" for="ev-ac">AC</label>
+        <input type="text" inputmode="decimal" id="ev-ac" placeholder="0">
+      </div>
+    </div>
+    <div class="about" id="ev-spec-note" style="margin:10px 0 0"></div>
+    <div class="form-err" id="evspec-err" role="alert" aria-live="assertive"></div>
+    <button class="save-btn" id="evspec-save" style="margin-top:18px" data-i18n="save">Kaydet</button>
+    <button type="button" class="details-toggle" id="evspec-reset" style="margin-top:12px" data-i18n="evResetSpecs">Üretici değerlerine dön</button>
   </div>
 </section>
 

@@ -70,7 +70,8 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
        initSegments, evSummaryHTML, carSVG, seedDemoData, clearDemoData,
        syncEmptyStates, renderHistory, renderVehiclePage, backupPayload,
        offerDemoCleanup, allSessions, allVehicles, memo, renderCompare,
-       invalidateCache, allExpenses};`;
+       invalidateCache, allExpenses, searchEV, openEvSpecs, EV_DB, EV_DB_TARIH,
+       renderVehiclePage: renderVehiclePage};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -968,7 +969,11 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     y1: 2023, batt: 75, range: 600, dc: 250, ac: 11, arch: 400, body: 'sedan' });
   const box = doc.createElement('div'); box.innerHTML = h;
   const cips = [...box.querySelectorAll('.spec')];
-  check('WT-38/2: beş teknik değer de çip olarak var', cips.length === 5,
+  // WT-40/A "Mimari (400 V)" çipini kaldırdı: son kullanıcı için anlamsız.
+  // Sıra da maddede yazdığı gibi: batarya, menzil, DC, AC.
+  check('WT-38/2 + WT-40/A: dört teknik değer çipi, mimari yok',
+    cips.length === 4 && !/\bV\b/.test(cips[3].textContent)
+      && /kWh/.test(cips[0].textContent) && /km|mi/.test(cips[1].textContent),
     cips.map(c => c.textContent.trim()).join(' | '));
   check('WT-38: çipin ekran okuyucu etiketi var (erişilebilirlik korundu)',
     cips.every(c => c.querySelector('.sr-only')?.textContent.trim()),
@@ -1086,6 +1091,87 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.db.sessions.filter(r => r.firma === 'X').delete();
 
   for (const n of ['sessions', 'vehicles', 'expenses']) A.db[n].toArray = orj[n];
+}
+
+// --- WT-40: menzil gösterimi, veri tarihi ve elle düzeltme ---
+{
+  const doc = window.document, A = app();
+
+  // A) arama sonucu satırı: mimari yerine menzil, donanım adı kalın
+  const res = A.searchEV('model y');
+  check('WT-40/A: arama EV_DB\'den sonuç döndürüyor', res.length >= 2,
+    'sonuç=' + res.length);
+  $('car-search').value = 'model y';
+  fire($('car-search'), 'input');
+  await sleep(120);
+  const satir = $('car-results').querySelector('.ev-item .d');
+  check('WT-40/A KABUL: sonuçta "kWh · … menzil" yazıyor, "400V" yazmıyor',
+    /kWh/.test(satir.textContent) && /menzil|range|Reichweite/i.test(satir.textContent)
+      && !/\d+V\b/.test(satir.textContent), satir.textContent.trim());
+  check('WT-40/C5: donanım adı kalın (yanlış sürüm seçilmesin)',
+    !!$('car-results').querySelector('.ev-item .d b'));
+
+  // B) menzilin ne olduğu yazıyor ve hesapta kullanılmıyor
+  const kart = doc.createElement('div');
+  kart.innerHTML = A.evSummaryHTML({brand: 'Tesla', model: 'Model Y', trim: 'Premium RWD',
+    y1: 2025, batt: 84, range: 622, dc: 250, ac: 11, arch: 400, body: 'suv'});
+  const cipMetin = [...kart.querySelectorAll('.spec .sr-only')].map(e => e.textContent).join('|');
+  check('WT-40/B: menzil etiketi "WLTP … (üretici beyanı)"',
+    /WLTP/.test(cipMetin) && /beyan|claim|Herstellerangabe|annonc|declarad|dichiarat/i.test(cipMetin),
+    cipMetin);
+  check('WT-40/B: gerçek menzilin değişebileceği not olarak yazılı',
+    /hava|weather|Wetter|météo|clima|meteo/i.test(kart.querySelector('.ev-note')?.textContent || ''),
+    kart.querySelector('.ev-note')?.textContent);
+  check('WT-40/A: kartta mimari (V) çipi yok',
+    ![...kart.querySelectorAll('.spec')].some(c => /\d+\s*V$/.test(c.textContent.trim())));
+  check('WT-40/A: arch alanı ve t(\'arch\') SİLİNMEDİ (ileride lazım)',
+    typeof A.T.tr.arch === 'string' && A.EV_DB[0].length >= 11);
+
+  // C2) veri tarihi kartta görünüyor
+  check('WT-40/C2: kartta "Veri: YYYY-MM" yazıyor',
+    /\d{4}-\d{2}/.test(kart.querySelector('.ev-foot')?.textContent || ''),
+    kart.querySelector('.ev-foot')?.textContent.trim());
+  check('WT-40/C2: EV_DB_TARIH sabiti tanımlı', /^\d{4}-\d{2}$/.test(A.EV_DB_TARIH),
+    A.EV_DB_TARIH);
+
+  // C4) "Bu bilgi yanlış mı?" bağlantısı önceden doldurulmuş
+  const link = kart.querySelector('a.ev-fix');
+  check('WT-40/C4: issue bağlantısı marka/model/donanım/yıl ile dolu',
+    link && /github\.com/.test(link.href)
+      && decodeURIComponent(link.href).includes('Tesla')
+      && decodeURIComponent(link.href).includes('Premium RWD')
+      && decodeURIComponent(link.href).includes('2025'),
+    link?.href.slice(0, 90));
+
+  // C3) elle düzeltme EV_DB'yi eziyor
+  await A.db.vehicles.clear();
+  const vid = await A.db.vehicles.add({ad: 'Tesla Model Y', brand: 'Tesla', model: 'Model Y',
+    trim: 'Premium RWD', y1: 2025, batt: 84, arch: 400, dc: 250, ac: 11, range: 622, body: 'suv'});
+  A.S.unit = 'km';
+  await A.openEvSpecs(vid);
+  await sleep(120);
+  check('WT-40/C3: düzenleme ekranı mevcut değerlerle açılıyor',
+    $('ev-batt').value.startsWith('84') && $('ev-dc').value === '250',
+    `batt=${$('ev-batt').value} dc=${$('ev-dc').value}`);
+
+  $('ev-batt').value = '75';
+  $('evspec-save').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(300);
+  const v2 = await A.db.vehicles.get(vid);
+  check('WT-40/C3 KABUL: batarya 75 olarak kaydedildi (EV_DB\'yi ezdi)',
+    v2.batt === 75 && v2.specElle === true, `batt=${v2.batt} elle=${v2.specElle}`);
+
+  // sınır dışı değer sessizce kırpılmamalı (WT-04 kuralı)
+  await A.openEvSpecs(vid);
+  await sleep(100);
+  $('ev-batt').value = '9999';
+  $('evspec-save').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(250);
+  const v3 = await A.db.vehicles.get(vid);
+  check('WT-40/C3: sınır dışı değer reddedildi, hata gösterildi',
+    v3.batt === 75 && $('evspec-err').classList.contains('show'),
+    'batt=' + v3.batt + ' hata=' + $('evspec-err').textContent);
+  await A.overlayClose('page-evspecs', {force: true});
 }
 
 // --- WT-50: dosya yapısı bölündü mü? ---

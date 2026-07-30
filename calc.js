@@ -83,7 +83,12 @@ const KURALLAR = {
   surSaat:    {min: 0,        max: 48,      dec: 0, lbl: 'fldDurH'},
   surDak:     {min: 0,        max: 59,      dec: 0, lbl: 'fldDurM'},
   soc:        {min: 0,        max: 100,     dec: 0, lbl: 'fldSoc'},
-  birimFiyat: {min: 0,        max: 1000,    dec: 2, lbl: 'fldUnitPrice'}
+  birimFiyat: {min: 0,        max: 1000,    dec: 2, lbl: 'fldUnitPrice'},
+  // WT-40/C3: araç teknik değerlerinin elle düzeltilmesi
+  spec_batt:  {min: 1,        max: 300,     dec: 2, lbl: 'battery'},
+  spec_range: {min: 1,        max: 2000,    dec: 0, lbl: 'rangeWltp'},
+  spec_dc:    {min: 1,        max: 1000,    dec: 0, lbl: 'dcMax'},
+  spec_ac:    {min: 1,        max: 100,     dec: 1, lbl: 'acMax'}
 };
 // Sınır dışı değerde SESSİZCE KIRPMA — {ok:false, msg} döndür, çağıran gösterir.
 // Boş alan: zorunlu değilse {ok:true, value:null}.
