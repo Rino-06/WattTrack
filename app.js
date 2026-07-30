@@ -110,7 +110,7 @@ deleteAsk:'Bu kayıt silinsin mi?',deleted:'Kayıt silindi',saved:'Kayıt eklend
 obWelcome:'Hoş geldin!',obCountryQ:'Hangi ülkede şarj oluyorsun? Para birimi ve mesafe birimini buna göre ayarlayalım.',
 obCarQ:'Aracını seç',obCarSub:'Marka veya model yaz — yıl ve donanıma göre farklı batarya sürümlerini ayırt et.',
 searchCar:'ör. Model Y, Togg, Torres…',continue:'Devam',skip:'Atla',start:'Başla',
-battery:'Batarya',arch:'Mimari',dcMax:'Maks DC',acMax:'AC',range:'Menzil (WLTP)',
+battery:'Batarya',vehiclePhoto:'Araç fotoğrafı',arch:'Mimari',dcMax:'Maks DC',acMax:'AC',range:'Menzil (WLTP)',
 addPhoto:'📷 Fotoğraf ekle',changePhoto:'📷 Fotoğrafı değiştir',
 customAdd:'"{q}" adıyla özel araç ekle',vehicleAdded:'Araç eklendi',photoAdded:'Fotoğraf eklendi',add:'Ekle',
 wipeAsk1:'TÜM kayıtlar, araçlar ve ayarlar silinecek. Emin misin?',wipeAsk2:'Geri alınamaz. Silinsin mi?',
@@ -161,7 +161,7 @@ deleteAsk:'Delete this record?',deleted:'Record deleted',saved:'Charge saved',up
 obWelcome:'Welcome!',obCountryQ:'Where do you charge? We will set currency and distance unit accordingly.',
 obCarQ:'Pick your car',obCarSub:'Type a brand or model — tell versions apart by year, trim and battery.',
 searchCar:'e.g. Model Y, ID.4, Torres…',continue:'Continue',skip:'Skip',start:'Start',
-battery:'Battery',arch:'Architecture',dcMax:'Max DC',acMax:'AC',range:'Range (WLTP)',
+battery:'Battery',vehiclePhoto:'Vehicle photo',arch:'Architecture',dcMax:'Max DC',acMax:'AC',range:'Range (WLTP)',
 addPhoto:'📷 Add photo',changePhoto:'📷 Replace photo',
 customAdd:'Add "{q}" as custom vehicle',vehicleAdded:'Vehicle added',photoAdded:'Photo added',add:'Add',
 wipeAsk1:'ALL records, vehicles and settings will be deleted. Sure?',wipeAsk2:'Cannot be undone. Delete?',
@@ -212,7 +212,7 @@ deleteAsk:'Eintrag löschen?',deleted:'Eintrag gelöscht',saved:'Ladung gespeich
 obWelcome:'Willkommen!',obCountryQ:'Wo lädst du? Währung und Einheit werden entsprechend gesetzt.',
 obCarQ:'Wähle dein Auto',obCarSub:'Marke oder Modell eingeben — Versionen nach Jahr und Akku unterscheiden.',
 searchCar:'z.B. ID.4, EV6, Torres…',continue:'Weiter',skip:'Überspringen',start:'Los',
-battery:'Akku',arch:'Architektur',dcMax:'Max DC',acMax:'AC',range:'Reichweite',
+battery:'Akku',vehiclePhoto:'Fahrzeugfoto',arch:'Architektur',dcMax:'Max DC',acMax:'AC',range:'Reichweite',
 addPhoto:'📷 Foto hinzufügen',changePhoto:'📷 Foto ersetzen',
 customAdd:'"{q}" als eigenes Fahrzeug',vehicleAdded:'Fahrzeug hinzugefügt',photoAdded:'Foto hinzugefügt',add:'Hinzufügen',
 wipeAsk1:'ALLE Daten werden gelöscht. Sicher?',wipeAsk2:'Nicht rückgängig. Löschen?',
@@ -263,7 +263,7 @@ deleteAsk:'Supprimer cette charge ?',deleted:'Charge supprimée',saved:'Charge e
 obWelcome:'Bienvenue !',obCountryQ:'Où chargez-vous ? Devise et unité seront réglées en conséquence.',
 obCarQ:'Choisissez votre voiture',obCarSub:'Tapez une marque ou un modèle — distinguez les versions par année et batterie.',
 searchCar:'ex. Megane, ID.4, Torres…',continue:'Continuer',skip:'Passer',start:'Démarrer',
-battery:'Batterie',arch:'Architecture',dcMax:'DC max',acMax:'AC',range:'Autonomie',
+battery:'Batterie',vehiclePhoto:'Photo du véhicule',arch:'Architecture',dcMax:'DC max',acMax:'AC',range:'Autonomie',
 addPhoto:'📷 Ajouter une photo',changePhoto:'📷 Remplacer la photo',
 customAdd:'Ajouter « {q} » en véhicule perso',vehicleAdded:'Véhicule ajouté',photoAdded:'Photo ajoutée',add:'Ajouter',
 wipeAsk1:'TOUTES les données seront supprimées. Sûr ?',wipeAsk2:'Irréversible. Supprimer ?',
@@ -314,7 +314,7 @@ deleteAsk:'¿Eliminar esta carga?',deleted:'Carga eliminada',saved:'Carga guarda
 obWelcome:'¡Bienvenido!',obCountryQ:'¿Dónde cargas? Ajustaremos moneda y unidad.',
 obCarQ:'Elige tu coche',obCarSub:'Escribe marca o modelo — distingue versiones por año y batería.',
 searchCar:'ej. Model 3, EV6, Torres…',continue:'Continuar',skip:'Omitir',start:'Empezar',
-battery:'Batería',arch:'Arquitectura',dcMax:'DC máx',acMax:'AC',range:'Autonomía',
+battery:'Batería',vehiclePhoto:'Foto del vehículo',arch:'Arquitectura',dcMax:'DC máx',acMax:'AC',range:'Autonomía',
 addPhoto:'📷 Añadir foto',changePhoto:'📷 Cambiar foto',
 customAdd:'Añadir «{q}» como vehículo propio',vehicleAdded:'Vehículo añadido',photoAdded:'Foto añadida',add:'Añadir',
 wipeAsk1:'Se borrarán TODOS los datos. ¿Seguro?',wipeAsk2:'Irreversible. ¿Borrar?',
@@ -365,7 +365,7 @@ deleteAsk:'Eliminare questa ricarica?',deleted:'Ricarica eliminata',saved:'Ricar
 obWelcome:'Benvenuto!',obCountryQ:'Dove ricarichi? Imposteremo valuta e unità di conseguenza.',
 obCarQ:'Scegli la tua auto',obCarSub:'Scrivi marca o modello — distingui le versioni per anno e batteria.',
 searchCar:'es. 500e, Model 3, Torres…',continue:'Continua',skip:'Salta',start:'Inizia',
-battery:'Batteria',arch:'Architettura',dcMax:'DC max',acMax:'AC',range:'Autonomia',
+battery:'Batteria',vehiclePhoto:'Foto del veicolo',arch:'Architettura',dcMax:'DC max',acMax:'AC',range:'Autonomia',
 addPhoto:'📷 Aggiungi foto',changePhoto:'📷 Sostituisci foto',
 customAdd:'Aggiungi «{q}» come veicolo personale',vehicleAdded:'Veicolo aggiunto',photoAdded:'Foto aggiunta',add:'Aggiungi',
 wipeAsk1:'TUTTI i dati saranno eliminati. Sicuro?',wipeAsk2:'Irreversibile. Eliminare?',
@@ -804,24 +804,51 @@ function carSVG(body, color) {
     <circle cx="172" cy="68" r="11" fill="#131714"/><circle cx="172" cy="68" r="5" fill="#8B918C"/>
   </svg>`;
 }
+// WT-38: kart yatay düzende ve ~110px'i geçmiyor. Teknik değerler ayrı
+// etiket satırı yerine tek satırlık çiplerde; etiket ekran okuyucuya
+// .sr-only ile veriliyor, yoksa "84 kWh" neyin değeri olduğu kaybolurdu.
+function specChip(label, value) {
+  return value ? `<div class="spec"><span class="sr-only">${esc(label)}: </span>${esc(value)}</div>` : '';
+}
 function evSummaryHTML(v) {
   const yr = v.y1 ? (v.y1 + (v.y2 ? '–' + v.y2 : '+')) : '—';
   const visual = v.photo
-    ? `<img class="carphoto" src="${v.photo}" alt="">`
+    ? `<img class="carphoto" src="${v.photo}" alt="${esc(t('vehiclePhoto'))}" role="button" tabindex="0">`
     : carSVG(v.body, colorFor(v.brand || v.ad || ''));
+  const chips = [
+    specChip(t('battery'), v.batt ? v.batt + ' kWh' : ''),
+    specChip(t('range'), v.range ? Math.round(distDisp(v.range)) + ' ' + S.unit : ''),
+    specChip(t('dcMax'), v.dc ? v.dc + ' kW DC' : ''),
+    specChip(t('acMax'), v.ac ? v.ac + ' kW AC' : ''),
+    specChip(t('arch'), v.arch ? v.arch + ' V' : '')
+  ].join('');
   return `<div class="ev-summary">
-    ${visual}
-    <div class="name">${esc((v.brand ? v.brand + ' ' : '') + (v.model || v.ad || ''))}</div>
-    <div class="trim">${esc(v.trim || '')}${v.trim ? ' · ' : ''}${yr}</div>
-    <div class="spec-grid">
-      <div class="spec"><div class="k">${t('battery')}</div><div class="v">${v.batt ? v.batt + ' kWh' : '—'}</div></div>
-      <div class="spec"><div class="k">${t('arch')}</div><div class="v">${v.arch ? v.arch + ' V' : '—'}</div></div>
-      <div class="spec"><div class="k">${t('dcMax')}</div><div class="v">${v.dc ? v.dc + ' kW' : '—'}</div></div>
-      <div class="spec"><div class="k">${t('acMax')}</div><div class="v">${v.ac ? v.ac + ' kW' : '—'}</div></div>
-      <div class="spec" style="grid-column:1/-1"><div class="k">${t('range')}</div><div class="v">${v.range ? Math.round(distDisp(v.range)) + ' ' + S.unit : '—'}</div></div>
+    <div class="ev-top">
+      ${visual}
+      <div class="ev-id">
+        <div class="name">${esc((v.brand ? v.brand + ' ' : '') + (v.model || v.ad || ''))}</div>
+        <div class="trim">${esc(v.trim || '')}${v.trim ? ' · ' : ''}${yr}</div>
+      </div>
     </div>
+    ${chips ? `<div class="spec-grid">${chips}</div>` : ''}
   </div>`;
 }
+// fotoğrafa dokununca tam ekran (WT-38/5) — overlay altyapısı WT-24'ten.
+// Kart üç ayrı yerde yeniden üretildiği için dinleyici belgede duruyor.
+function openPhotoView(img) {
+  $('photo-view-img').src = img.src;
+  $('photo-view-img').alt = img.alt || '';
+  overlayOpen('photo-view');
+}
+document.addEventListener('click', e => {
+  const img = e.target.closest?.('.ev-summary img.carphoto');
+  if (img) openPhotoView(img);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const img = e.target.closest?.('.ev-summary img.carphoto');
+  if (img) { e.preventDefault(); openPhotoView(img); }
+});
 // fotoğrafı küçültüp dataURL yap (max 640px genişlik)
 function resizePhoto(file) {
   return new Promise((res, rej) => {
@@ -2407,6 +2434,7 @@ function renderBankCountries() {
     }));
 }
 $('btn-close-country').addEventListener('click', () => overlayClose('page-country'));
+$('btn-close-photo').addEventListener('click', () => overlayClose('photo-view'));
 $('country-search').addEventListener('input', e => renderCountryList(e.target.value));
 
 // ---------- araç arama (ortak) ----------

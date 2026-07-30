@@ -56,7 +56,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
        fmtInput, checkNum, isValidDate, localISO, renderDashboard, scanBadData,
        isConv, amtB, renderStats, applyI18n, T, LANG_NAMES, CHARGERS,
        COUNTRIES, HOME_NAMES, PAN_EU, BANKS_BY, BANKS_DEFAULT, overlayClose,
-       initSegments};`;
+       initSegments, evSummaryHTML, carSVG};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -798,6 +798,80 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     check(`WT-31/3: ${theme} temada anahtarın sınır halkası var`,
       /\.sw i\{[^}]*box-shadow\s*:\s*inset[^}]*var\(--border\)/.test(flat));
   }
+}
+
+// --- WT-38: araç özet kartı kompakt mı? ---
+{
+  const doc = window.document;
+  const css = [...doc.querySelectorAll('style')].map(x => x.textContent).join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const body = sel => {
+    const m = new RegExp('(?:^|[},])\\s*' + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      + '\\s*\\{([^}]*)\\}').exec(css);
+    return m ? m[1] : '';
+  };
+  const px = (b, p) => {
+    const m = new RegExp(p + '\\s*:\\s*(\\d+(?:\\.\\d+)?)px').exec(b);
+    return m ? parseFloat(m[1]) : null;
+  };
+
+  const kart = body('.ev-summary'), svg = body('.ev-summary svg');
+  const foto = body('.ev-summary img.carphoto'), grid = body('.spec-grid'), cip = body('.spec');
+  check('WT-38/3: .ev-summary padding 12px', px(kart, 'padding') === 12,
+    'padding=' + px(kart, 'padding'));
+  check('WT-38/1: araç silüeti küçük çipte (88x34)',
+    px(svg, 'width') === 88 && px(svg, 'height') === 34,
+    `${px(svg, 'width')}x${px(svg, 'height')}`);
+  check('WT-38/5: fotoğraf 64x48 çipte, tam genişlik banner yok',
+    px(foto, 'width') === 64 && px(foto, 'height') === 48 && !/width\s*:\s*100%/.test(foto),
+    `${px(foto, 'width')}x${px(foto, 'height')}`);
+  check('WT-38/1: üst blok yatay düzende',
+    /display\s*:\s*flex/.test(body('.ev-top')) && /align-items\s*:\s*center/.test(body('.ev-top')));
+  check('WT-38/2: teknik değerler tek satır kaydırılabilir çipler',
+    /display\s*:\s*flex/.test(grid) && /overflow-x\s*:\s*auto/.test(grid), grid.trim());
+  check('WT-38/2: çip metni WT-31 kuralına uyuyor (>=12px)',
+    px(cip, 'font-size') >= 12, 'font-size=' + px(cip, 'font-size'));
+  // 4) yükseklik: jsdom ölçemez, bildirilen değerlerden üst sınır hesaplanır
+  const cipH = px(cip, 'font-size') * 1.35 + 2 * px(cip, 'padding') ;
+  const ustH = Math.max(px(foto, 'height'), px(svg, 'height'));
+  const toplam = 2 * px(kart, 'padding') + ustH + px(grid, 'margin-top') + cipH + 2;
+  check('WT-38/4: kart yüksekliği ~110px sınırını geçmiyor', toplam <= 112,
+    'hesaplanan=' + Math.round(toplam) + 'px (eskisi ~280px)');
+  check('WT-38/7: koyu tema svg kuralı korundu',
+    /\[data-theme="dark"\]\s*\.ev-summary svg \[fill="#F1F7F2"\]\s*\{fill:#1e293b\}/.test(css));
+
+  // Silüetler DEĞİŞMEMELİ — sedan gövde yolu birebir sabit
+  const SEDAN = 'M20 62 Q22 50 42 47 L62 34 Q80 26 112 26 Q144 26 158 36 L170 46 '
+    + 'Q196 49 202 58 Q206 62 204 68 L188 68 A14 14 0 0 0 160 68 L84 68 '
+    + 'A14 14 0 0 0 56 68 L24 68 Q18 66 20 62 Z';
+  check('WT-38: carSVG() silüetleri değişmedi (sedan gövdesi birebir)',
+    app().carSVG('sedan', '#1C8742').includes(SEDAN));
+  check('WT-38: viewBox aynı kaldı', app().carSVG('suv').includes('viewBox="0 0 220 84"'));
+
+  // Kart HTML'i: çipler, ekran okuyucu etiketi, fotoğrafın klavye erişimi
+  const h = app().evSummaryHTML({ brand: 'Tesla', model: 'Model 3', trim: 'LR',
+    y1: 2023, batt: 75, range: 600, dc: 250, ac: 11, arch: 400, body: 'sedan' });
+  const box = doc.createElement('div'); box.innerHTML = h;
+  const cips = [...box.querySelectorAll('.spec')];
+  check('WT-38/2: beş teknik değer de çip olarak var', cips.length === 5,
+    cips.map(c => c.textContent.trim()).join(' | '));
+  check('WT-38: çipin ekran okuyucu etiketi var (erişilebilirlik korundu)',
+    cips.every(c => c.querySelector('.sr-only')?.textContent.trim()),
+    cips.map(c => c.querySelector('.sr-only')?.textContent).join(''));
+  check('WT-38: boş değer için çip üretilmiyor',
+    (() => { const b2 = doc.createElement('div');
+      b2.innerHTML = app().evSummaryHTML({ ad: 'Bilinmeyen', body: 'suv' });
+      return b2.querySelectorAll('.spec').length === 0; })());
+
+  const hp = doc.createElement('div');
+  hp.innerHTML = app().evSummaryHTML({ ad: 'Fotolu', body: 'suv', photo: 'data:image/png;base64,AAA' });
+  const im = hp.querySelector('img.carphoto');
+  check('WT-38/5: fotoğraf klavyeyle de açılabilir',
+    im?.getAttribute('role') === 'button' && im?.getAttribute('tabindex') === '0'
+      && im?.getAttribute('alt'), 'alt=' + im?.getAttribute('alt'));
+  check('WT-38/5: tam ekran görüntüleyici dialog semantiğinde',
+    doc.getElementById('photo-view')?.getAttribute('role') === 'dialog'
+      && doc.getElementById('photo-view')?.getAttribute('aria-modal') === 'true');
 }
 
 // --- Çeviri sözlüğü bütünlüğü (kullanıcı kuralı: 6 dili DOLDUR) ---
