@@ -74,7 +74,7 @@ const odoDistOf = v => (v && v.kmStart != null && v.kmNow > v.kmStart) ? v.kmNow
 const vehName = v => v ? (v.brand ? v.brand + ' ' + v.model : v.ad) : '';
 
 async function renderDashboard() {
-  const vehicles = (await db.vehicles.toArray()).filter(v => !v.archived);
+  const vehicles = (await allVehicles()).filter(v => !v.archived);
   // araç filtresi seçeneği (2+ araçta görünür, tek araçta adını gösterir)
   const dsel = $('d-vehsel');
   if (vehicles.length > 1) {
@@ -89,7 +89,7 @@ async function renderDashboard() {
     S.dashVeh = '';
   }
 
-  const allRaw = await db.sessions.toArray();
+  const allRaw = await allSessions();
   const all = vehFilter(allRaw, S.dashVeh);
   const cur = periodFilter(all);
   reportFxGaps(cur);   // WT-10

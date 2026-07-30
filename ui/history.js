@@ -11,8 +11,8 @@
 // GEÇMİŞ
 // ============================================================
 async function renderHistory() {
-  const all = await db.sessions.toArray();
-  const vehicles = await db.vehicles.toArray();
+  const all = await allSessions();
+  const vehicles = await allVehicles();
   const sorted = [...all].sort((a, b) => b.tarih.localeCompare(a.tarih));
 
   const years = [...new Set(sorted.map(r => r.tarih.slice(0, 4)))].sort().reverse();

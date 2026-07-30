@@ -25,7 +25,7 @@ async function deleteVehicleFlow(vid) {
     await db.vehicles.delete(vid);
     return true;
   }
-  const others = (await db.vehicles.toArray()).filter(v => v.id !== vid);
+  const others = (await allVehicles()).filter(v => v.id !== vid);
   const choice = await choiceDialog({
     title: t('delVehTitle'),
     msg: t('delVehMsg', {n: nSess, e: nExp}),
@@ -64,7 +64,7 @@ async function deleteVehicleFlow(vid) {
 // WT-09/B. Toplu kayıt devretme — elle düzeltme yolu. Arşivdeki araçlar dahil.
 // Dönüş: taşıma yapıldıysa true.
 async function moveRecordsFlow(fromId = null) {
-  const vs = await db.vehicles.toArray();
+  const vs = await allVehicles();
   if (vs.length < 2) { toast(t('noOtherVehicle')); return false; }
 
   const body = document.createElement('div');
@@ -129,16 +129,16 @@ async function moveRecordsFlow(fromId = null) {
 
 // WT-09/C. Öksüz kayıt tespiti — aracId'si var olmayan bir araca işaret ediyor.
 async function scanOrphans() {
-  const ids = new Set((await db.vehicles.toArray()).map(v => v.id));
-  const orphS = (await db.sessions.toArray()).filter(r => r.aracId != null && !ids.has(r.aracId));
-  const orphE = (await db.expenses.toArray()).filter(r => r.aracId != null && !ids.has(r.aracId));
+  const ids = new Set((await allVehicles()).map(v => v.id));
+  const orphS = (await allSessions()).filter(r => r.aracId != null && !ids.has(r.aracId));
+  const orphE = (await allExpenses()).filter(r => r.aracId != null && !ids.has(r.aracId));
   const n = orphS.length + orphE.length;
   if (!n) { setWarning('orphan', null); return; }
   setWarning('orphan', {
     msg: t('orphanWarn', {n}),
     actionLbl: t('orphanAssign'),
     action: async () => {
-      const vs = await db.vehicles.toArray();
+      const vs = await allVehicles();
       if (!vs.length) { toast(t('noOtherVehicle')); return; }
       const pick = await choiceDialog({
         title: t('orphanAssign'),
@@ -160,7 +160,7 @@ async function scanOrphans() {
 }
 
 async function renderVehiclePage() {
-  const allV = await db.vehicles.toArray();
+  const allV = await allVehicles();
   const vehicles = allV.filter(v => !v.archived);
   const archived = allV.filter(v => v.archived);
   const odoInfo = {};                       // WT-19/5
@@ -225,7 +225,7 @@ async function renderVehiclePage() {
       const vid = +b.dataset.rm;
       if (!await deleteVehicleFlow(vid)) return;   // WT-09/A
       if (S.defaultVehicleId === vid) {
-        const rest = (await db.vehicles.toArray()).filter(v => !v.archived);
+        const rest = (await allVehicles()).filter(v => !v.archived);
         S.defaultVehicleId = rest[0]?.id || null;
         await saveSetting('defaultVehicleId', S.defaultVehicleId);
       }
@@ -272,13 +272,13 @@ async function renderVehiclePage() {
     ? vehName(vehicles.find(v => String(v.id) === S.vehExpVeh))
     : (vehicles.length === 1 ? vehName(vehicles[0]) : '');
   $('c-exp-title').textContent = t('expenses') + (expVehName ? ' — ' + expVehName : '');
-  const exAllV = await db.expenses.toArray();
+  const exAllV = await allExpenses();
   const ex = S.vehExpVeh
     ? exAllV.filter(e => String(e.aracId) === S.vehExpVeh || !e.aracId)
     : exAllV;
 
   // ---- toplam gider metrikleri (şarj + sabit) ----
-  const sessV = vehFilter(await db.sessions.toArray(), S.vehExpVeh);
+  const sessV = vehFilter(await allSessions(), S.vehExpVeh);
   const chargeTot = sessV.reduce((s, r) => s + amtB(r), 0);
   const fixedTot = ex.reduce((s, e) => s + expB(e), 0);
   $('v-total-cost').textContent = money(chargeTot + fixedTot);
@@ -595,7 +595,7 @@ async function openExpense(rec) {
   // WT-18: "Tüm araçlar" bir FİLTRE değeri, geçerli bir kayıt değeri değil —
   // formdan kaldırıldı. Tek araçta seçici gizli kalır ama id OTOMATİK atanır
   // (eskiden aracId her zaman null yazılıyordu).
-  const vs = (await db.vehicles.toArray()).filter(v => !v.archived || v.id === rec?.aracId);
+  const vs = (await allVehicles()).filter(v => !v.archived || v.id === rec?.aracId);
   $('wrap-exp-veh').style.display = vs.length > 1 ? '' : 'none';
   $('in-exp-veh').innerHTML =
     vs.map(v => `<option value="${v.id}">${esc(vehName(v))}</option>`).join('');

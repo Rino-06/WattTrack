@@ -148,9 +148,9 @@ async function backupPayload() {
   return {
     app: 'WattTrack', version: SCHEMA_VERSION, appVersion: APP_VERSION,
     exportedAt: new Date().toISOString(),
-    sessions: (await db.sessions.toArray()).filter(r => !isDemo(r)),
-    vehicles: (await db.vehicles.toArray()).filter(r => !isDemo(r)),
-    expenses: (await db.expenses.toArray()).filter(r => !isDemo(r)),
+    sessions: (await allSessions()).filter(r => !isDemo(r)),
+    vehicles: (await allVehicles()).filter(r => !isDemo(r)),
+    expenses: (await allExpenses()).filter(r => !isDemo(r)),
     settings: await db.settings.toArray()
   };
 }
@@ -160,9 +160,9 @@ $('btn-export-json').addEventListener('click', async () => {
   toast(t('jsonDone'));
 });
 $('btn-export-csv').addEventListener('click', async () => {
-  const rows = (await db.sessions.toArray()).filter(r => !isDemo(r))   // WT-36/3f
+  const rows = (await allSessions()).filter(r => !isDemo(r))   // WT-36/3f
     .sort((a, b) => a.tarih.localeCompare(b.tarih));
-  const vehicles = await db.vehicles.toArray();
+  const vehicles = await allVehicles();
   const vn = id => { const v = vehicles.find(x => x.id === id); return v ? vehName(v) : ''; };
   const num = n => n == null ? '' : String(Math.round(n * 100) / 100).replace('.', ',');
   // CSV formül enjeksiyonuna karşı koruma: =,+,-,@ ile başlayan metinleri etkisizleştir
@@ -196,7 +196,7 @@ async function importBackupText(text) {
   //     bloklar ve zaman aşımına düşürür) ---
   // mükerrer tespiti: tarih+firma+kwh+tutar+para birimi imzası
   const sig = r => [r.tarih, r.firma, r.kwh, r.odenen, r.cur || ''].join('|');
-  const existing = new Set((await db.sessions.toArray()).map(sig));
+  const existing = new Set((await allSessions()).map(sig));
   const fresh = [], dupes = [];
   data.sessions.forEach(({id, ...r}) => (existing.has(sig(r)) ? dupes : fresh).push({...r, _oldVeh: r.aracId}));
   if (!fresh.length && data.sessions.length) { alert(t('importAllDup')); return; }
@@ -213,7 +213,7 @@ async function importBackupText(text) {
   const restoreSettings = hasSettings && confirm(t('restoreSettingsAsk'));
 
   const esig = e => [e.tarih, e.tur, e.tutar, e.cur || ''].join('|');
-  const haveExp = new Set((await db.expenses.toArray()).map(esig));
+  const haveExp = new Set((await allExpenses()).map(esig));
   const freshExp = Array.isArray(data.expenses)
     ? data.expenses.map(({id, ...e}) => ({...e, _oldVeh: e.aracId})).filter(e => !haveExp.has(esig(e)))
     : [];
@@ -268,7 +268,7 @@ async function importBackupText(text) {
   // WT-19: import aracId'leri idMap üzerinden çeviriyor; içeri giren odo
   // kayıtları zaten odo kaydı olan bir araca düşmüş olabilir — zincirler
   // transaction bittikten SONRA baştan kurulur.
-  for (const vid of new Set((await db.sessions.toArray())
+  for (const vid of new Set((await allSessions())
       .filter(r => r.odo != null).map(r => r.aracId ?? null)))
     await tureMesafe(vid);
 

@@ -29,7 +29,7 @@ $('c-calc').addEventListener('click', async () => {
 });
 
 async function renderCompare() {
-  const vehicles = (await db.vehicles.toArray()).filter(v => !v.archived);
+  const vehicles = (await allVehicles()).filter(v => !v.archived);
   const wrap = $('wrap-c-veh');
   wrap.style.display = vehicles.length > 1 ? '' : 'none';
   if (vehicles.length > 1) {
@@ -52,10 +52,10 @@ async function renderCompare() {
   // WT-18: `|| !e.aracId` koşulu aracId'si null olan giderleri HER araca
   // sayıyordu; artık aracId zorunlu ve migration eskiyi düzeltiyor, o yüzden
   // koşul kalktı. "Tüm araçlar" görünümünde arşiv giderleri varsayılan HARİÇ.
-  const allV = await db.vehicles.toArray();
+  const allV = await allVehicles();
   const inclArch = $('c-inclarch').checked;
   const activeIds = new Set(allV.filter(v => inclArch || !v.archived).map(v => v.id));
-  const exAll = await db.expenses.toArray();
+  const exAll = await allExpenses();
   const ex = S.cmpVeh
     ? exAll.filter(e => String(e.aracId) === S.cmpVeh)
     : exAll.filter(e => activeIds.has(e.aracId));
@@ -70,7 +70,7 @@ async function renderCompare() {
   const box = $('c-result');
   if (!S.cmp) { box.style.display = 'none'; return; }
 
-  const all = vehFilter(await db.sessions.toArray(), S.cmpVeh);
+  const all = vehFilter(await allSessions(), S.cmpVeh);
   reportFxGaps(all, 'c-warnings', 'fxCompare');   // WT-10
   let wd = all.filter(r => r.mesafeKm > 0);
   let distKm = wd.reduce((s, r) => s + r.mesafeKm, 0);

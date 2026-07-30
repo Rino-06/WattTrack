@@ -204,10 +204,13 @@ function fillFirmSelect(code, current, usedCounts) {
   }
 }
 
-async function formCountryChanged(keepRate) {
+// WT-49/3: openAdd() aynı açılışta sessions'ı ÜÇ KEZ okuyordu. Liste artık
+// bir kez okunup buraya geçiriliyor; dışarıdan tek başına çağrıldığında
+// (ülke değişimi) kendisi okuyor.
+async function formCountryChanged(keepRate, onceden) {
   const code = $('in-country').value;
   const c = COUNTRIES.find(x => x[0] === code);
-  const all = await db.sessions.toArray();
+  const all = onceden || await allSessions();
   const counts = {};
   all.forEach(r => { if ((r.ulke || S.country) === code) counts[r.firma] = (counts[r.firma] || 0) + 1; });
   const curFirm = $('in-firm').value === '__other'
@@ -283,9 +286,13 @@ async function openAdd(id) {
   $('in-unitprice').value = fmtInput(r?.birimFiyat ?? S.homeKwhPrice, 2);
   $('in-free').dispatchEvent(new Event('change'));
 
+  // WT-49/3: bu açılıştaki TEK sessions okuması — hem firma sayımı, hem
+  // lokasyon önerileri, hem de gerekirse formCountryChanged bunu kullanıyor.
+  const allSess = await allSessions();
+
   // firma / banka / kur — ülkeye göre (düzenlemede firmayı koru)
   await (async () => {
-    const all = await db.sessions.toArray();
+    const all = allSess;
     const counts = {};
     all.forEach(x => { if ((x.ulke || S.country) === selCode) counts[x.firma] = (counts[x.firma] || 0) + 1; });
     fillFirmSelect(selCode, r?.firma || '', counts);
@@ -298,12 +305,12 @@ async function openAdd(id) {
     if (foreign) {
       $('rate-lbl').textContent = t('rateLbl', {f: c[3], b: S.currency});
       $('rate-note').textContent = t('rateNote', {b: S.currency});
-      if (!r?.rate) formCountryChanged();
+      if (!r?.rate) formCountryChanged(undefined, allSess);
     }
   })();
 
   // lokasyon önerileri (daha önce girilenler)
-  const locs = [...new Set((await db.sessions.toArray()).map(x => x.loc).filter(Boolean))];
+  const locs = [...new Set(allSess.map(x => x.loc).filter(Boolean))];
   $('loc-list').innerHTML = locs.map(l => `<option value="${esc(l)}">`).join('');
 
   // indirim ve SoC hızlı çipleri
@@ -324,7 +331,7 @@ async function openAdd(id) {
     }));
 
   // araç seçimi (arşivdekiler hariç; düzenlenen kayıt arşivli araca aitse o da listelenir)
-  let vehicles = (await db.vehicles.toArray()).filter(v => !v.archived || v.id === r?.aracId);
+  let vehicles = (await allVehicles()).filter(v => !v.archived || v.id === r?.aracId);
   $('wrap-vehicle').style.display = vehicles.length > 1 ? '' : 'none';
   $('in-vehicle').innerHTML = vehicles.map(v =>
     `<option value="${v.id}">${esc(vehName(v))}</option>`).join('');
@@ -454,7 +461,7 @@ $('btn-save').addEventListener('click', async () => {
     // odo'lu kayıtta mesafe henüz türetilmedi; komşusundan tahmin et
     let mes = rec.mesafeKm;
     if (mes == null && odoKm != null) {
-      const onceki = (await db.sessions.toArray())
+      const onceki = (await allSessions())
         .filter(r => vehEq(r.aracId, rec.aracId) && r.odo != null
           && r.id !== editingId && r.tarih <= rec.tarih)
         .sort((a, b) => b.tarih.localeCompare(a.tarih))[0];

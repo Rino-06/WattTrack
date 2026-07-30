@@ -11,7 +11,7 @@
 // İSTATİSTİK (ana sayfadan taşınan grafikler + dağılımlar)
 // ============================================================
 async function renderStats() {
-  const vehicles = (await db.vehicles.toArray()).filter(v => !v.archived);
+  const vehicles = (await allVehicles()).filter(v => !v.archived);
   const ssel = $('s-vehsel');
   if (vehicles.length > 1) {
     ssel.style.display = '';
@@ -23,7 +23,7 @@ async function renderStats() {
     ssel.innerHTML = vehicles.length ? `<option value="">${esc(vehName(vehicles[0]))}</option>` : '';
   }
 
-  const all = vehFilter(await db.sessions.toArray(), S.dashVeh);
+  const all = vehFilter(await allSessions(), S.dashVeh);
   reportFxGaps(all, 's-warnings', 'fxStats');   // WT-10
 
   // WT-15: d-gran segmenti YALNIZCA harcama grafiğini etkiliyordu; altındaki
@@ -32,6 +32,22 @@ async function renderStats() {
   const cur = granFilter(all);
   $('s-gran-lbl').textContent = t('periodLbl', {p: periodShort(S.gran)});
   $('s-chart-scope').textContent = t('chartTrendNote');
+
+  // WT-49/4: her çubuk için diziyi baştan taramak (all.filter(...) × 7) yerine
+  // gün/ay/yıl toplamları TEK geçişte çıkarılıyor ve önbellek kuşağına bağlı
+  // memoize ediliyor. Anahtar araç filtresini ve para birimini içeriyor —
+  // amtB() para birimine bağlı, ayarlar tablosu önbelleğe dahil değil.
+  const T_ = memo('statsSums:' + S.dashVeh + ':' + S.currency, () => {
+    const g = {gun: {}, ay: {}, yil: {}};
+    all.forEach(r => {
+      const v = amtB(r);
+      const d = r.tarih.slice(0, 10), a = r.tarih.slice(0, 7), y = r.tarih.slice(0, 4);
+      g.gun[d] = (g.gun[d] || 0) + v;
+      g.ay[a] = (g.ay[a] || 0) + v;
+      g.yil[y] = (g.yil[y] || 0) + v;
+    });
+    return g;
+  });
 
   // harcama grafiği: kasıtlı olarak birden çok dönemi yan yana gösterir (seyir)
   const now = new Date();
@@ -43,14 +59,14 @@ async function renderStats() {
       bars.push({
         label: DAYS[S.lang][(d.getDay() + 6) % 7],
         year: String(d.getFullYear()),
-        sum: all.filter(r => r.tarih.slice(0, 10) === key).reduce((s, r) => s + amtB(r), 0)
+        sum: T_.gun[key] || 0
       });
     }
   } else if (S.gran === 'year') {
     for (let i = 4; i >= 0; i--) {
       const y = String(now.getFullYear() - i);
       bars.push({label: y, year: y,
-        sum: all.filter(r => r.tarih.slice(0, 4) === y).reduce((s, r) => s + amtB(r), 0)});
+        sum: T_.yil[y] || 0});
     }
   } else {
     for (let i = 5; i >= 0; i--) {
@@ -59,7 +75,7 @@ async function renderStats() {
       bars.push({
         label: MONTHS[S.lang][d.getMonth()].slice(0, 3),
         year: String(d.getFullYear()),
-        sum: all.filter(r => monthKey(r.tarih) === key).reduce((s, r) => s + amtB(r), 0)
+        sum: T_.ay[key] || 0
       });
     }
   }

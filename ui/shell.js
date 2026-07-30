@@ -229,7 +229,7 @@ async function fetchTable(from, date) {
 }
 // Kur tablosu eksik kayıtları sessizce tamamla (oturum başına sınırlı)
 async function backfillRates() {
-  const all = await db.sessions.toArray();
+  const all = await allSessions();
   const need = all.filter(r => r.cur && !r.fxTable);
   const groups = {};
   need.forEach(r => { (groups[r.cur + '|' + r.tarih.slice(0, 10)] ||= []).push(r); });
@@ -524,9 +524,9 @@ function renderWarnings() {
 // Varsayılan (ya da tek) araca atanır; hiç araç yoksa dokunulmaz — kullanıcı
 // araç ekleyince bir sonraki açılışta çalışır.
 async function migrateExpenseVehicles() {
-  const orphan = (await db.expenses.toArray()).filter(e => e.aracId == null);
+  const orphan = (await allExpenses()).filter(e => e.aracId == null);
   if (!orphan.length) return;
-  const vs = await db.vehicles.toArray();
+  const vs = await allVehicles();
   if (!vs.length) return;
   const target = vs.find(v => v.id === S.defaultVehicleId && !v.archived)
     || vs.find(v => !v.archived) || vs[0];
@@ -538,7 +538,7 @@ async function migrateExpenseVehicles() {
 
 // Sınır dışı socB/socA/dur/kwh değerlerini tara. Otomatik silme yok.
 async function scanBadData() {
-  const all = await db.sessions.toArray();
+  const all = await allSessions();
   const bad = all.filter(r =>
     (r.socB != null && (r.socB < 0 || r.socB > 100)) ||
     (r.socA != null && (r.socA < 0 || r.socA > 100)) ||
@@ -581,9 +581,9 @@ document.addEventListener('click', e => {
 const isDemo = r => r.demo === true;
 async function demoCounts() {
   return {
-    s: (await db.sessions.toArray()).filter(isDemo).length,
-    v: (await db.vehicles.toArray()).filter(isDemo).length,
-    e: (await db.expenses.toArray()).filter(isDemo).length
+    s: (await allSessions()).filter(isDemo).length,
+    v: (await allVehicles()).filter(isDemo).length,
+    e: (await allExpenses()).filter(isDemo).length
   };
 }
 async function demoActive() {
@@ -592,8 +592,8 @@ async function demoActive() {
 }
 
 async function syncEmptyStates() {
-  const sess = await db.sessions.toArray();
-  const vehs = (await db.vehicles.toArray()).filter(v => !v.archived);
+  const sess = await allSessions();
+  const vehs = (await allVehicles()).filter(v => !v.archived);
 
   $('d-empty').innerHTML = sess.length ? ''
     : emptyStateHTML('⚡', 'emptyDash', 'addCharge');
@@ -673,6 +673,6 @@ $('btn-demo-clear').addEventListener('click', () => clearDemoData());
 // WT-36/3d: kullanıcı ilk GERÇEK kaydını girdiğinde örnek veriyi silmeyi öner
 async function offerDemoCleanup() {
   if (!await demoActive()) return;
-  const gercek = (await db.sessions.toArray()).some(r => !isDemo(r));
+  const gercek = (await allSessions()).some(r => !isDemo(r));
   if (gercek) await clearDemoData({ask: true});
 }

@@ -69,7 +69,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
        COUNTRIES, HOME_NAMES, PAN_EU, BANKS_BY, BANKS_DEFAULT, overlayClose,
        initSegments, evSummaryHTML, carSVG, seedDemoData, clearDemoData,
        syncEmptyStates, renderHistory, renderVehiclePage, backupPayload,
-       offerDemoCleanup};`;
+       offerDemoCleanup, allSessions, allVehicles, memo, renderCompare};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -1015,6 +1015,64 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const tanimsiz = [...kullanilan].filter(k => !ref.has(k));
   check('i18n: HTML\'deki her data-i18n anahtarı sözlükte var',
     tanimsiz.length === 0, tanimsiz.join(',') || kullanilan.size + ' anahtar');
+}
+
+// --- WT-49: bellek içi önbellek gerçekten okumayı azaltıyor mu? ---
+{
+  const A = app();
+  A.S.period = 'year'; A.S.dashVeh = '';   // kayıtlar bu yıl içinde
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  await A.db.sessions.bulkAdd([1, 2, 3].map(i => ({
+    tarih: `2026-0${i}-15T10:00`, firma: 'ZES', tip: 'DC', kwh: 10 * i,
+    tutar: 100 * i, odenen: 100 * i, cur: 'TRY', aracId: null })));
+
+  // IndexedDB'ye giden okumaları say
+  let okuma = 0;
+  const orj = A.db.sessions.toArray.bind(A.db.sessions);
+  A.db.sessions.toArray = (...a) => { okuma++; return orj(...a); };
+  const say = async fn => { const o = okuma; await fn(); await sleep(150); return okuma - o; };
+
+  const ilk = await say(() => A.renderDashboard());
+  const ikinci = await say(() => A.renderDashboard());
+  check('WT-49/1: ikinci render tabloyu yeniden OKUMUYOR (önbellek)',
+    ilk >= 1 && ikinci === 0, `ilk=${ilk} ikinci=${ikinci}`);
+
+  const sekme = await say(() => A.renderStats());
+  check('WT-49/4: sekme geçişi de yeniden okumuyor', sekme === 0, 'okuma=' + sekme);
+
+  const form = await say(() => A.openAdd());
+  check('WT-49/3: openAdd tek açılışta en fazla BİR okuma yapıyor (eskiden üç)',
+    form <= 1, 'okuma=' + form);
+  await A.overlayClose('page-add', {force: true});
+
+  // --- doğruluk: yazma önbelleği düşürmeli ---
+  await A.db.sessions.add({ tarih: '2026-04-15T10:00', firma: 'YENİ', tip: 'AC',
+    kwh: 5, tutar: 50, odenen: 50, cur: 'TRY', aracId: null });
+  const sonra = await say(() => A.renderDashboard());
+  check('WT-49: yazmadan sonra önbellek düştü (yeniden okundu)', sonra >= 1,
+    'okuma=' + sonra);
+  check('WT-49 KABUL: yeni kayıt ekranda görünüyor (bayat önbellek yok)',
+    $('d-sess').textContent.startsWith('4'), 'd-sess=' + $('d-sess').textContent);
+
+  // Collection.delete() Table metodundan geçmiyor — hook'lar onu da yakalamalı
+  await A.db.sessions.filter(r => r.firma === 'YENİ').delete();
+  await A.renderDashboard();
+  await sleep(200);
+  check('WT-49: Collection.delete() de önbelleği düşürüyor',
+    $('d-sess').textContent.startsWith('3'), 'd-sess=' + $('d-sess').textContent);
+
+  // memo: aynı kuşakta aynı nesne, yazmadan sonra yeni nesne
+  const m1 = A.memo('test', () => ({n: 1}));
+  const m2 = A.memo('test', () => ({n: 2}));
+  check('WT-49/4: memo aynı kuşakta yeniden hesaplamıyor', m1 === m2 && m1.n === 1);
+  await A.db.sessions.add({ tarih: '2026-05-15T10:00', firma: 'X', tip: 'AC',
+    kwh: 1, tutar: 1, odenen: 1, cur: 'TRY', aracId: null });
+  const m3 = A.memo('test', () => ({n: 3}));
+  check('WT-49/4: yazmadan sonra memo tazeleniyor', m3.n === 3);
+  await A.db.sessions.filter(r => r.firma === 'X').delete();
+
+  A.db.sessions.toArray = orj;
 }
 
 // --- WT-50: dosya yapısı bölündü mü? ---

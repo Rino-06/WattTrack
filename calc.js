@@ -218,7 +218,7 @@ const vehEq = (a, b) => (a ?? null) === (b ?? null);
 // mesafeleri baştan hesaplar. Araya sonradan geçmiş tarihli kayıt eklenebildiği
 // için "bir önceki kayıttan farkı al" mantığı tek başına yetmez.
 async function tureMesafe(aracId) {
-  const mine = (await db.sessions.toArray())
+  const mine = (await allSessions())
     .filter(r => vehEq(r.aracId, aracId) && r.odo != null)
     .sort((a, b) => a.tarih.localeCompare(b.tarih) || a.id - b.id);
   const upd = [];
@@ -244,7 +244,7 @@ async function odoNeighbourCheck(aracId, tarih, odoKm, excludeId) {
   if (veh?.kmStart != null && odoKm < veh.kmStart)
     return {ok: false, msg: t('odoBelowStart', {a: d(veh.kmStart)})};
 
-  const mine = (await db.sessions.toArray())
+  const mine = (await allSessions())
     .filter(r => vehEq(r.aracId, aracId) && r.odo != null && r.id !== excludeId)
     .sort((a, b) => a.tarih.localeCompare(b.tarih));
   const before = [...mine].reverse().find(r => r.tarih <= tarih);
@@ -266,7 +266,7 @@ async function odoNeighbourCheck(aracId, tarih, odoKm, excludeId) {
 // gidilmiş görünüyorsa) sorulur. En az 5 geçmiş kayıt yoksa sorulmaz.
 async function looksLikeMissedCharge(aracId, mesafeKm, kwh, excludeId) {
   if (!(mesafeKm > 0) || !(kwh > 0)) return false;
-  const gecmis = (await db.sessions.toArray())
+  const gecmis = (await allSessions())
     .filter(r => vehEq(r.aracId, aracId) && r.id !== excludeId
       && !r.atlanan && r.mesafeKm > 0 && r.kwh > 0)
     .sort((a, b) => b.tarih.localeCompare(a.tarih))
@@ -281,7 +281,7 @@ async function looksLikeMissedCharge(aracId, mesafeKm, kwh, excludeId) {
 // BÜYÜK olanı. Hangisinin kullanıldığı Aracım sayfasında not olarak yazılır.
 async function odoNowOf(v) {
   if (!v) return {km: null, src: null};
-  const mine = (await db.sessions.toArray())
+  const mine = (await allSessions())
     .filter(r => vehEq(r.aracId, v.id) && r.odo != null)
     .sort((a, b) => a.tarih.localeCompare(b.tarih));
   const fromRec = mine.length ? mine[mine.length - 1].odo : null;

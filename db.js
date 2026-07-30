@@ -112,3 +112,52 @@ async function initStorage() {
   } catch { /* yok sayılır */ }
   el.textContent = t(persisted ? 'storagePersist' : 'storageBest') + usage;
 }
+
+/* ---- WT-49: bellek içi önbellek ---- */
+// Sorun: her render, her sekme geçişi ve tema değişimi tabloların TAMAMINI
+// IndexedDB'den yeniden okuyordu (openAdd() tek açılışta sessions'ı üç kez).
+// Çözüm: tablo başına tek bir dizi tut, YAZMA olunca geçersiz kıl.
+//
+// Geçersiz kılma çağrı yerlerine bırakılmadı — bir yeri unutmak bayat ekran
+// demek. Hem Table metotları sarmalanıyor (add/put/update/delete/bulk*/clear)
+// hem de Dexie hook'ları bağlanıyor (Collection.delete()/modify() Table
+// metodundan geçmiyor). İkisi birden her yazma yolunu kapatıyor.
+const CACHED_TABLES = ['sessions', 'vehicles', 'expenses'];
+const _cache = {sessions: null, vehicles: null, expenses: null};
+let _cacheGen = 0;   // memoize edilen türetilmiş değerler bunu izler
+
+function invalidateCache(tablo) {
+  if (tablo) _cache[tablo] = null;
+  else CACHED_TABLES.forEach(n => { _cache[n] = null; });
+  _cacheGen++;
+}
+CACHED_TABLES.forEach(n => {
+  ['add', 'put', 'update', 'delete', 'bulkAdd', 'bulkPut', 'bulkDelete', 'clear']
+    .forEach(m => {
+      const orj = db[n][m].bind(db[n]);
+      db[n][m] = (...a) => { invalidateCache(n); return orj(...a); };
+    });
+  ['creating', 'updating', 'deleting'].forEach(ev =>
+    db[n].hook(ev, () => { invalidateCache(n); }));
+});
+
+// Çağıranlar diziyi yerinde sıralayabiliyor (sort), bu yüzden sığ kopya
+// dönüyor: IndexedDB gidiş-dönüşü kalkıyor ama önbellek bozulmuyor.
+async function _all(n) {
+  if (!_cache[n]) _cache[n] = await db[n].toArray();
+  return [..._cache[n]];
+}
+const allSessions = () => _all('sessions');
+const allVehicles = () => _all('vehicles');
+const allExpenses = () => _all('expenses');
+
+// WT-49/4: ağır türetilmiş değerler için memoize. Önbellek geçersiz kılınınca
+// (yani herhangi bir yazmada) otomatik olarak düşer.
+const _memo = new Map();
+function memo(key, fn) {
+  const cur = _memo.get(key);
+  if (cur && cur.gen === _cacheGen) return cur.val;
+  const val = fn();
+  _memo.set(key, {gen: _cacheGen, val});
+  return val;
+}
