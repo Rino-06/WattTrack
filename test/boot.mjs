@@ -45,6 +45,13 @@ window.scrollTo = () => {};
 window.HTMLElement.prototype.scrollIntoView = () => {};
 window.URL.createObjectURL = () => 'blob:test';
 window.URL.revokeObjectURL = () => {};
+// WT-37: jsdom'da HTMLMediaElement.play() yok. Reject eden bir stub koyup
+// "otomatik oynatma engellendi" yedek yolunu (4a) gerçekten koşturuyoruz.
+let splashPlayCalled = false;
+window.HTMLMediaElement.prototype.play = function () {
+  splashPlayCalled = true;
+  return Promise.reject(new Error('autoplay blocked (test)'));
+};
 
 // Dört dosya tarayıcıda AYNI global kapsamı paylaşıyor; ayrı ayrı eval
 // edilirse const/let bildirimleri birbirini görmez. Tek eval'de birleştir.
@@ -1004,6 +1011,45 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const tanimsiz = [...kullanilan].filter(k => !ref.has(k));
   check('i18n: HTML\'deki her data-i18n anahtarı sözlükte var',
     tanimsiz.length === 0, tanimsiz.join(',') || kullanilan.size + ' anahtar');
+}
+
+// --- WT-37: video splash ve yedek yolları ---
+{
+  const doc = window.document;
+  check('WT-37/4a: otomatik oynatma denendi',
+    splashPlayCalled === true);
+  check('WT-37/4a KABUL: oynatma reddedilince uygulama yine açıldı (splash kapandı)',
+    doc.getElementById('splash') === null);
+  check('WT-37/7: oturum bayrağı kondu (ikinci açılışta splash atlanır)',
+    window.sessionStorage.getItem('wt-splash-seen') === '1');
+
+  // Kaynaktaki sözleşme: bunlar bozulursa iOS/Android otomatik oynatmaz
+  check('WT-37/1: video muted + playsinline + poster ile tanımlı',
+    /<video[^>]*id="splash-video"[^>]*>/.test(html)
+      && /id="splash-video"[\s\S]{0,220}muted/.test(html)
+      && /id="splash-video"[\s\S]{0,220}playsinline/.test(html)
+      && /id="splash-video"[\s\S]{0,220}poster="splash-poster\.png"/.test(html));
+  check('WT-37/2: splashLogoIn / splashWordIn keyframe\'leri kaldırıldı',
+    !/splashLogoIn|splashWordIn/.test(html));
+  check('WT-37/2: statik logo yedek olarak DOM\'da tutuldu',
+    /class="splash-static"/.test(html) && /class="splash-logo"/.test(html));
+  const js = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  check('WT-37/3: sabit SPLASH_MIN_MS beklemesi kaldırıldı',
+    !/(const|let|var)\s+SPLASH_MIN_MS/.test(js));
+  check('WT-37/3: güvenlik ağı 2500 ms',
+    /SPLASH_FAILSAFE_MS\s*=\s*2500/.test(js));
+  check('WT-37/3: splash video VE veri hazır olunca kapanıyor',
+    /splashVideoDone\s*&&\s*splashDataDone/.test(js));
+  check('WT-37/4c: prefers-reduced-motion yolu var',
+    /prefers-reduced-motion: reduce/.test(js));
+  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  check('WT-37/6: splash medyası service worker listesinde',
+    /splash\.mp4/.test(sw) && /splash-poster\.png/.test(sw));
+  check('WT-37/6: eksik video SW kurulumunu BOZMUYOR (addAll dışında, catch\'li)',
+    /OPTIONAL_ASSETS/.test(sw) && /c\.add\(u\)\.catch/.test(sw));
+  const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+  check('WT-37: video gereksinimleri README\'ye yazıldı',
+    /1080×1080/.test(readme) && /1,2 MB/.test(readme) && /playsinline/.test(readme));
 }
 
 // --- WT-36: boş durumlar + örnek veri yaşam döngüsü ---

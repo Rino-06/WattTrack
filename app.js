@@ -516,20 +516,58 @@ const monthKey = iso => iso.slice(0, 7);
 const distDisp = km => S.unit === 'mi' ? km / MI : km;
 const distFactor = () => S.unit === 'mi' ? MI : 1;   // 100 birim = 100*factor km
 
-// Açılış animasyonu: gerçek yükleme paralelde sürer, splash yalnız görsel bir katman —
-// en az SPLASH_MIN_MS gösterilir ki animasyon yarıda kesilmiş gibi durmasın.
-// (popüler mobil uygulamalardaki ~2 sn marka splash süresi baz alındı)
-const SPLASH_MIN_MS = 2000;
-const splashStart = Date.now();
-function hideSplash() {
+// ---- WT-37: açılış animasyonu (video) ----
+// Sabit SPLASH_MIN_MS beklemesi kaldırıldı. Splash iki koşul da sağlanınca
+// kapanır: video bitti VE uygulama verisi hazır (ikisinden GEÇ olanı belirler).
+// Bozuk/eksik video uygulamayı kilitlemesin diye 2500 ms'lik güvenlik ağı var.
+const SPLASH_FAILSAFE_MS = 2500;   // her hâlükârda kapat
+const SPLASH_STATIC_MS   = 900;    // otomatik oynatma engellendi -> statik logo
+const SPLASH_REDUCED_MS  = 400;    // prefers-reduced-motion -> kısa statik
+const SPLASH_SEEN_KEY    = 'wt-splash-seen';
+let splashVideoDone = false, splashDataDone = false, splashClosed = false;
+
+function closeSplash() {
+  if (splashClosed) return;
+  splashClosed = true;
   const el = document.getElementById('splash');
   if (!el) return;
-  const wait = Math.max(0, SPLASH_MIN_MS - (Date.now() - splashStart));
-  setTimeout(() => {
-    el.classList.add('hide');
-    setTimeout(() => el.remove(), 600);
-  }, wait);
+  el.classList.add('hide');
+  setTimeout(() => el.remove(), 600);
 }
+function splashTryClose() {
+  if (splashVideoDone && splashDataDone) closeSplash();
+}
+// init() bunu çağırıyor: "veri hazır" tarafı
+function hideSplash() { splashDataDone = true; splashTryClose(); }
+
+function initSplash() {
+  const el = document.getElementById('splash');
+  if (!el) return;
+  const v = document.getElementById('splash-video');
+  const staticYol = ms => { el.classList.remove('video-on'); v?.remove();
+    setTimeout(() => { splashVideoDone = true; splashTryClose(); }, ms); };
+
+  // 7) video oturumda YALNIZ BİR KEZ oynasın
+  let gorulmus = false;
+  try { gorulmus = sessionStorage.getItem(SPLASH_SEEN_KEY) === '1'; } catch (e) {}
+  if (gorulmus) { splashVideoDone = true; closeSplash(); return; }
+  try { sessionStorage.setItem(SPLASH_SEEN_KEY, '1'); } catch (e) {}
+
+  // 4c) hareket azaltma tercihi: videoyu hiç oynatma
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !v) {
+    staticYol(SPLASH_REDUCED_MS);
+  } else {
+    v.addEventListener('ended', () => { splashVideoDone = true; splashTryClose(); });
+    v.addEventListener('error', () => staticYol(SPLASH_STATIC_MS));   // 4b
+    el.classList.add('video-on');
+    const p = v.play?.();
+    // 4a) otomatik oynatma engellendiyse Promise reject olur
+    if (p?.catch) p.catch(() => staticYol(SPLASH_STATIC_MS));
+  }
+  // 3) güvenlik ağı — video bitmezse de uygulama açılsın
+  setTimeout(closeSplash, SPLASH_FAILSAFE_MS);
+}
+initSplash();
 function toast(msg) {
   const el = $('toast');
   el.textContent = msg;

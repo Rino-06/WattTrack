@@ -16,6 +16,13 @@ const ASSETS = [
   './nav-plus.png',
   './privacy.html'
 ];
+// WT-37/6: açılış videosu ve poster'ı. AYRI listede çünkü addAll() tek dosya
+// eksikse TÜM kurulumu reddediyor — video repoya konmadan önce bu, service
+// worker'ın hiç kurulmaması ve çevrimdışı çalışmanın tamamen bozulması
+// demek olurdu. Bunlar tek tek, hata yutularak önbelleğe alınıyor.
+// Video 1,2 MB'ı aşarsa bu listeden ÇIKAR: ilk açılış maliyetine doğrudan
+// ekleniyor, statik logo yedeği zaten var.
+const OPTIONAL_ASSETS = ['./splash.mp4', './splash.webm', './splash-poster.png'];
 
 // WT-11: uygulamanın kendi kabuğu network-first olmalı. Cache-first olduğu
 // sürece yeni sürüm ancak SW değişince geliyordu. Görseller ve dexie.min.js
@@ -25,7 +32,10 @@ const NETWORK_FIRST = ['./', './index.html', './app.js', './evdata.js',
 const NET_TIMEOUT = 3000;
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE)
+    .then(c => c.addAll(ASSETS)
+      .then(() => Promise.all(OPTIONAL_ASSETS.map(u => c.add(u).catch(() => {})))))
+    .then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(

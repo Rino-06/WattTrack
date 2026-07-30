@@ -36,6 +36,8 @@ w.scrollTo = () => {};
 w.HTMLElement.prototype.scrollIntoView = () => {};
 w.URL.createObjectURL = () => 'blob:test';
 w.URL.revokeObjectURL = () => {};
+// WT-37: jsdom'da HTMLMediaElement.play() yok; splash yedek yolu koşsun
+w.HTMLMediaElement.prototype.play = () => Promise.reject(new Error('autoplay blocked (test)'));
 w.confirm = () => true;
 w.alert = () => {};
 

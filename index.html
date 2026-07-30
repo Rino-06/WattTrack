@@ -59,23 +59,18 @@ body{background:var(--bg);color:var(--text);
   transition:opacity .55s ease,transform .55s ease}
 [data-theme="dark"] .splash{background:linear-gradient(150deg,#1e293b 30%,#16223a 100%)}
 .splash.hide{opacity:0;transform:scale(1.03);pointer-events:none}
-.splash-logo{width:auto;height:132px;opacity:0;
-  animation:splashLogoIn 1s cubic-bezier(.16,1,.3,1) .15s forwards}
-.splash-word{display:flex;font-size:27px;font-weight:700;letter-spacing:-.3px;opacity:0;
-  animation:splashWordIn .8s cubic-bezier(.16,1,.3,1) .8s forwards}
+/* WT-37: açılış animasyonu video. Video oynayamazsa (dosya yok, otomatik
+   oynatma engellendi, prefers-reduced-motion) statik logo devreye girer —
+   keyframe animasyonları kaldırıldı, logo artık hareketsiz duruyor. */
+.splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+.splash.video-on .splash-video{display:block}
+.splash-static{display:flex;flex-direction:column;align-items:center;gap:20px}
+.splash.video-on .splash-static{display:none}
+.splash-logo{width:auto;height:132px}
+.splash-word{display:flex;font-size:27px;font-weight:700;letter-spacing:-.3px}
 .splash-word b{color:#6CB33F;font-weight:700}
 .splash-word i{color:#1B5FAA;font-style:normal;font-weight:700}
-@keyframes splashLogoIn{
-  0%{opacity:0;transform:translateY(18px) scale(.78)}
-  60%{opacity:1}
-  100%{opacity:1;transform:none}
-}
-@keyframes splashWordIn{
-  from{opacity:0;transform:translateY(10px)}
-  to{opacity:1;transform:none}
-}
 @media(prefers-reduced-motion:reduce){
-  .splash-logo,.splash-word{animation:none;opacity:1}
   .splash{transition:none}
 }
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
@@ -467,8 +462,15 @@ nav button{min-height:48px;justify-content:center}
 </head>
 <body>
 <div class="splash" id="splash" aria-hidden="true">
-  <img class="splash-logo" src="logo.png" alt="">
-  <div class="splash-word"><b>Watt</b><i>Track</i></div>
+  <!-- WT-37: muted + playsinline ZORUNLU; bunlar olmadan iOS Safari ve
+       Android Chrome otomatik oynatmayı engeller. Dosya yoksa onerror
+       statik yola düşürür, uygulama yine açılır. -->
+  <video id="splash-video" class="splash-video" src="splash.mp4" poster="splash-poster.png"
+         muted playsinline preload="auto" aria-hidden="true"></video>
+  <div class="splash-static" id="splash-static">
+    <img class="splash-logo" src="logo.png" alt="">
+    <div class="splash-word"><b>Watt</b><i>Track</i></div>
+  </div>
 </div>
 <div class="app">
 <main class="content">

@@ -41,6 +41,8 @@ function makeWindow() {
   window.HTMLElement.prototype.scrollIntoView = () => {};
   window.URL.createObjectURL = () => 'blob:test';
   window.URL.revokeObjectURL = () => {};
+  // WT-37: jsdom'da HTMLMediaElement.play() yok; splash yedek yolu koşsun
+  window.HTMLMediaElement.prototype.play = () => Promise.reject(new Error('autoplay blocked (test)'));
   window.confirm = () => true;
   window.alert = () => {};
   return window;
