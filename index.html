@@ -714,7 +714,7 @@ nav button{min-height:48px;justify-content:center}
       <button data-v="lpg">LPG</button>
     </div>
     <div class="about" id="c-hybrid-note" style="display:none;margin-bottom:10px;font-size:12px" data-i18n="hybridNote">Şarj edilmeyen (tam) hibritler de litre/100km ile ölçülür — sadece tüketimi düşüktür (~4-5 lt). Şarjlı hibrit (PHEV) için ortalama karma tüketimi gir.</div>
-    <div class="row2" style="margin-bottom:14px;margin-top:8px">
+    <div class="row2" style="margin-top:8px">
       <div>
         <label class="lbl" id="c-price-lbl" for="c-price">Yakıt fiyatı (lt)</label>
         <input type="text" inputmode="decimal" id="c-price" placeholder="47,50">
@@ -724,6 +724,8 @@ nav button{min-height:48px;justify-content:center}
         <input type="text" inputmode="decimal" id="c-cons" placeholder="6,5">
       </div>
     </div>
+    <!-- WT-43/2: fiyat güncellenince eskisi EZİLMEZ, geçmişe satır eklenir -->
+    <button type="button" class="details-toggle" id="c-price-hist" style="margin-bottom:14px"></button>
     <div style="margin-bottom:14px">
       <label class="lbl" id="c-icefix-lbl" data-i18n="iceFixLabel" for="c-icefix">Yakıtlı aracın yıllık sabit gideri (vergi + sigorta + bakım)</label>
       <input type="text" inputmode="decimal" id="c-icefix" placeholder="0">
@@ -1245,6 +1247,34 @@ nav button{min-height:48px;justify-content:center}
   <div class="ov-body">
     <input type="text" id="country-search" data-i18n-ph="phCountrySearch" placeholder="Ülke ara…">
     <div class="country-list" id="country-list"></div>
+  </div>
+</section>
+
+<!-- ============ YAKIT FİYATI GEÇMİŞİ (WT-43) ============ -->
+<section class="overlay" id="page-fuelprice" role="dialog" aria-modal="true" aria-labelledby="fuelprice-title">
+  <div class="ov-head">
+    <button class="close" id="btn-close-fuelprice">×</button>
+    <div class="title" id="fuelprice-title" data-i18n="fuelHistTitle">Yakıt fiyatı geçmişi</div>
+    <div style="width:32px"></div>
+  </div>
+  <div class="ov-body">
+    <div class="about" data-i18n="fuelHistD" style="margin-bottom:14px">Her şarj kaydı, kendi tarihinde geçerli olan fiyatla kıyaslanır. Geçmiş tarihli fiyat da girebilirsin.</div>
+    <div class="row2">
+      <div>
+        <label class="lbl" data-i18n="date" for="fp-date">Tarih</label>
+        <input type="date" id="fp-date">
+      </div>
+      <div>
+        <label class="lbl" id="fp-price-lbl" for="fp-price">Fiyat</label>
+        <input type="text" inputmode="decimal" id="fp-price" placeholder="0,00">
+      </div>
+    </div>
+    <label class="lbl" style="margin-top:12px" data-i18n="fuelType" for="fp-type">Yakıt tipi</label>
+    <select id="fp-type"></select>
+    <div class="form-err" id="fp-err" role="alert" aria-live="assertive"></div>
+    <button class="save-btn" id="fp-save" style="margin-top:16px" data-i18n="add">Ekle</button>
+    <div class="section-lbl" data-i18n="fuelHistList">Kayıtlı fiyatlar</div>
+    <ul class="vlist" id="fp-list"></ul>
   </div>
 </section>
 

@@ -75,6 +75,19 @@ db.version(5).stores({
   expenses: '++id, tarih, tur, aracId'
 }).upgrade(() => { /* yalnız isteğe bağlı alanlar eklendi, veri dokunulmadı */ });
 
+// WT-43/1: yakıt fiyatı geçmişi. Tek güncel fiyatın tüm geçmişe uygulanması
+// enflasyonun yüksek olduğu yerde kümülatif grafiği ve "toplam kazanç"
+// rakamını tamamen yanlış yapıyordu.
+// upgrade GÖVDESİ BOŞ: yalnız yeni tablo eklendi, mevcut veri dokunulmadı.
+db.version(6).stores({
+  sessions: '++id, tarih, firma, tip, aracId, mekan, odo',
+  vehicles: '++id, ad',
+  settings: 'key',
+  expenses: '++id, tarih, tur, aracId',
+  fuelPrices: '++id, tarih, tur, ulke'
+}).upgrade(() => { /* yeni tablo, mevcut kayıtlara dokunulmadı */ });
+
+
 const EXP_TYPES = ['tax', 'insurance', 'maintenance', 'tire', 'inspection',
                    'repair', 'parking', 'equipment', 'other'];
 const EXP_ICON = {tax: '🧾', insurance: '🛡️', maintenance: '🔧', tire: '🛞',
@@ -135,8 +148,8 @@ async function initStorage() {
 // demek. Hem Table metotları sarmalanıyor (add/put/update/delete/bulk*/clear)
 // hem de Dexie hook'ları bağlanıyor (Collection.delete()/modify() Table
 // metodundan geçmiyor). İkisi birden her yazma yolunu kapatıyor.
-const CACHED_TABLES = ['sessions', 'vehicles', 'expenses'];
-const _cache = {sessions: null, vehicles: null, expenses: null};
+const CACHED_TABLES = ['sessions', 'vehicles', 'expenses', 'fuelPrices'];
+const _cache = {sessions: null, vehicles: null, expenses: null, fuelPrices: null};
 let _cacheGen = 0;   // memoize edilen türetilmiş değerler bunu izler
 
 function invalidateCache(tablo) {
@@ -163,6 +176,7 @@ async function _all(n) {
 const allSessions = () => _all('sessions');
 const allVehicles = () => _all('vehicles');
 const allExpenses = () => _all('expenses');
+const allFuelPrices = () => _all('fuelPrices');   // WT-43
 
 // WT-49/4: ağır türetilmiş değerler için memoize. Önbellek geçersiz kılınınca
 // (yani herhangi bir yazmada) otomatik olarak düşer.

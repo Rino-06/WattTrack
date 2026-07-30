@@ -70,7 +70,8 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
        initSegments, evSummaryHTML, carSVG, seedDemoData, clearDemoData,
        syncEmptyStates, renderHistory, renderVehiclePage, backupPayload,
        offerDemoCleanup, allSessions, allVehicles, memo, renderCompare,
-       invalidateCache, allExpenses, searchEV, openEvSpecs, EV_DB, EV_DB_TARIH,
+       invalidateCache, allExpenses, allFuelPrices, searchEV, openEvSpecs,
+       EV_DB, EV_DB_TARIH, openFuelHist,
        renderVehiclePage: renderVehiclePage};`;
 try {
   window.eval(bundle);
@@ -1091,6 +1092,85 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.db.sessions.filter(r => r.firma === 'X').delete();
 
   for (const n of ['sessions', 'vehicles', 'expenses']) A.db[n].toArray = orj[n];
+}
+
+// --- WT-43: yakıt fiyatı geçmişi (uçtan uca) ---
+{
+  const A = app();
+  A.S.unit = 'km'; A.S.country = 'TR'; A.S.cmpVeh = '';
+  await A.db.sessions.clear();
+  await A.db.fuelPrices.clear();
+  await A.db.sessions.bulkAdd([
+    {tarih: '2024-06-15T12:00', firma: 'ZES', tip: 'DC', kwh: 50, tutar: 500,
+      odenen: 500, cur: 'TRY', mesafeKm: 300, aracId: null},
+    {tarih: '2026-06-15T12:00', firma: 'ZES', tip: 'DC', kwh: 50, tutar: 500,
+      odenen: 500, cur: 'TRY', mesafeKm: 300, aracId: null}
+  ]);
+  await A.db.fuelPrices.bulkAdd([
+    {tarih: '2024-01-01', tur: 'diesel', fiyat: 20, ulke: 'TR'},
+    {tarih: '2026-01-01', tur: 'diesel', fiyat: 60, ulke: 'TR'}
+  ]);
+  A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 0, prorate: true};
+  await A.renderCompare();
+  await sleep(350);
+  // 2024: 300 km × 10/100 × 20 = 600 · 2026: 300 × 1 × 60 = 1800 -> toplam 2400
+  // Tek fiyatla (60) olsaydı 3600 çıkardı.
+  check('WT-43/4 KABUL: iki kayıt kendi dönemlerinin fiyatıyla kıyaslandı',
+    /2\.400/.test($('c-icetot').textContent), 'c-icetot=' + $('c-icetot').textContent);
+  check('WT-43/6: kaç fiyat kaydıyla hesaplandığı yazılı',
+    /2/.test($('c-veh-note').textContent)
+      && /fiyat/i.test($('c-veh-note').textContent),
+    $('c-veh-note').textContent.slice(-90));
+
+  // tek fiyat kalınca uyarı
+  await A.db.fuelPrices.clear();
+  await A.db.fuelPrices.add({tarih: '2026-01-01', tur: 'diesel', fiyat: 60, ulke: 'TR'});
+  await A.renderCompare();
+  await sleep(300);
+  check('WT-43/6: tek fiyat varken uyarı çıkıyor',
+    /tek fiyat/i.test($('c-veh-note').textContent),
+    $('c-veh-note').textContent.slice(-80));
+
+  // WT-43/2: fiyat güncellenince eskisi EZİLMİYOR, yeni satır ekleniyor
+  const oncekiN = (await A.allFuelPrices()).length;
+  $('c-price').value = '75';
+  $('c-cons').value = '10';
+  $('c-calc').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(400);
+  const fpAll = await A.allFuelPrices();
+  check('WT-43/2: fiyat güncellemesi geçmişe EKLİYOR, ezmiyor',
+    fpAll.length === oncekiN + 1 && fpAll.some(x => x.fiyat === 60)
+      && fpAll.some(x => x.fiyat === 75),
+    'kayıt=' + fpAll.map(x => x.tarih + ':' + x.fiyat).join(' '));
+
+  // WT-43/3: geçmiş ekranı listeliyor ve silebiliyor
+  await A.openFuelHist();
+  await sleep(250);
+  check('WT-43/3: fiyat geçmişi ekranı kayıtları listeliyor',
+    window.document.querySelectorAll('#fp-list li[data-fid]').length === fpAll.length,
+    'satır=' + window.document.querySelectorAll('#fp-list li[data-fid]').length);
+  $('fp-date').value = '2025-03-01';
+  $('fp-price').value = '40';
+  $('fp-save').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(350);
+  check('WT-43/3: geçmiş TARİHLİ fiyat girilebiliyor',
+    (await A.allFuelPrices()).some(x => x.tarih === '2025-03-01' && x.fiyat === 40));
+  await A.overlayClose('page-fuelprice', {force: true});
+
+  // WT-43/12: mi modunda etiketler gal/MPG
+  A.S.unit = 'mi';
+  A.applyI18n();
+  await sleep(120);
+  check('WT-43/12 KABUL: mi modunda "Consumption (MPG)" görünüyor',
+    /MPG/.test($('c-cons-lbl').textContent) && /gal/i.test($('c-price-lbl').textContent),
+    `${$('c-cons-lbl').textContent} | ${$('c-price-lbl').textContent}`);
+  A.S.unit = 'km';
+  A.applyI18n();
+  // Sonraki bloklar paylaşılan DOM'u devralıyor: formu ve fiyat geçmişini
+  // bıraktığımız gibi değil, bulduğumuz gibi geri ver.
+  $('c-price').value = ''; $('c-cons').value = '';
+  A.S.cmp = null;
+  await A.db.fuelPrices.clear();
 }
 
 // --- WT-42: şarj kaybı uçtan uca ---

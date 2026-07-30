@@ -46,7 +46,8 @@ vm.createContext(sandbox);
 const KOPRU = ['pf', 'fmtNum', 'fmtInput', 'savingsOf', 'netFromGross', 'convOf',
   'amtB', 'savB', 'expB', 'isConv', 'periodFilter', 'prevPeriodFilter', 'inPeriod',
   'odoDistOf', 'S', 'localISO', 'localMonth', 'monthKey', 'esc', 'checkNum',
-  'kayipHesapla', 'KAYIP_UYARI'];
+  'kayipHesapla', 'KAYIP_UYARI', 'fiyatBul', 'fiyatGoster', 'fiyatMetrik',
+  'tuketimGoster', 'tuketimMetrik'];
 const kaynak = ['calc.js', 'ui/dashboard.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
   + `\n;Object.assign(globalThis, {${KOPRU.join(', ')}});`;
@@ -267,8 +268,48 @@ test('WT-42/4: uyarı eşiği %20', () => {
   assert.ok(Math.abs(k.pct) > KAYIP_UYARI, 'pct=' + k.pct);
 });
 
-test('fiyatBul henüz yok (WT-43 ile gelecek)', () => {
-  assert.equal(sandbox.fiyatBul, undefined);
+// ============================================================
+// WT-43 · yakıt fiyatı geçmişi ve birim uyumu
+// ============================================================
+const {fiyatBul, fiyatGoster, fiyatMetrik, tuketimGoster, tuketimMetrik} = sandbox;
+const FP = [
+  {tarih: '2024-01-01', tur: 'diesel', fiyat: 43.20},
+  {tarih: '2025-06-01', tur: 'diesel', fiyat: 52.00},
+  {tarih: '2026-02-01', tur: 'diesel', fiyat: 61.50},
+  {tarih: '2025-01-01', tur: 'petrol', fiyat: 44.00}
+];
+
+test('WT-43/4 KABUL: her kayıt KENDİ dönemindeki fiyatla kıyaslanır', () => {
+  assert.equal(fiyatBul(FP, '2024-05-10T12:00', 'diesel').fiyat, 43.20);
+  assert.equal(fiyatBul(FP, '2025-07-20T12:00', 'diesel').fiyat, 52.00);
+  assert.equal(fiyatBul(FP, '2026-07-30T12:00', 'diesel').fiyat, 61.50);
+});
+
+test('WT-43/4: kayıttan önce fiyat yoksa EN ESKİSİ kullanılır', () => {
+  assert.equal(fiyatBul(FP, '2020-01-01', 'diesel').fiyat, 43.20);
+});
+
+test('WT-43/4: yakıt tipi karışmıyor, kayıt yoksa null', () => {
+  assert.equal(fiyatBul(FP, '2026-01-01', 'petrol').fiyat, 44.00);
+  assert.equal(fiyatBul(FP, '2026-01-01', 'lpg'), null);
+  assert.equal(fiyatBul([], '2026-01-01', 'diesel'), null);
+});
+
+test('WT-43/4: sınır günü — fiyatın kendi tarihi dahil', () => {
+  assert.equal(fiyatBul(FP, '2025-06-01', 'diesel').fiyat, 52.00);
+  assert.equal(fiyatBul(FP, '2025-05-31', 'diesel').fiyat, 43.20);
+});
+
+test('WT-43/12 KABUL: mi modunda 30 MPG dahili olarak 7,84 lt/100km', () => {
+  S.unit = 'mi';
+  assert.equal(Math.round(tuketimMetrik(30) * 100) / 100, 7.84);
+  assert.equal(Math.round(tuketimGoster(7.84) * 10) / 10, 30);
+  // fiyat: ₺/lt <-> ₺/gal
+  assert.equal(Math.round(fiyatMetrik(100) * 100) / 100, 26.42);
+  assert.equal(Math.round(fiyatGoster(26.42) * 10) / 10, 100);
+  S.unit = 'km';
+  assert.equal(tuketimMetrik(6.5), 6.5, 'km modunda çevrim yok');
+  assert.equal(fiyatMetrik(47.5), 47.5);
 });
 
 // ============================================================

@@ -88,7 +88,9 @@ const KURALLAR = {
   spec_batt:  {min: 1,        max: 300,     dec: 2, lbl: 'battery'},
   spec_range: {min: 1,        max: 2000,    dec: 0, lbl: 'rangeWltp'},
   spec_dc:    {min: 1,        max: 1000,    dec: 0, lbl: 'dcMax'},
-  spec_ac:    {min: 1,        max: 100,     dec: 1, lbl: 'acMax'}
+  spec_ac:    {min: 1,        max: 100,     dec: 1, lbl: 'acMax'},
+  // WT-43: yakıt fiyatı (gösterim biriminde: ₺/lt ya da ₺/gal)
+  fuelPrice:  {min: 0.01,     max: 1000,    dec: 2, lbl: 'fldFuelPrice'}
 };
 // Sınır dışı değerde SESSİZCE KIRPMA — {ok:false, msg} döndür, çağıran gösterir.
 // Boş alan: zorunlu değilse {ok:true, value:null}.
@@ -319,3 +321,27 @@ function kayipHesapla(rec, veh) {
   };
 }
 const KAYIP_UYARI = 20;   // %20'yi aşan sapmada satırda uyarı (madde 4)
+
+
+/* ---- WT-43: yakıt fiyatı geçmişi ---- */
+// Tek güncel fiyatın tüm geçmişe uygulanması, enflasyonun yüksek olduğu bir
+// ülkede kümülatif grafiği ve "toplam kazanç" rakamını tamamen yanlış yapıyor.
+// Her kayıt için o KAYDIN TARİHİNDE geçerli fiyat kullanılır.
+function fiyatBul(liste, tarih, tur) {
+  const t10 = String(tarih || '').slice(0, 10);
+  const ayni = (liste || []).filter(f => f.tur === tur)
+    .sort((a, b) => a.tarih.localeCompare(b.tarih));
+  if (!ayni.length) return null;
+  let sec = null;
+  for (const f of ayni) { if (f.tarih <= t10) sec = f; else break; }
+  return sec ?? ayni[0];        // kayıttan önce fiyat yoksa EN ESKİSİ
+}
+
+/* ---- WT-43/12: birim uyumu (gal / MPG) ---- */
+// Dahili hesap HER ZAMAN metrik (₺/lt ve lt/100km); yalnız gösterim çevriliyor.
+const GALON_LT = 3.78541;
+const MPG_SABIT = 235.215;                       // lt/100km = 235,215 / MPG
+const fiyatGoster = p => S.unit === 'mi' ? p * GALON_LT : p;          // ₺/lt -> ₺/gal
+const fiyatMetrik = p => S.unit === 'mi' ? p / GALON_LT : p;
+const tuketimGoster = c => S.unit === 'mi' ? (c > 0 ? MPG_SABIT / c : 0) : c;
+const tuketimMetrik = c => S.unit === 'mi' ? (c > 0 ? MPG_SABIT / c : 0) : c;

@@ -18,13 +18,22 @@ $('c-fuel').addEventListener('click', e => {
 $('c-vehsel').addEventListener('change', () => { S.cmpVeh = $('c-vehsel').value; renderCompare(); });
 $('c-inclarch').addEventListener('change', () => renderCompare());   // WT-18/4
 $('c-calc').addEventListener('click', async () => {
-  const price = pf($('c-price').value);
-  const cons = pf($('c-cons').value);
+  // WT-43/12: 'mi' modunda kullanıcı gal ve MPG giriyor; dahili hesap metrik
+  const price = fiyatMetrik(pf($('c-price').value));
+  const cons = tuketimMetrik(pf($('c-cons').value));
   if (!price || !cons || price <= 0 || cons <= 0) return;
-  S.cmp = {fuel: $('c-fuel').querySelector('.sel').dataset.v, price, cons,
+  const fuel = $('c-fuel').querySelector('.sel').dataset.v;
+  S.cmp = {fuel, price, cons,
     icefix: Math.max(0, pf($('c-icefix').value) || 0),
     prorate: $('c-prorate').checked};
   await saveSetting('cmp', S.cmp);
+  // WT-43/2: fiyat güncellenince ESKİSİ EZİLMEZ — bugünün tarihiyle yeni
+  // satır eklenir. Aynı gün ve tür için varsa üzerine yazılır.
+  const bugun = localISO();
+  const varOlan = (await allFuelPrices())
+    .find(x => x.tarih === bugun && x.tur === fuel && x.ulke === S.country);
+  if (varOlan) await db.fuelPrices.update(varOlan.id, {fiyat: price});
+  else await db.fuelPrices.add({tarih: bugun, tur: fuel, fiyat: price, ulke: S.country});
   renderCompare();
 });
 
@@ -39,8 +48,9 @@ async function renderCompare() {
     $('c-vehsel').value = cur;
   }
   if (S.cmp) {
-    $('c-price').value = fmtInput(S.cmp.price, 2);
-    $('c-cons').value = fmtInput(S.cmp.cons, 2);
+    // WT-43/12: saklanan değer metrik; alanlar gösterim biriminde doluyor
+    $('c-price').value = fmtInput(fiyatGoster(S.cmp.price), 2);
+    $('c-cons').value = fmtInput(tuketimGoster(S.cmp.cons), 2);
     $('c-icefix').value = S.cmp.icefix ? fmtInput(S.cmp.icefix, 2) : '';
     $('c-prorate').checked = S.cmp.prorate !== false;
     $('c-fuel').querySelectorAll('button').forEach(x =>
@@ -67,6 +77,7 @@ async function renderCompare() {
   $('c-veh-note').textContent = inclNames.length
     ? t('tcoVehNote', {v: inclNames.join(', ')}) : '';
 
+  await fuelHistSync();
   const box = $('c-result');
   if (!S.cmp) { box.style.display = 'none'; return; }
 
@@ -120,7 +131,16 @@ async function renderCompare() {
     : netAvg + wdAvg.reduce((s, r) => s + savB(r), 0);
   const evNetPerKm = netAvg / distAvg;
   const evGrossPerKm = grossAvg / distAvg;
-  const icePerKm = S.cmp.price * S.cmp.cons / 100;
+  // WT-43/4: her kaydın TARİHİNDEKİ fiyatı kullan. Fiyat geçmişi boşsa
+  // formdaki tek fiyat geçerli (eski davranış) ve altında uyarı çıkar.
+  const fiyatlar = (await allFuelPrices()).filter(x => !x.ulke || x.ulke === S.country);
+  const fiyatAt = tarih => {
+    const f = fiyatBul(fiyatlar, tarih, S.cmp.fuel);
+    return f ? f.fiyat : S.cmp.price;
+  };
+  const iceKmAt = tarih => fiyatAt(tarih) * S.cmp.cons / 100;
+  // Kutulardaki "şu anki" birim maliyet için en güncel fiyat kullanılıyor
+  const icePerKm = iceKmAt(localISO());
 
   $('c-1km').textContent = money2(evNetPerKm * f);
   $('c-ice1km').textContent = money2(icePerKm * f);
@@ -133,7 +153,10 @@ async function renderCompare() {
   $('c-per100').textContent = t('per100', {v: money((icePerKm - evNetPerKm) * 100 * f), u: S.unit});
 
   // --- bugüne kadar kümülatif: EV gerçek vs yakıtlı (aynı km) ---
-  const iceTot = distKm * icePerKm;
+  // WT-43/4-5: toplam da kayıt kayıt, o günün fiyatıyla hesaplanıyor
+  const iceTot = wd.length
+    ? wd.reduce((s, r) => s + r.mesafeKm * iceKmAt(r.tarih), 0)
+    : distKm * icePerKm;
   $('c-dist-lbl').textContent = t('totalDist');
   $('c-dist').textContent = fmtNum(distDisp(distKm), 0) + ' ' + S.unit;
   $('c-evtot').textContent = money(net);
@@ -146,7 +169,7 @@ async function renderCompare() {
   const ptsEvAll = [], ptsIceAll = [], labelsAll = [];
   seq.forEach(r => {
     cumEv += amtB(r);
-    cumIce += r.mesafeKm * icePerKm;
+    cumIce += r.mesafeKm * iceKmAt(r.tarih);   // WT-43/5
     ptsEvAll.push(cumEv); ptsIceAll.push(cumIce);
     labelsAll.push(shortDate(r.tarih));
   });
@@ -200,6 +223,12 @@ async function renderCompare() {
   $('c-tcopill').textContent = t('per100', {v: money(tcoSave / distKm * 100 * f), u: S.unit});
   $('c-tco-note').textContent = t('tcoNote', {d: Math.round(days), f: money(iceFix)}) +
     (pr < 1 ? ' ' + t('prorateNote', {p: Math.round(pr * 100), r: money(expReal)}) : '');
+
+  // WT-43/6: hesabın hangi fiyatlarla yapıldığını söyle. Tek fiyat varsa uyar.
+  const nFiyat = fiyatlar.filter(x => x.tur === S.cmp.fuel).length;
+  $('c-veh-note').textContent = ($('c-veh-note').textContent
+    ? $('c-veh-note').textContent + ' · ' : '')
+    + (nFiyat >= 2 ? t('fuelHistUsed', {n: nFiyat}) : t('fuelHistSingle'));
 
   // ---- Yakıt dışı gider kıyaslaması (EV vs Yakıtlı) ----
   // Yakıtlı aracın yıllık sabit gideri girilmemişse (opsiyonel alan) kıyas anlamsız olur — gizle.
@@ -257,3 +286,64 @@ function drawLineChart(id, labels, series) {
       text-anchor="middle" font-family="inherit">${l}</text>`).join('');
   svg.innerHTML = out;
 }
+
+
+/* ---- WT-43: yakıt fiyatı geçmişi ekranı ---- */
+const FUEL_TURLERI = ['petrol', 'diesel', 'hybrid', 'lpg'];
+
+async function fuelHistSync() {
+  const n = (await allFuelPrices()).filter(x => !x.ulke || x.ulke === S.country).length;
+  $('c-price-hist').textContent = t('fuelHistLink', {n});
+}
+$('c-price-hist').addEventListener('click', () => openFuelHist());
+
+async function openFuelHist() {
+  $('fp-type').innerHTML = FUEL_TURLERI.map(x =>
+    `<option value="${x}">${esc(t(x))}</option>`).join('');
+  $('fp-type').value = S.cmp?.fuel || 'petrol';
+  $('fp-date').value = localISO();
+  $('fp-price').value = '';
+  $('fp-price-lbl').textContent = t(S.unit === 'mi' ? 'fuelPriceGal' : 'fuelPrice', {s: sym()});
+  $('fp-err').classList.remove('show');
+  await fuelHistList();
+  overlayOpen('page-fuelprice');
+}
+$('btn-close-fuelprice').addEventListener('click', () => overlayClose('page-fuelprice'));
+bindDecimalInput('fp-price', 2);
+
+async function fuelHistList() {
+  const liste = (await allFuelPrices())
+    .filter(x => !x.ulke || x.ulke === S.country)
+    .sort((a, b) => b.tarih.localeCompare(a.tarih));
+  $('fp-list').innerHTML = liste.length ? liste.map(f => `<li data-fid="${f.id}">
+    <div class="vn">${fm(sym(), fmtNum(fiyatGoster(f.fiyat), 2))}
+      <div class="vd">${shortDate(f.tarih)} · ${esc(t(f.tur))}</div></div>
+    <button class="rm" data-fdel="${f.id}" title="${esc(t('delete'))}">×</button>
+  </li>`).join('') : `<li style="color:var(--faint);font-weight:400">${t('noData')}</li>`;
+  $('fp-list').querySelectorAll('[data-fdel]').forEach(b =>
+    b.addEventListener('click', async () => {
+      await db.fuelPrices.delete(+b.dataset.fdel);
+      await fuelHistList(); await fuelHistSync(); renderCompare();
+    }));
+}
+
+$('fp-save').addEventListener('click', async () => {
+  const err = $('fp-err');
+  const tarih = $('fp-date').value;
+  if (!isValidDate(tarih)) {
+    err.textContent = t('dateNeeded'); err.classList.add('show'); return;
+  }
+  const r = checkNum('fuelPrice', $('fp-price').value, {required: true});
+  if (!r.ok) { err.textContent = r.msg; err.classList.add('show'); return; }
+  err.classList.remove('show');
+  const tur = $('fp-type').value;
+  const fiyat = fiyatMetrik(r.value);       // dahili hesap metrik (WT-43/12)
+  // aynı gün + tür varsa güncelle, yoksa ekle
+  const varOlan = (await allFuelPrices())
+    .find(x => x.tarih === tarih && x.tur === tur && (x.ulke || S.country) === S.country);
+  if (varOlan) await db.fuelPrices.update(varOlan.id, {fiyat});
+  else await db.fuelPrices.add({tarih, tur, fiyat, ulke: S.country});
+  $('fp-price').value = '';
+  toast(t('savedLocal'));
+  await fuelHistList(); await fuelHistSync(); renderCompare();
+});

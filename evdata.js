@@ -138,6 +138,13 @@ const BANKS_DEFAULT = ['Visa','Mastercard','Amex','Revolut','N26','Wise'];
    girilen değer buradaki listeyi EZER. */
 const EV_DB_TARIH = '2025-07';
 
+/* WT-43/10: bölgesel yakıt fiyatı YALNIZCA farkın anlamlı olduğu ülkelerde.
+   TR/DE/FR gibi ülkelerde şehirler arası fark ~%1-2; sormak gereksiz
+   karmaşıklık olur. US ve CA'da eyalet/il vergileri fiyatı %30'a varan
+   oranda değiştiriyor.
+   Bölge seçilmemişse ülke ortalaması kullanılır ve sessizce çalışır. */
+const BOLGESEL_YAKIT = ['US', 'CA'];
+
 const EV_DB = [
   // --- Togg ---
   ['Togg','T10X','V1 Standart Menzil',2023,0,52.4,400,150,11,314,'suv'],
