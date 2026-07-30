@@ -800,6 +800,39 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   }
 }
 
+// --- WT-34: renk semantiği tek sözlüğe bağlı mı? ---
+{
+  const doc = window.document;
+  const renk = id => doc.getElementById(id)?.style.color || '';
+  const YESIL = 'var(--accent-dark)', MAVI = 'var(--blue)', KIRMIZI = 'var(--red)';
+
+  check('WT-34: "Ücretsiz şarj" artık yeşil (olumlu)', renk('d-free') === YESIL,
+    'd-free=' + renk('d-free'));
+  const css = [...doc.querySelectorAll('style')].map(x => x.textContent).join('\n');
+  check('WT-34: "ücretsiz" rozeti de yeşil',
+    /\.crow \.free-tag\{color:var\(--accent-dark\)\}/.test(css));
+
+  // Kıyasla: EV tarafı yeşil, yakıtlı taraf mavi — kırmızı kalmamalı
+  const ev = ['c-1km', 'c-ev', 'c-evtot', 'c-savetot', 'c-exptot', 'c-tcoev',
+    'c-tco1km', 'c-nf-ev-km', 'c-nf-ev-100', 'c-nf-ev-yr', 'c-disc-fx'];
+  const ice = ['c-ice1km', 'c-ice', 'c-icetot', 'c-icefixtot', 'c-tcoice',
+    'c-tcoice1km', 'c-nf-ice-km', 'c-nf-ice-100', 'c-nf-ice-yr'];
+  check('WT-34: EV değerlerinin hepsi yeşil',
+    ev.every(id => renk(id) === YESIL),
+    ev.filter(id => renk(id) !== YESIL).map(id => id + '=' + renk(id)).join(', ') || 'tamam');
+  check('WT-34: yakıtlı araç değerlerinin hepsi mavi',
+    ice.every(id => renk(id) === MAVI),
+    ice.filter(id => renk(id) !== MAVI).map(id => id + '=' + renk(id)).join(', ') || 'tamam');
+  check('WT-34: kıyas değerlerinde kırmızı kullanılmıyor (kırmızı = olumsuz/uyarı)',
+    ![...ev, ...ice].some(id => renk(id) === KIRMIZI));
+  check('WT-34: gider toplamı nötr (tasarruf değil)', renk('v-exp-total') === '',
+    'v-exp-total=' + JSON.stringify(renk('v-exp-total')));
+  // Sözlüğün kendisi index.html'de yorum olarak duruyor (madde bunu istiyor);
+  // yorumlar DOM'a taşınmadığı için ham kaynakta aranıyor.
+  check('WT-34: renk sözlüğü index.html içinde belgelendi',
+    /WT-34: RENK SÖZLÜĞÜ/.test(html));
+}
+
 // --- WT-33: masaüstünde çok sütun yerine grid ---
 {
   const doc = window.document;
