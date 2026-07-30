@@ -800,6 +800,40 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   }
 }
 
+// --- WT-35: yakıt dışı gider bloğu sadeleşti mi? ---
+{
+  const doc = window.document;
+  const wrap = doc.getElementById('c-nf-wrap');
+  const det = doc.getElementById('c-nf-details');
+  const btn = doc.getElementById('c-nf-more');
+
+  check('WT-35: türetilmiş kutular varsayılan olarak gizli',
+    det.style.display === 'none' && btn.getAttribute('aria-expanded') === 'false');
+  // Kapalıyken görünen sayı: fark + pill + iki bar etiketi
+  const gorunen = [...wrap.querySelectorAll('.tile')].filter(el => !det.contains(el));
+  check('WT-35: kapalıyken hiç türetilmiş kutu görünmüyor', gorunen.length === 0,
+    'görünen kutu=' + gorunen.length);
+  check('WT-35: fark satırı ve iki bar görünür kalıyor',
+    !!doc.getElementById('c-nf-diff') && !!doc.getElementById('c-nf-bar-ev')
+      && !!doc.getElementById('c-nf-bar-ice') && !det.contains(doc.getElementById('c-nf-diff')));
+  check('WT-35: yedi kutunun hiçbiri SİLİNMEDİ, detaya taşındı',
+    det.querySelectorAll('.tile').length === 7,
+    'detaydaki kutu=' + det.querySelectorAll('.tile').length);
+  check('WT-35: detayda "tek tahminden türetildi" uyarısı var',
+    !!det.querySelector('#c-nf-guess'));
+
+  btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await sleep(60);
+  check('WT-35: butona basınca detay açılıyor',
+    det.style.display !== 'none' && btn.getAttribute('aria-expanded') === 'true',
+    'metin=' + btn.textContent);
+  btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await sleep(60);
+  check('WT-35: tekrar basınca kapanıyor',
+    det.style.display === 'none' && btn.getAttribute('aria-expanded') === 'false',
+    'metin=' + btn.textContent);
+}
+
 // --- WT-34: renk semantiği tek sözlüğe bağlı mı? ---
 {
   const doc = window.document;

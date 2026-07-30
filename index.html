@@ -119,6 +119,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .legend .li{display:flex;align-items:center;gap:8px}
 .legend .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
 .legend .lv{margin-left:auto;font-weight:700}
+.mb-lg{margin-bottom:20px}
 .dstat{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .dstat .tile .v{font-size:15px}
 .toplist{background:var(--card);border-radius:16px;padding:6px 16px;box-shadow:var(--shadow);margin-bottom:14px}
@@ -525,7 +526,9 @@ nav button{min-height:48px;justify-content:center}
     <div class="tile"><div class="k"><span data-i18n="totalKwhP">Enerji (kWh)</span><span id="d-kwh-note"></span></div><div class="v" id="d-kwh">0</div></div>
     <div class="tile"><div class="k" data-i18n="sessionsCompanies">Şarj / Firma</div><div class="v" id="d-sess">0 / 0</div></div>
   </div>
-  <div class="tiles" style="margin-bottom:20px">
+  <!-- WT-33 düzeltmesi: satır içi margin masaüstü ızgarasında #page-dashboard>*
+       kuralını yeniyordu (o hücrenin altında 20+14px boşluk kalıyordu) -->
+  <div class="tiles mb-lg">
     <div class="tile"><div class="k" data-i18n="totalDiscP">Alınan indirim</div><div class="v" id="d-disc" style="color:var(--accent-dark)">0</div></div>
     <div class="tile"><div class="k" data-i18n="freeCount">Ücretsiz şarj</div><div class="v" id="d-free" style="color:var(--accent-dark)">0</div></div>
   </div>
@@ -738,23 +741,12 @@ nav button{min-height:48px;justify-content:center}
     </div>
     <div class="about" id="c-tco-note" style="margin:-4px 0 14px;font-size:12px"></div>
 
+    <!-- WT-35: blok 7 kutu + 2 bar + 1 pill = 10 sayı gösteriyordu; hepsi
+         kullanıcının tahminen girdiği TEK bir sayıdan türüyor. Girdi belirsizken
+         bu kadar çıktı sahte kesinlik yaratıyor. Görünen: tek fark satırı +
+         iki bar. Türetilmiş kutular "Detayları göster"in arkasında. -->
     <div id="c-nf-wrap" style="display:none">
       <h2 class="h2" data-i18n="nonFuelTitle">Yakıt dışı gider kıyaslaması</h2>
-      <div class="tiles">
-        <div class="tile"><div class="k" id="c-nf-ev-km-lbl">—</div><div class="v" id="c-nf-ev-km" style="color:var(--accent-dark)">—</div></div>
-        <div class="tile"><div class="k" id="c-nf-ice-km-lbl">—</div><div class="v" id="c-nf-ice-km" style="color:var(--blue)">—</div></div>
-      </div>
-      <div class="tiles">
-        <div class="tile"><div class="k" id="c-nf-ev-100-lbl">—</div><div class="v" id="c-nf-ev-100" style="color:var(--accent-dark)">—</div></div>
-        <div class="tile"><div class="k" id="c-nf-ice-100-lbl">—</div><div class="v" id="c-nf-ice-100" style="color:var(--blue)">—</div></div>
-      </div>
-      <div class="tiles">
-        <div class="tile"><div class="k" id="c-nf-ev-yr-lbl">—</div><div class="v" id="c-nf-ev-yr" style="color:var(--accent-dark)">—</div></div>
-        <div class="tile"><div class="k" id="c-nf-ice-yr-lbl">—</div><div class="v" id="c-nf-ice-yr" style="color:var(--blue)">—</div></div>
-      </div>
-      <div class="tiles" style="margin-bottom:14px">
-        <div class="tile"><div class="k" id="c-nf-kwh-lbl">—</div><div class="v" id="c-nf-kwh">—</div></div>
-      </div>
       <div class="hero" style="margin-top:2px">
         <div class="k" data-i18n="nonFuelDiffYear">Yıllık yakıt dışı gider farkı</div>
         <div class="v" id="c-nf-diff" style="font-size:26px">—</div>
@@ -764,10 +756,30 @@ nav button{min-height:48px;justify-content:center}
         <div class="cmp-head" style="margin-bottom:6px">
           <div class="mid"><div class="name" data-i18n="nonFuelChart">Yıllık yakıt dışı gider (EV / Yakıtlı)</div></div>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted2);margin-bottom:3px"><span>EV</span><span id="c-nf-bar-ev-lbl">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted2);margin-bottom:3px"><span>EV</span><span id="c-nf-bar-ev-lbl">—</span></div>
         <div class="track" style="margin-bottom:8px"><div class="fill" id="c-nf-bar-ev" style="width:0%"></div></div>
-        <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted2);margin-bottom:3px"><span id="c-nf-bar-ice-name">Yakıtlı</span><span id="c-nf-bar-ice-lbl">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted2);margin-bottom:3px"><span id="c-nf-bar-ice-name">Yakıtlı</span><span id="c-nf-bar-ice-lbl">—</span></div>
         <div class="track"><div class="fill" id="c-nf-bar-ice" style="width:0%;background:var(--blue)"></div></div>
+      </div>
+      <button type="button" class="details-toggle" id="c-nf-more"
+        aria-expanded="false" aria-controls="c-nf-details" data-i18n="showDetails">+ Detayları göster</button>
+      <div id="c-nf-details" style="display:none;margin-top:10px">
+        <div class="tiles">
+          <div class="tile"><div class="k" id="c-nf-ev-km-lbl">—</div><div class="v" id="c-nf-ev-km" style="color:var(--accent-dark)">—</div></div>
+          <div class="tile"><div class="k" id="c-nf-ice-km-lbl">—</div><div class="v" id="c-nf-ice-km" style="color:var(--blue)">—</div></div>
+        </div>
+        <div class="tiles">
+          <div class="tile"><div class="k" id="c-nf-ev-100-lbl">—</div><div class="v" id="c-nf-ev-100" style="color:var(--accent-dark)">—</div></div>
+          <div class="tile"><div class="k" id="c-nf-ice-100-lbl">—</div><div class="v" id="c-nf-ice-100" style="color:var(--blue)">—</div></div>
+        </div>
+        <div class="tiles">
+          <div class="tile"><div class="k" id="c-nf-ev-yr-lbl">—</div><div class="v" id="c-nf-ev-yr" style="color:var(--accent-dark)">—</div></div>
+          <div class="tile"><div class="k" id="c-nf-ice-yr-lbl">—</div><div class="v" id="c-nf-ice-yr" style="color:var(--blue)">—</div></div>
+        </div>
+        <div class="tiles" style="margin-bottom:14px">
+          <div class="tile"><div class="k" id="c-nf-kwh-lbl">—</div><div class="v" id="c-nf-kwh">—</div></div>
+        </div>
+        <div class="about" id="c-nf-guess" style="margin:-4px 0 10px;font-size:12px" data-i18n="nonFuelGuessNote">Bu değerlerin hepsi yukarıda girdiğin tek yıllık gider tahmininden türetilmiştir.</div>
       </div>
     </div>
   </div>
