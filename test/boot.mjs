@@ -69,7 +69,8 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
        COUNTRIES, HOME_NAMES, PAN_EU, BANKS_BY, BANKS_DEFAULT, overlayClose,
        initSegments, evSummaryHTML, carSVG, seedDemoData, clearDemoData,
        syncEmptyStates, renderHistory, renderVehiclePage, backupPayload,
-       offerDemoCleanup, allSessions, allVehicles, memo, renderCompare};`;
+       offerDemoCleanup, allSessions, allVehicles, memo, renderCompare,
+       invalidateCache, allExpenses};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -1029,9 +1030,17 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 
   // IndexedDB'ye giden okumaları say
   let okuma = 0;
-  const orj = A.db.sessions.toArray.bind(A.db.sessions);
-  A.db.sessions.toArray = (...a) => { okuma++; return orj(...a); };
+  const perTablo = {sessions: 0, vehicles: 0, expenses: 0};
+  const orj = {};
+  for (const n of ['sessions', 'vehicles', 'expenses']) {
+    orj[n] = A.db[n].toArray.bind(A.db[n]);
+    A.db[n].toArray = (...a) => { okuma++; perTablo[n]++; return orj[n](...a); };
+  }
   const say = async fn => { const o = okuma; await fn(); await sleep(150); return okuma - o; };
+  const sayT = async fn => {
+    const o = {...perTablo}; await fn(); await sleep(150);
+    return Object.fromEntries(Object.keys(perTablo).map(k => [k, perTablo[k] - o[k]]));
+  };
 
   const ilk = await say(() => A.renderDashboard());
   const ikinci = await say(() => A.renderDashboard());
@@ -1039,11 +1048,15 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     ilk >= 1 && ikinci === 0, `ilk=${ilk} ikinci=${ikinci}`);
 
   const sekme = await say(() => A.renderStats());
-  check('WT-49/4: sekme geçişi de yeniden okumuyor', sekme === 0, 'okuma=' + sekme);
+  check('WT-49/4: sekme geçişi üç tabloyu da yeniden okumuyor', sekme === 0,
+    'okuma=' + sekme);
 
-  const form = await say(() => A.openAdd());
-  check('WT-49/3: openAdd tek açılışta en fazla BİR okuma yapıyor (eskiden üç)',
-    form <= 1, 'okuma=' + form);
+  // SOĞUK önbellekle ölç: sıcakken sıfır okuma çıkar ve bu, üç okumayı bire
+  // indiren düzeltmeyi DEĞİL yalnız önbelleği doğrulamış olurdu.
+  A.invalidateCache();
+  const form = await sayT(() => A.openAdd());
+  check('WT-49/3: soğuk önbellekte openAdd sessions\'ı TEK KEZ okuyor (eskiden üç)',
+    form.sessions === 1, JSON.stringify(form));
   await A.overlayClose('page-add', {force: true});
 
   // --- doğruluk: yazma önbelleği düşürmeli ---
@@ -1072,7 +1085,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-49/4: yazmadan sonra memo tazeleniyor', m3.n === 3);
   await A.db.sessions.filter(r => r.firma === 'X').delete();
 
-  A.db.sessions.toArray = orj;
+  for (const n of ['sessions', 'vehicles', 'expenses']) A.db[n].toArray = orj[n];
 }
 
 // --- WT-50: dosya yapısı bölündü mü? ---

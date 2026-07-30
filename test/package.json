@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Uygulamayı jsdom içinde açıp kabul kriterlerini doğrular. Uygulamanın kendisi build gerektirmez; bu klasör bağımsızdır.",
   "scripts": {
-    "test": "node boot.mjs && node backup.mjs && node overlay.mjs && node homework.mjs && node odo.mjs"
+    "test": "node --test unit.mjs && node boot.mjs && node backup.mjs && node overlay.mjs && node homework.mjs && node odo.mjs",
+    "test:unit": "node --test unit.mjs"
   },
   "devDependencies": {
     "fake-indexeddb": "^6.0.0",
