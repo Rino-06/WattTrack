@@ -181,6 +181,8 @@ h1,h2{font-size:inherit;font-weight:inherit}
 .crow .sav{font-size:12px;color:var(--accent-text);min-height:15px}
 .crow .del{width:26px;height:26px;border-radius:50%;background:var(--circle);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted2);font-size:14px}
 .crow .free-tag{color:var(--accent-dark)}   /* WT-34: olumlu -> yeşil */
+/* WT-46/5: satıra dokununca düzenleme açıldığını gösteren çevron */
+.crow .crow-chev{color:var(--faint);font-size:20px;line-height:1;flex:none;margin-left:2px}
 .month-group{margin-bottom:20px}
 /* WT-36: boş durum = ikon + tek cümle + eylem butonu */
 .empty{text-align:center;color:var(--faint);font-size:14px;padding:36px 0}
@@ -687,7 +689,12 @@ nav button{min-height:48px;justify-content:center}
     <h1 class="page-title"><span data-i18n="historyTitle">Geçmiş</span></h1>
     <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
   </div>
-  <div class="filters">
+  <!-- WT-46/1: arama kutusu (firma, lokasyon, not, banka) -->
+  <input type="search" id="h-search" data-i18n-ph="searchPh" placeholder="Ara — firma, lokasyon, not, banka" style="margin-bottom:10px">
+  <!-- WT-46/6: altı açılır liste tek "Filtrele" düğmesinin arkasında -->
+  <button type="button" class="mini-btn" id="h-filter-btn"
+    aria-expanded="false" aria-controls="h-filters" data-i18n="filterBtn">⚙ Filtrele</button>
+  <div class="filters" id="h-filters" style="display:none">
     <select id="f-year" data-i18n-aria="ariaYearFilter" aria-label="Yıl filtresi"></select>
     <select id="f-firm" data-i18n-aria="ariaFirmFilter" aria-label="Firma filtresi"></select>
     <select id="f-type" data-i18n-aria="ariaTypeFilter" aria-label="Tip filtresi"></select>
@@ -695,6 +702,8 @@ nav button{min-height:48px;justify-content:center}
     <select id="f-bank" data-i18n-aria="ariaBankFilter" aria-label="Banka filtresi"></select>
     <select id="f-loc" data-i18n-aria="ariaLocFilter" aria-label="Lokasyon filtresi"></select>
   </div>
+  <!-- WT-46/2: asıl istenen — filtrelenmiş sonucun toplamı -->
+  <div class="scope-note" id="h-summary" style="margin:10px 0 12px"></div>
   <div id="h-groups"></div>
 </section>
 

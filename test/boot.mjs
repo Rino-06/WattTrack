@@ -1095,6 +1095,98 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   for (const n of ['sessions', 'vehicles', 'expenses']) A.db[n].toArray = orj[n];
 }
 
+// --- WT-46: geçmiş araması, özet şeridi, rozet, geri alma ---
+{
+  const A = app();
+  const doc = window.document;
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  const v1 = await A.db.vehicles.add({ad: 'Araç A', body: 'suv'});
+  const v2 = await A.db.vehicles.add({ad: 'Araç B', body: 'sedan'});
+  const y = new Date().getFullYear();
+  await A.db.sessions.bulkAdd([
+    {tarih: `${y}-05-01T10:00`, firma: 'ZES', tip: 'DC', kwh: 40, tutar: 400,
+      odenen: 400, cur: 'TRY', loc: 'Kadıköy', banka: 'Garanti', aracId: v1},
+    {tarih: `${y}-05-02T10:00`, firma: 'Esarj', tip: 'AC', kwh: 10, tutar: 100,
+      odenen: 100, cur: 'TRY', loc: 'Besiktas', not: 'otoparkta', aracId: v2}
+  ]);
+  $('h-search').value = '';
+  await A.renderHistory();
+  await sleep(300);
+
+  check('WT-46/2: filtre özeti kayıt sayısı, tutar, kWh ve birim fiyat veriyor',
+    /2/.test($('h-summary').textContent) && /500/.test($('h-summary').textContent)
+      && /50 kWh/.test($('h-summary').textContent)
+      && /10,00/.test($('h-summary').textContent),
+    $('h-summary').textContent);
+
+  check('WT-46/3: çok araçlı kullanıcıda satırda araç rozeti var',
+    [...doc.querySelectorAll('#h-groups .crow .name .chip')].length === 2,
+    doc.querySelector('#h-groups .crow .name')?.textContent.trim());
+  check('WT-46/5: satırda düzenleme çevronu var',
+    doc.querySelectorAll('#h-groups .crow-chev').length === 2);
+
+  // WT-46/1: arama — nota göre
+  $('h-search').value = 'otopark';
+  fire($('h-search'), 'input');
+  await sleep(400);
+  check('WT-46/1: arama notta da eşleşiyor',
+    doc.querySelectorAll('#h-groups .crow').length === 1
+      && /Esarj/.test(doc.querySelector('#h-groups .crow').textContent),
+    'satır=' + doc.querySelectorAll('#h-groups .crow').length);
+  check('WT-46/2: özet arama sonucuna göre güncelleniyor',
+    /100/.test($('h-summary').textContent) && /1/.test($('h-summary').textContent),
+    $('h-summary').textContent);
+
+  // lokasyona göre
+  $('h-search').value = 'kadıköy';
+  fire($('h-search'), 'input');
+  await sleep(400);
+  check('WT-46/1: arama lokasyonda da eşleşiyor (büyük/küçük harf duyarsız)',
+    doc.querySelectorAll('#h-groups .crow').length === 1
+      && /ZES/.test(doc.querySelector('#h-groups .crow').textContent));
+  $('h-search').value = '';
+  fire($('h-search'), 'input');
+  await sleep(400);
+
+  // WT-46/6: filtreler tek düğmenin arkasında
+  check('WT-46/6: altı açılır liste varsayılan olarak gizli',
+    $('h-filters').style.display === 'none'
+      && $('h-filter-btn').getAttribute('aria-expanded') === 'false');
+  $('h-filter-btn').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(80);
+  check('WT-46/6: düğmeye basınca panel açılıyor',
+    $('h-filters').style.display !== 'none'
+      && $('h-filter-btn').getAttribute('aria-expanded') === 'true');
+
+  // WT-46/4: silme sonrası geri alma
+  window.confirm = () => true;
+  const oncekiN = (await A.allSessions()).length;
+  doc.querySelector('#h-groups [data-del]')
+    .dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(400);
+  check('WT-46/4: kayıt silindi', (await A.allSessions()).length === oncekiN - 1);
+  const geri = doc.querySelector('#toast button, .toast button');
+  check('WT-46/4: toast\'ta "Geri al" düğmesi var', !!geri, geri?.textContent);
+  if (geri) {
+    geri.dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+    await sleep(400);
+    check('WT-46/4: geri alınca kayıt geri geldi',
+      (await A.allSessions()).length === oncekiN,
+      'kayıt=' + (await A.allSessions()).length);
+  }
+
+  // WT-46/7: ekran görüntüsü olan kayıtta ataç
+  await A.db.sessions.clear();
+  await A.db.sessions.add({tarih: `${y}-05-03T10:00`, firma: 'ZES', tip: 'DC',
+    kwh: 5, tutar: 50, odenen: 50, cur: 'TRY', aracId: v1,
+    ekranGor: new window.Blob(['x'], {type: 'image/jpeg'})});
+  await A.renderHistory();
+  await sleep(300);
+  check('WT-46/7: ekran görüntüsü olan kayıtta ataç ikonu (WT-39)',
+    /📎/.test($('h-groups').innerHTML));
+}
+
 // --- WT-45: bütçe takibi ---
 {
   const A = app();

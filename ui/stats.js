@@ -122,7 +122,8 @@ async function renderStats() {
       <div class="cmp-head">
         <div class="avatar" style="background:${colorFor(r.firma)}">${esc(r.firma.charAt(0).toUpperCase())}</div>
         <div class="mid">
-          <div class="name">${esc(r.firma)}</div>
+          <div class="name">${esc(r.firma)}${VEH_ADI && r.aracId != null && VEH_ADI[r.aracId]
+        ? ` <span class="chip" style="padding:2px 7px;font-size:11.5px;vertical-align:middle">${esc(VEH_ADI[r.aracId])}</span>` : ''}</div>
           <div class="sub">${r.count} ${t('sessions')} · ${r.kwh ? fmtNum(r.total / r.kwh, 2) : fmtNum(0, 2)} ${esc(sym())}/kWh</div>
         </div>
         <div class="total">${money(r.total)}</div>
@@ -262,5 +263,7 @@ function rowHTML(r, withDelete) {
     ${r.ekranGor ? `<button class="del" data-shot="${r.id}" title="${esc(t('ocrAttach'))}"
       aria-label="${esc(t('ocrAttach'))}">📎</button>` : ''}
     ${withDelete ? `<button class="del" data-del="${r.id}">×</button>` : ''}
+    <!-- WT-46/5: satıra dokununca düzenleme açıldığını göster -->
+    <span class="crow-chev" aria-hidden="true">›</span>
   </div>`;
 }
