@@ -800,6 +800,40 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   }
 }
 
+// --- WT-33: masaüstünde çok sütun yerine grid ---
+{
+  const doc = window.document;
+  const css = [...doc.querySelectorAll('style')].map(x => x.textContent).join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  check('WT-33: #page-dashboard / #page-compare üzerinde `columns` kalmadı',
+    !/#page-(dashboard|compare)[^{]*\{[^}]*(?<![-\w])columns\s*:/.test(css)
+      && !/column-span\s*:/.test(css));
+  check('WT-33: yerine auto-fit grid tanımlı',
+    /#page-dashboard,#page-compare\{[^}]*display:grid[^}]*repeat\(auto-fit,minmax\(280px,1fr\)\)/
+      .test(css.replace(/\s*\n\s*/g, '')));
+  const span = /([^{}]*)\{grid-column:1\/-1\}/.exec(css.replace(/\s*\n\s*/g, ''));
+  const spanSel = span ? span[1] : '';
+  for (const s of ['#page-dashboard>.hero', '#page-dashboard>.seg',
+    '#page-dashboard>.h2row:first-child', '#page-dashboard>.warn-host',
+    '#page-compare>.page-title-row'])
+    check('WT-33: tam genişlik — ' + s, spanSel.includes(s), spanSel);
+
+  // Izgarada her hücre kendi başına anlamlı olmalı: başlık ile değerleri,
+  // kutular ile onları açıklayan not ayrı hücrelere düşmemeli.
+  const pk = doc.getElementById('d-perkm-wrap'), ds = doc.getElementById('d-dstat-wrap');
+  check('WT-33: 1 km kutuları ve kaynak notu aynı hücrede',
+    !!pk && !!pk.querySelector('#d-1km') && !!pk.querySelector('#d-dist-scope'));
+  check('WT-33: detay başlığı, filtresi ve değerleri aynı hücrede',
+    !!ds && !!ds.querySelector('#d-dstat-type') && !!ds.querySelector('#d-dur')
+      && !!ds.querySelector('#d-power'));
+  // Tab sırası DOM sırasıyla aynı kalmalı (grid satır satır dolduruyor)
+  const cocuk = [...doc.getElementById('page-dashboard').children].map(e => e.id || e.className);
+  check('WT-33: ana sayfa doğrudan çocuk sırası bozulmadı',
+    cocuk.indexOf('d-perkm-wrap') < cocuk.indexOf('d-dstat-wrap')
+      && cocuk.indexOf('d-warnings') < cocuk.indexOf('d-perkm-wrap'),
+    cocuk.join(' > '));
+}
+
 // --- WT-38: araç özet kartı kompakt mı? ---
 {
   const doc = window.document;

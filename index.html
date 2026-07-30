@@ -411,11 +411,18 @@ nav button{min-height:48px;justify-content:center}
     width:min(780px,94vw);max-width:none;border-radius:26px;overflow:hidden;
     box-shadow:0 30px 80px rgba(0,0,0,.28);border:1px solid var(--hairline)}
   .toast{bottom:110px}
-  /* iki sütunlu yerleşim: uzun sayfalar ekranı doldursun */
-  #page-dashboard,#page-compare{columns:2;column-gap:26px}
-  #page-dashboard>*,#page-compare>*{break-inside:avoid;-webkit-column-break-inside:avoid}
-  #page-dashboard>.h2row:first-child,#page-compare>.page-title,#page-dashboard>.seg{column-span:all}
-  .h2{break-after:avoid}
+  /* WT-33: `columns` içeriği sütun sütun (yukarıdan aşağı) doldurduğu için
+     görsel sıra DOM sırasından kopuyor, sütun dengesi tarayıcıya göre
+     değişiyor ve Tab sırası görünenle eşleşmiyordu. Grid satır satır
+     doldurur: görsel sıra = DOM sırası = Tab sırası.
+     (Eski `#page-compare>.page-title` seçicisi zaten hiç eşleşmiyordu;
+      Kıyasla sayfasının doğrudan çocuğu .page-title-row.) */
+  #page-dashboard,#page-compare{display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;align-items:start}
+  #page-dashboard>*,#page-compare>*{margin-bottom:0}
+  #page-dashboard>.h2row:first-child,#page-dashboard>.warn-host,
+  #page-dashboard>.seg,#page-dashboard>.hero,
+  #page-compare>.page-title-row{grid-column:1/-1}
   #page-history,#page-settings,#page-vehicle,#page-stats{max-width:820px;margin:0 auto}
   .side2{display:block}
   .side2>div+div{margin-top:14px}
@@ -423,7 +430,8 @@ nav button{min-height:48px;justify-content:center}
   .donut-col svg{width:110px;height:110px}
 }
 @media(min-width:1240px){
-  #page-dashboard{columns:3}
+  /* WT-33: sabit `columns:3` yerine auto-fit sütun sayısını genişliğe göre
+     kendisi seçiyor; ayrı bir kural gerekmiyor. */
   #page-history,#page-settings,#page-vehicle,#page-stats{max-width:900px}
   .side2{display:flex}
   .side2>div+div{margin-top:0}
@@ -492,14 +500,18 @@ nav button{min-height:48px;justify-content:center}
     <div class="tile"><div class="k"><span data-i18n="avgPerKwh">kWh başı</span> · <span data-i18n="netLbl">net</span></div><div class="v" id="d-avg">—</div></div>
     <div class="tile"><div class="k"><span data-i18n="avgPerKwh">kWh başı</span> · <span data-i18n="grossLbl">indirimsiz</span></div><div class="v" id="d-avg-g">—</div></div>
   </div>
-  <div class="tiles">
-    <div class="tile"><div class="k"><span id="d-1km-lbl">1 km</span> · <span data-i18n="netLbl">net</span></div><div class="v" id="d-1km">—</div></div>
-    <div class="tile"><div class="k"><span id="d-1km-lbl2">1 km</span> · <span data-i18n="grossLbl">indirimsiz</span></div><div class="v" id="d-1km-g">—</div></div>
+  <!-- WT-33: kutular ve onları açıklayan not masaüstü ızgarasında ayrı hücrelere
+       düşmesin diye tek sarmalayıcıda -->
+  <div id="d-perkm-wrap">
+    <div class="tiles">
+      <div class="tile"><div class="k"><span id="d-1km-lbl">1 km</span> · <span data-i18n="netLbl">net</span></div><div class="v" id="d-1km">—</div></div>
+      <div class="tile"><div class="k"><span id="d-1km-lbl2">1 km</span> · <span data-i18n="grossLbl">indirimsiz</span></div><div class="v" id="d-1km-g">—</div></div>
+    </div>
+    <!-- WT-32: "100 km · net / indirimsiz" kutuları kaldırıldı — 1 km kutularıyla
+         mükerrer. cost100 anahtarı Kıyasla sayfasında kullanılmaya devam ediyor. -->
+    <!-- WT-14/B: mesafe kaynağı dönem seçicisinden bağımsızsa burada söylenir -->
+    <div class="scope-note" id="d-dist-scope"></div>
   </div>
-  <!-- WT-32: "100 km · net / indirimsiz" kutuları kaldırıldı — 1 km kutularıyla
-       mükerrer. cost100 anahtarı Kıyasla sayfasında kullanılmaya devam ediyor. -->
-  <!-- WT-14/B: mesafe kaynağı dönem seçicisinden bağımsızsa burada söylenir -->
-  <div class="scope-note" id="d-dist-scope"></div>
   <div class="tiles">
     <div class="tile"><div class="k"><span data-i18n="totalKwhP">Enerji (kWh)</span><span id="d-kwh-note"></span></div><div class="v" id="d-kwh">0</div></div>
     <div class="tile"><div class="k" data-i18n="sessionsCompanies">Şarj / Firma</div><div class="v" id="d-sess">0 / 0</div></div>
@@ -509,20 +521,23 @@ nav button{min-height:48px;justify-content:center}
     <div class="tile"><div class="k" data-i18n="freeCount">Ücretsiz şarj</div><div class="v" id="d-free" style="color:var(--blue)">0</div></div>
   </div>
 
-  <div class="h2row" style="margin-top:0">
-    <h2 class="h2"><span data-i18n="detailStats">Detay istatistikler</span> <span class="scope-badge" id="d-dstat-scope"></span></h2>
-    <div class="seg mini" id="d-dstat-type" data-i18n-aria="ariaTypeFilter" style="width:170px">
-      <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
-      <button data-v="DC">DC</button>
-      <button data-v="AC">AC</button>
+  <!-- WT-33: başlık, filtre ve değerleri tek hücrede tutan sarmalayıcı -->
+  <div id="d-dstat-wrap">
+    <div class="h2row" style="margin-top:0">
+      <h2 class="h2"><span data-i18n="detailStats">Detay istatistikler</span> <span class="scope-badge" id="d-dstat-scope"></span></h2>
+      <div class="seg mini" id="d-dstat-type" data-i18n-aria="ariaTypeFilter" style="width:170px">
+        <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
+        <button data-v="DC">DC</button>
+        <button data-v="AC">AC</button>
+      </div>
     </div>
-  </div>
-  <div class="dstat">
-    <div class="tile"><div class="k" data-i18n="avgDuration">Ort. şarj süresi</div><div class="v" id="d-dur">—</div></div>
-    <div class="tile"><div class="k" data-i18n="avgSocRange">Ort. şarj aralığı</div><div class="v" id="d-soc">—</div><div class="yd" id="d-soc-add"></div></div>
-  </div>
-  <div class="tiles" style="margin-bottom:20px">
-    <div class="tile"><div class="k" data-i18n="chargePower">Ort. şarj gücü</div><div class="v" id="d-power">—</div></div>
+    <div class="dstat">
+      <div class="tile"><div class="k" data-i18n="avgDuration">Ort. şarj süresi</div><div class="v" id="d-dur">—</div></div>
+      <div class="tile"><div class="k" data-i18n="avgSocRange">Ort. şarj aralığı</div><div class="v" id="d-soc">—</div><div class="yd" id="d-soc-add"></div></div>
+    </div>
+    <div class="tiles" style="margin-bottom:20px">
+      <div class="tile"><div class="k" data-i18n="chargePower">Ort. şarj gücü</div><div class="v" id="d-power">—</div></div>
+    </div>
   </div>
 
   <!-- WT-32: "Yıllık karşılaştırma" bölümü kaldırıldı — üstteki kutularla
