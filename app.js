@@ -62,7 +62,8 @@ function clearFormErr() {
 
 // init ve yedek geri yükleme aynı listeyi kullanır (WT-07)
 const SETTING_KEYS = ['country','currency','unit','lang','advOpen','defaultVehicleId',
-  'onboarded','cmp','bankCountries','customBanks','gran','theme','homeKwhPrice'];
+  'onboarded','cmp','bankCountries','customBanks','gran','theme','homeKwhPrice',
+  'ocrOn','budgetM','budgetY'];   // WT-39, WT-45
 
 (async function init() {
   for (const key of SETTING_KEYS) {

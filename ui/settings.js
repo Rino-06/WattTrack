@@ -14,6 +14,11 @@ async function renderSettings() {
   $('app-version').textContent = APP_VERSION + ' · ' + APP_DATE;
   $('set-homekwh').value = S.homeKwhPrice != null ? fmtInput(S.homeKwhPrice, 2) : '';
   $('set-homekwh-lbl').textContent = t('homeKwhPrice') + ' — ' + sym();
+  // WT-45/1: bütçe isteğe bağlı (boş = kapalı)
+  $('set-budget-m').value = S.budgetM > 0 ? fmtInput(S.budgetM, 0) : '';
+  $('set-budget-y').value = S.budgetY > 0 ? fmtInput(S.budgetY, 0) : '';
+  $('set-budget-m-lbl').textContent = t('budgetMonthly') + ' — ' + sym();
+  $('set-budget-y-lbl').textContent = t('budgetYearly') + ' — ' + sym();
   const c = COUNTRIES.find(x => x[0] === S.country);
   $('set-country-val').textContent = c ? c[1] + ' ' + c[2] : '—';
 
@@ -353,3 +358,15 @@ $('set-ocr').addEventListener('change', async e => {
     if (confirm(t('ocrClearCacheAsk'))) await ocrOnbellekSil();
   }
 });
+
+
+/* ---- WT-45: bütçe alanları ---- */
+for (const [id, key] of [['set-budget-m', 'budgetM'], ['set-budget-y', 'budgetY']]) {
+  bindDecimalInput(id, 0);
+  $(id).addEventListener('change', async () => {
+    const v = pf($(id).value, 0);
+    S[key] = isNaN(v) || v <= 0 ? null : v;
+    await saveSetting(key, S[key]);
+    renderDashboard();
+  });
+}

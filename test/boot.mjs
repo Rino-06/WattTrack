@@ -1095,6 +1095,67 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   for (const n of ['sessions', 'vehicles', 'expenses']) A.db[n].toArray = orj[n];
 }
 
+// --- WT-45: bütçe takibi ---
+{
+  const A = app();
+  await A.db.sessions.clear();
+  A.S.dashVeh = ''; A.S.dstatType = '';
+  const bugun = A.localISO();
+  await A.db.sessions.add({tarih: bugun + 'T10:00', firma: 'ZES', tip: 'DC',
+    kwh: 100, tutar: 1240, odenen: 1240, cur: 'TRY', aracId: null});
+
+  // bütçe kapalıyken çubuk hiç görünmemeli
+  A.S.budgetM = null; A.S.budgetY = null; A.S.period = 'month';
+  await A.renderDashboard();
+  await sleep(250);
+  check('WT-45/1: bütçe girilmemişse çubuk görünmüyor',
+    $('d-budget').style.display === 'none');
+
+  A.S.budgetM = 2000;
+  await A.renderDashboard();
+  await sleep(250);
+  check('WT-45/2: harcama / bütçe ve yüzde yazılı',
+    /1\.240/.test($('d-budget-lbl').textContent)
+      && /2\.000/.test($('d-budget-lbl').textContent)
+      && /62/.test($('d-budget-lbl').textContent),
+    $('d-budget-lbl').textContent);
+  check('WT-45/2: çubuk %62 dolu',
+    $('d-budget-bar').style.width === '62%', $('d-budget-bar').style.width);
+  check('WT-45/3: aşılmamışken çubuk yeşil ve "kalan" yazıyor',
+    /accent/.test($('d-budget-bar').style.background)
+      && /Kalan|Remaining/.test($('d-budget-note').textContent),
+    $('d-budget-note').textContent);
+
+  // aşım
+  A.S.budgetM = 1000;
+  await A.renderDashboard();
+  await sleep(250);
+  check('WT-45/3: aşımda çubuk kırmızı VE metin de değişiyor (WCAG 1.4.1)',
+    /red/.test($('d-budget-bar').style.background)
+      && /aşıldı|Over budget|überschritten|dépassé|superado|superato/i
+        .test($('d-budget-note').textContent)
+      && /240/.test($('d-budget-note').textContent),
+    $('d-budget-note').textContent);
+
+  check('WT-45: geleceğe dönük TAHMİN YOK',
+    !/tahmin|projection|ay sonu|year-end/i
+      .test($('d-budget-lbl').textContent + $('d-budget-note').textContent),
+    $('d-budget-note').textContent);
+
+  // yıllık bütçe yıl dönemine bağlı
+  A.S.period = 'year'; A.S.budgetY = 20000;
+  await A.renderDashboard();
+  await sleep(250);
+  check('WT-45/1: yıl döneminde yıllık bütçe kullanılıyor',
+    /20\.000/.test($('d-budget-lbl').textContent), $('d-budget-lbl').textContent);
+  A.S.period = 'week';
+  await A.renderDashboard();
+  await sleep(250);
+  check('WT-45: hafta seçiliyken çubuk gizli (aylık bütçe anlamsız olurdu)',
+    $('d-budget').style.display === 'none');
+  A.S.period = 'year'; A.S.budgetM = null; A.S.budgetY = null;
+}
+
 // --- WT-44: bakım hatırlatmaları ---
 {
   const A = app();

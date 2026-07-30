@@ -153,6 +153,7 @@ async function renderDashboard() {
       scopeEl.textContent = '';
     }
   }
+  butceCiz(cur, all);   // WT-45
   $('d-kwh').textContent = fmtNum(kwh, 0);
   // Ham kWh tüm kayıtları sayar; oran metrikleri saymaz — fark varsa söyle
   $('d-kwh-note').textContent = conv.length !== cur.length ? ' · ' + t('allRecordsNote') : '';
@@ -224,4 +225,39 @@ async function renderDashboard() {
   // mükerrerdi ve dönem seçicisinden bağımsız olması kafa karıştırıyordu.
   // WT-32/3: "Son şarjlar" bloğu kaldırıldı — Geçmiş sekmesi aynı işi yapıyor.
   // rowHTML() Geçmiş'te kullanılmaya devam ediyor, silinmedi.
+}
+
+
+/* ---- WT-45: bütçe takibi ---- */
+// KURULUM.md'nin veri modelinde `settings: budget` yazıyordu ama uygulamada
+// yoktu. Bilinçli olarak YALNIZ gerçekleşen harcama ve geçmişle kıyas
+// gösteriliyor: "bu gidişle ay sonu ~X" gibi projeksiyon YOK (madde açıkça
+// yasaklıyor — az veriyle üretilen tahmin güven kaybettirir).
+function butceCiz(cur, all) {
+  const box = $('d-budget');
+  const aylik = S.budgetM > 0 ? S.budgetM : null;
+  const yillik = S.budgetY > 0 ? S.budgetY : null;
+  // Dönem seçicisi ne ise ona uyan bütçe kullanılır; hafta seçiliyse
+  // aylık bütçe anlamsız olacağı için çubuk gizlenir.
+  const hedef = S.period === 'year' ? yillik : (S.period === 'month' ? aylik : null);
+  if (!hedef) { box.style.display = 'none'; return; }
+  const harcanan = cur.filter(isConv).reduce((s, r) => s + amtB(r), 0);
+  const pct = Math.round(harcanan / hedef * 100);
+  box.style.display = '';
+  $('d-budget-lbl').textContent = t('budgetLine', {
+    p: periodShort(S.period), h: money(harcanan), b: money(hedef), y: pct});
+  const bar = $('d-budget-bar');
+  bar.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  // WT-45/3: aşımda hem renk hem METİN değişiyor — anlam yalnız renkle
+  // aktarılmıyor (WCAG 1.4.1).
+  const asti = harcanan > hedef;
+  bar.style.background = asti ? 'var(--red)' : 'var(--accent)';
+  $('d-budget-note').textContent = asti
+    ? t('budgetOver', {v: money(harcanan - hedef)})
+    : t('budgetLeft', {v: money(hedef - harcanan)});
+  $('d-budget-note').style.color = asti ? 'var(--red)' : 'var(--muted2)';
+  $('d-budget-note').style.fontWeight = asti ? '700' : '400';
+  // WT-45/4: geçmişle kıyas zaten hero'da (d-delta); çubukla ilişkilendir
+  const dEl = $('d-delta');
+  if (dEl.textContent) $('d-budget-note').textContent += ' · ' + dEl.textContent;
 }

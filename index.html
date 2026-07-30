@@ -542,6 +542,16 @@ nav button{min-height:48px;justify-content:center}
     </div>
   </div>
 
+  <!-- WT-45/2: bütçe çubuğu. GELECEĞE DÖNÜK TAHMİN YOK — yalnız gerçekleşen
+       harcama ve geçmişle kıyas. -->
+  <div id="d-budget" class="d-data cmp" style="display:none;margin-bottom:14px">
+    <div class="cmp-head" style="margin-bottom:6px">
+      <div class="mid"><div class="name" id="d-budget-lbl">—</div></div>
+    </div>
+    <div class="track"><div class="fill" id="d-budget-bar" style="width:0%"></div></div>
+    <div class="sub" id="d-budget-note" style="margin-top:6px;font-size:12px;color:var(--muted2)"></div>
+  </div>
+
   <div id="d-odo-wrap" class="d-data" style="display:none">
     <h2 class="h2" data-i18n="odometer">Kilometre sayacı</h2>
     <div class="dstat">
@@ -948,6 +958,18 @@ nav button{min-height:48px;justify-content:center}
 
   <!-- WT-16/C1: TEK bir kWh fiyatı. Tarife dilimi / T1-T2-T3 / puant-gece
        ayrımı KASITLI olarak yok — kullanıcı vergiler dahil tek fiyatı biliyor. -->
+  <!-- WT-45/1: bütçe isteğe bağlı; boş bırakılırsa çubuk hiç görünmez -->
+  <div class="row2" style="margin-bottom:20px">
+    <div>
+      <label class="lbl" id="set-budget-m-lbl" for="set-budget-m">Aylık bütçe</label>
+      <input type="text" inputmode="decimal" id="set-budget-m" placeholder="0">
+    </div>
+    <div>
+      <label class="lbl" id="set-budget-y-lbl" for="set-budget-y">Yıllık bütçe</label>
+      <input type="text" inputmode="decimal" id="set-budget-y" placeholder="0">
+    </div>
+  </div>
+
   <label class="lbl" id="set-homekwh-lbl" for="set-homekwh">Ev/İş elektrik birim fiyatı (kWh başına)</label>
   <input type="text" inputmode="decimal" id="set-homekwh" placeholder="0,00" aria-describedby="set-homekwh-d">
   <div class="about" id="set-homekwh-d" style="margin:5px 0 20px" data-i18n="homeKwhPriceD">Vergiler dahil tek bir kWh fiyatı yeter. Ev-İş şarjlarında tutar bundan hesaplanır.</div>
