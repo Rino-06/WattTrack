@@ -71,7 +71,8 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
        syncEmptyStates, renderHistory, renderVehiclePage, backupPayload,
        offerDemoCleanup, allSessions, allVehicles, memo, renderCompare,
        invalidateCache, allExpenses, allFuelPrices, searchEV, openEvSpecs,
-       EV_DB, EV_DB_TARIH, openFuelHist,
+       EV_DB, EV_DB_TARIH, openFuelHist, openExpense, yaklasanlar,
+       renderYaklasanlar, tekrarOner,
        renderVehiclePage: renderVehiclePage};`;
 try {
   window.eval(bundle);
@@ -1092,6 +1093,83 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.db.sessions.filter(r => r.firma === 'X').delete();
 
   for (const n of ['sessions', 'vehicles', 'expenses']) A.db[n].toArray = orj[n];
+}
+
+// --- WT-44: bakım hatırlatmaları ---
+{
+  const A = app();
+  const doc = window.document;
+  A.S.unit = 'km';
+  await A.db.expenses.clear();
+  await A.db.vehicles.clear();
+  const vid = await A.db.vehicles.add({ad: 'Bakım EV', batt: 60, body: 'suv',
+    kmStart: 10000, kmNow: 42000});
+  A.S.defaultVehicleId = vid;
+
+  // KABUL: ileri tarihli muayene hatırlatması
+  await A.db.expenses.add({tarih: '2026-03-15', tur: 'inspection', tutar: 1000,
+    cur: 'TRY', aracId: vid, sonrakiTarih: '2027-03-15', hatirlatmaAraligi: '2yil'});
+  // km bazlı, aracın sayacı 42.000 -> 3.000 km sonra
+  await A.db.expenses.add({tarih: '2026-01-10', tur: 'tire', tutar: 8000,
+    cur: 'TRY', aracId: vid, sonrakiKm: 45000, hatirlatmaKm: 10000});
+  // GECİKMİŞ kalem
+  await A.db.expenses.add({tarih: '2025-01-01', tur: 'insurance', tutar: 9000,
+    cur: 'TRY', aracId: vid, sonrakiTarih: '2026-07-18', tekrar: true,
+    hatirlatmaAraligi: '1yil'});
+
+  await A.renderVehiclePage();
+  await sleep(400);
+  check('WT-44/3 KABUL: "Yaklaşanlar" kartı görünüyor',
+    $('v-upcoming').style.display !== 'none');
+  const satirlar = [...doc.querySelectorAll('#v-upcoming-list .crow')];
+  check('WT-44/3: en yakın üç kalem listeleniyor', satirlar.length === 3,
+    'satır=' + satirlar.length);
+  const metin = satirlar.map(x => x.textContent.replace(/\s+/g, ' ')).join(' | ');
+  check('WT-44/3 KABUL: tarih bazlı hatırlatma geri sayımla görünüyor',
+    /gün sonra|days|Tagen/.test(metin), metin.slice(0, 120));
+  check('WT-44/3: km bazlı hatırlatma aracın güncel sayacını kullanıyor',
+    /3\.000 km/.test(metin), metin.slice(0, 160));
+  const geciken = satirlar.find(x => /gecikti|overdue/.test(x.textContent));
+  check('WT-44/3: geçmiş kalem KIRMIZI ve metniyle de belli (WCAG 1.4.1)',
+    !!geciken && /var\(--red\)/.test(geciken.querySelector('.sub').getAttribute('style') || ''),
+    geciken?.textContent.replace(/\s+/g, ' '));
+
+  // sıralama: en yakın önce
+  const y = await A.yaklasanlar();
+  check('WT-44/1: "hangisi önce gelirse" — en yakın olan başta',
+    y[0].sira <= y[1].sira && y[1].sira <= y[2].sira,
+    y.map(x => x.ad + ':' + Math.round(x.sira)).join(' '));
+
+  // Form: hatırlatma alanları kayda yazılıyor mu?
+  await A.openExpense(null);
+  await sleep(250);
+  $('in-exp-type').value = 'inspection';
+  $('in-exp-type').dispatchEvent(new window.Event('change', {bubbles: true}));
+  check('WT-44/4: gider türüne göre yaygın aralık ÖNERİLİYOR',
+    $('exp-rem-hint').textContent.trim().length > 0, $('exp-rem-hint').textContent);
+  $('in-exp-date').value = '2026-07-30';
+  $('in-exp-amount').value = '1500';
+  $('exp-rem-toggle').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  $('in-exp-next').value = '2027-03-15';
+  $('in-exp-nextkm').value = '60000';
+  $('in-exp-repeat').checked = true;
+  $('btn-save-exp').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(450);
+  const kayit = (await A.allExpenses()).find(e => e.tutar === 1500);
+  check('WT-44/1: tarih, sayaç, aralık ve tekrar alanları kayda yazıldı',
+    kayit && kayit.sonrakiTarih === '2027-03-15' && kayit.sonrakiKm === 60000
+      && kayit.tekrar === true,
+    JSON.stringify({d: kayit?.sonrakiTarih, km: kayit?.sonrakiKm, r: kayit?.tekrar}));
+
+  // WT-44/2: gecikmiş tekrarlayan kalem taslak öneriyor
+  window.confirm = () => true;
+  await A.tekrarOner();
+  await sleep(300);
+  check('WT-44/2: gecikmiş tekrarlayan kalem için taslak açıldı (onaylı)',
+    doc.getElementById('page-expense').classList.contains('active')
+      && $('in-exp-amount').value !== '',
+    'tutar=' + $('in-exp-amount').value);
+  await A.overlayClose('page-expense', {force: true});
 }
 
 // --- WT-43: yakıt fiyatı geçmişi (uçtan uca) ---

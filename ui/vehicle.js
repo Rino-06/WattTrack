@@ -260,6 +260,8 @@ async function renderVehiclePage() {
       renderVehiclePage();
     }));
 
+  renderYaklasanlar();   // WT-44/3
+
   // WT-40/C3: ⚙ → teknik değerleri elle düzelt (EV_DB'yi ezer)
   $('set-vehicles').querySelectorAll('[data-spec]').forEach(li =>
     li.addEventListener('click', e => {
@@ -627,6 +629,19 @@ async function openExpense(rec) {
   $('in-exp-veh').value = defVeh != null ? String(defVeh) : '';
   $('in-exp-note').value = rec?.not || '';
   $('in-exp-amt-lbl').textContent = t('expAmount') + ' (' + symOf($('in-exp-cur').value) + ')';
+  // WT-44/1: hatırlatma alanları
+  remDoldurSecicileri();
+  $('in-exp-int').value = rec?.hatirlatmaAraligi || '';
+  $('in-exp-intkm').value = rec?.hatirlatmaKm != null ? String(rec.hatirlatmaKm) : '';
+  $('in-exp-next').value = rec?.sonrakiTarih || '';
+  $('in-exp-nextkm').value = rec?.sonrakiKm != null
+    ? fmtNum(Math.round(distDisp(rec.sonrakiKm)), 0) : '';
+  $('in-exp-repeat').checked = rec?.tekrar === true;
+  const acik = !!(rec?.sonrakiTarih || rec?.sonrakiKm);
+  $('exp-rem').style.display = acik ? '' : 'none';
+  $('exp-rem-toggle').setAttribute('aria-expanded', String(acik));
+  $('exp-rem-toggle').textContent = acik ? t('remindHide') : t('remindAdd');
+  $('in-exp-type').dispatchEvent(new Event('change'));
   overlayOpen('page-expense');
   markFormClean('page-expense');   // WT-24/7: 'temiz' referansı
 }
@@ -668,7 +683,16 @@ $('btn-save-exp').addEventListener('click', async () => {
     altAd: tur === 'other' ? $('in-exp-altad').value.trim() : '',
     tutar, cur,
     aracId: expVeh,
-    not: $('in-exp-note').value.trim()
+    not: $('in-exp-note').value.trim(),
+    // WT-44/1: hatırlatma. Sayaç değeri km olarak saklanıyor (gösterim mi olabilir).
+    hatirlatmaAraligi: $('in-exp-int').value || null,
+    hatirlatmaKm: $('in-exp-intkm').value ? +$('in-exp-intkm').value : null,
+    sonrakiTarih: isValidDate($('in-exp-next').value) ? $('in-exp-next').value : null,
+    sonrakiKm: (() => {
+      const v = pf($('in-exp-nextkm').value, 0);
+      return isNaN(v) || v <= 0 ? null : Math.round(S.unit === 'mi' ? v * MI : v);
+    })(),
+    tekrar: $('in-exp-repeat').checked
   };
   const wasEditing = editingExpId;
   const w = await safeWrite(async () => wasEditing            // WT-12
@@ -756,3 +780,155 @@ $('evspec-reset').addEventListener('click', async () => {
   renderVehiclePage();
   renderDashboard();
 });
+
+
+/* ---- WT-44: bakım hatırlatmaları ---- */
+// Gider kategorileri ileriye dönük çalışmıyordu. Artık her gider kaydı
+// isteğe bağlı bir hatırlatma taşıyabiliyor: tarih ve/veya sayaç değeri.
+// İKİSİ birden girilirse HANGİSİ ÖNCE GELİRSE o tetiklenir.
+const REM_ARALIK = [        // [anahtar, gün]
+  ['', null], ['3ay', 90], ['6ay', 180], ['1yil', 365], ['2yil', 730]
+];
+const REM_KM = [['', null], ['5000', 5000], ['10000', 10000],
+                ['15000', 15000], ['20000', 20000], ['30000', 30000]];
+// WT-44/4: yalnız ÖNERİ — kullanıcı değiştirebiliyor
+const REM_VARSAYILAN = {
+  tax: {gun: 365}, insurance: {gun: 365}, inspection: {gun: 730},
+  tire: {km: 10000}, maintenance: {gun: 365, km: 15000}, repair: {},
+  parking: {}, equipment: {}, other: {}
+};
+
+function remDoldurSecicileri() {
+  $('in-exp-int').innerHTML = REM_ARALIK.map(([k]) =>
+    `<option value="${k}">${k ? t('rem_' + k) : t('remindNone')}</option>`).join('');
+  $('in-exp-intkm').innerHTML = REM_KM.map(([k]) =>
+    `<option value="${k}">${k ? fmtNum(distDisp(+k), 0) + ' ' + S.unit : t('remindNone')}</option>`).join('');
+  $('in-exp-nextkm-lbl').textContent = t('remindNextKm', {u: S.unit});
+}
+// Aralık seçilince sonraki tarih/sayaç ÖNERİLİR (kullanıcı yine değiştirebilir)
+function remOner() {
+  const gun = REM_ARALIK.find(([k]) => k === $('in-exp-int').value)?.[1];
+  if (gun) {
+    const d = new Date($('in-exp-date').value || localISO());
+    d.setDate(d.getDate() + gun);
+    $('in-exp-next').value = localISO(d);
+  }
+  const km = REM_KM.find(([k]) => k === $('in-exp-intkm').value)?.[1];
+  if (km) remOnerKm(km);
+}
+async function remOnerKm(km) {
+  const v = (await allVehicles()).find(x => x.id === +$('in-exp-veh').value);
+  const now = v ? (await odoNowOf(v)).km : null;
+  if (now != null) $('in-exp-nextkm').value = fmtNum(Math.round(distDisp(now + km)), 0);
+}
+$('in-exp-int').addEventListener('change', remOner);
+$('in-exp-intkm').addEventListener('change', remOner);
+$('exp-rem-toggle').addEventListener('click', () => {
+  const box = $('exp-rem'), acik = box.style.display === 'none';
+  box.style.display = acik ? '' : 'none';
+  $('exp-rem-toggle').setAttribute('aria-expanded', String(acik));
+  $('exp-rem-toggle').textContent = acik ? t('remindHide') : t('remindAdd');
+});
+
+// Gider türü değişince varsayılan ARALIK önerisi (WT-44/4)
+$('in-exp-type').addEventListener('change', () => {
+  const d = REM_VARSAYILAN[$('in-exp-type').value] || {};
+  $('exp-rem-hint').textContent = (d.gun || d.km)
+    ? t('remindSuggest', {
+        v: [d.gun ? t('rem_' + REM_ARALIK.find(([, g]) => g === d.gun)[0]) : null,
+            d.km ? fmtNum(distDisp(d.km), 0) + ' ' + S.unit : null]
+          .filter(Boolean).join(' · ')})
+    : '';
+});
+
+// WT-44/3: yaklaşan hatırlatmalar. Km bazlılar için aracın güncel sayacı
+// (WT-19) kullanılıyor.
+async function yaklasanlar() {
+  const exps = (await allExpenses()).filter(e => e.sonrakiTarih || e.sonrakiKm);
+  if (!exps.length) return [];
+  const vs = await allVehicles();
+  const odo = {};
+  for (const v of vs) odo[v.id] = (await odoNowOf(v)).km;
+  const bugun = localISO();
+  return exps.map(e => {
+    const ad = e.tur === 'other' && e.altAd ? e.altAd : t('exp_' + e.tur);
+    let gun = null, km = null;
+    if (e.sonrakiTarih)
+      gun = Math.round((new Date(e.sonrakiTarih) - new Date(bugun)) / 86400000);
+    if (e.sonrakiKm != null && odo[e.aracId] != null)
+      km = e.sonrakiKm - odo[e.aracId];
+    // "10.000 km veya 1 yıl — hangisi önce": ikisi de varsa yakın olan
+    const gunSira = gun != null ? gun : Infinity;
+    const kmSira = km != null ? km / 50 : Infinity;   // kaba: ~50 km/gün
+    return {e, ad, gun, km, sira: Math.min(gunSira, kmSira),
+      gecti: (gun != null && gun < 0) || (km != null && km < 0)};
+  }).sort((a, b) => a.sira - b.sira).slice(0, 3);
+}
+
+async function renderYaklasanlar() {
+  const liste = await yaklasanlar();
+  const box = $('v-upcoming');
+  if (!liste.length) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  $('v-upcoming-list').innerHTML = liste.map(x => {
+    const parca = [];
+    if (x.gun != null) parca.push(x.gun < 0
+      ? t('remLate', {n: Math.abs(x.gun)}) : t('remInDays', {n: x.gun}));
+    if (x.km != null) parca.push(x.km < 0
+      ? t('remLateKm', {n: fmtNum(Math.abs(distDisp(x.km)), 0), u: S.unit})
+      : t('remInKm', {n: fmtNum(distDisp(x.km), 0), u: S.unit}));
+    return `<div class="crow" data-expid="${x.e.id}">
+      <div class="avatar" style="background:var(--chip);color:var(--accent-text)">${EXP_ICON[x.e.tur] || '📦'}</div>
+      <div class="mid">
+        <div class="name">${esc(x.ad)}</div>
+        <div class="sub"${x.gecti ? ' style="color:var(--red);font-weight:600"' : ''}>${esc(parca.join(' · '))}</div>
+      </div>
+    </div>`;
+  }).join('');
+  $('v-upcoming-list').querySelectorAll('[data-expid]').forEach(el =>
+    el.addEventListener('click', async () =>
+      openExpense(await db.expenses.get(+el.dataset.expid))));
+  // WT-44/5: bildirim isteğe bağlı. İzin yoksa kart yine görünüyor.
+  const nOK = typeof Notification !== 'undefined';
+  $('btn-notify').style.display = nOK && Notification.permission === 'default' ? '' : 'none';
+  if (nOK && Notification.permission === 'granted') bildirimGonder(liste);
+}
+$('btn-notify').addEventListener('click', async () => {
+  try {
+    const izin = await Notification.requestPermission();
+    if (izin === 'granted') { toast(t('savedLocal')); renderVehiclePage(); }
+  } catch { /* desteklenmiyor */ }
+});
+let _bildirilen = new Set();
+function bildirimGonder(liste) {
+  for (const x of liste) {
+    if (!x.gecti && !(x.gun != null && x.gun <= 7)) continue;
+    const anahtar = x.e.id + ':' + (x.e.sonrakiTarih || x.e.sonrakiKm);
+    if (_bildirilen.has(anahtar)) continue;
+    _bildirilen.add(anahtar);
+    try {
+      new Notification('WattTrack', {body: x.ad + ' — '
+        + (x.gecti ? t('remLate', {n: Math.abs(x.gun ?? 0)})
+                   : t('remInDays', {n: x.gun}))});
+    } catch { /* bildirim gönderilemedi */ }
+  }
+}
+
+// WT-44/2: tekrarlayan kalem tetiklendiğinde yeni taslak ÖNERİLİR (onaylı)
+async function tekrarOner() {
+  const liste = await yaklasanlar();
+  for (const x of liste) {
+    if (!x.e.tekrar || !x.gecti) continue;
+    if (!confirm(t('remRepeatAsk', {v: x.ad}))) continue;
+    const yeni = {...x.e};
+    delete yeni.id;
+    yeni.tarih = localISO();
+    yeni.sonrakiTarih = x.e.hatirlatmaAraligi
+      ? (() => { const d = new Date();
+          d.setDate(d.getDate() + (REM_ARALIK.find(([k]) => k === x.e.hatirlatmaAraligi)?.[1] || 365));
+          return localISO(d); })()
+      : null;
+    await openExpense(yeni);
+    return;   // aynı anda tek taslak
+  }
+}
