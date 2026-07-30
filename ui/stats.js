@@ -194,8 +194,43 @@ async function renderStats() {
       <span class="tn">${esc(name)}<div class="ts">${money(x.tl)}</div></span>
       <span class="tv">${x.n} ${t('sessions')}</span></div>`).join('')
     : `<div class="tl" style="color:var(--faint)">${t('noData')}</div>`;
+
+  // WT-41/3: aylık tüketim trendi. Son 6 ay; atlanan kayıtlar hariç.
+  // Kışın artışı görmek EV sahipleri için en değerli sinyallerden biri.
+  const consAy = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    const g = all.filter(r => monthKey(r.tarih) === key && !r.atlanan
+      && r.mesafeKm > 0 && r.kwh > 0);
+    const km = g.reduce((s, r) => s + r.mesafeKm, 0);
+    const kw = g.reduce((s, r) => s + r.kwh, 0);
+    consAy.push({label: MONTHS[S.lang][d.getMonth()].slice(0, 3),
+      v: km >= 20 ? kw / km * 100 : null});
+  }
+  const maxC = Math.max(1, ...consAy.map(x => x.v || 0));
+  $('s-cons').innerHTML = consAy.map(x =>
+    `<div class="mb">
+      <div class="amt">${x.v != null ? fmtNum(x.v, 1) : ''}</div>
+      <div class="bar" style="height:${x.v != null ? Math.max(4, x.v / maxC * 100) : 2}%"></div>
+      <div class="m">${esc(x.label)}</div>
+    </div>`).join('');
+  // WLTP ile karşılaştırma KASITLI olarak yok (WT-41/2): araçlar o değere
+  // ulaşmıyor, yanıltıcı olurdu. Ölçek kullanıcının kendi geçmişi.
+  const dolu = consAy.filter(x => x.v != null);
+  $('s-cons-note').textContent = dolu.length >= 2
+    ? t('consTrendNote', {
+        min: fmtNum(Math.min(...dolu.map(x => x.v)), 1),
+        max: fmtNum(Math.max(...dolu.map(x => x.v)), 1)})
+    : t('consTrendNeed');
 }
 
+// WT-41/4: kaydın kendi tüketimi (kWh/100 km). Atlanan kayıtta gösterilmez —
+// o kaydın mesafesi kendisine ait değil.
+function rowCons(r) {
+  if (r.atlanan || !(r.mesafeKm > 0) || !(r.kwh > 0)) return '';
+  return ' · ' + fmtNum(r.kwh / r.mesafeKm * 100, 1) + ' kWh/100 ' + S.unit;
+}
 function rowHTML(r, withDelete) {
   const s = savingsOf(r);
   const cs = symOf(r.cur || S.currency);
@@ -203,7 +238,7 @@ function rowHTML(r, withDelete) {
     <div class="avatar" style="background:${colorFor(r.firma)}">${esc(r.firma.charAt(0).toUpperCase())}</div>
     <div class="mid">
       <div class="name">${esc(r.firma)}</div>
-      <div class="sub">${shortDate(r.tarih)} · ${r.kwh} kWh · ${r.tip || 'DC'}${r.mesafeKm ? ' · ' + Math.round(distDisp(r.mesafeKm)) + ' ' + S.unit : ''}${r.atlanan ? ` · <span title="${esc(t('missedTag'))}" aria-label="${esc(t('missedTag'))}">⚠︎</span>` : ''}</div>
+      <div class="sub">${shortDate(r.tarih)} · ${r.kwh} kWh · ${r.tip || 'DC'}${r.mesafeKm ? ' · ' + Math.round(distDisp(r.mesafeKm)) + ' ' + S.unit : ''}${rowCons(r)}${r.atlanan ? ` · <span title="${esc(t('missedTag'))}" aria-label="${esc(t('missedTag'))}">⚠︎</span>` : ''}</div>
     </div>
     <div class="right">
       <div class="amt">${r.free ? '<span class="free-tag">' + t('free') + '</span>' : fm(cs, fmtNum(r.odenen, 0))}</div>

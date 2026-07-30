@@ -593,6 +593,8 @@ nav button{min-height:48px;justify-content:center}
     </div>
     <div class="tiles" style="margin-bottom:20px">
       <div class="tile"><div class="k" data-i18n="chargePower">Ort. şarj gücü</div><div class="v" id="d-power">—</div></div>
+      <!-- WT-41/1: kendi geçmişiyle karşılaştırılır; WLTP ile KARŞILAŞTIRILMAZ -->
+      <div class="tile"><div class="k" data-i18n="avgCons">Ortalama tüketim</div><div class="v" id="d-cons">—</div><div class="yd" id="d-cons-d"></div></div>
     </div>
   </div>
 
@@ -653,6 +655,11 @@ nav button{min-height:48px;justify-content:center}
 
   <h2 class="h2" data-i18n="topBanks">Bankalar (indirim kazancı)</h2>
   <div class="toplist" id="d-banks"></div>
+
+  <!-- WT-41/3: aylık tüketim trendi — kışın artışı görmek EV sahipleri için değerli -->
+  <h2 class="h2"><span data-i18n="consTrend">Aylık tüketim (kWh/100 km)</span></h2>
+  <div class="monthbars" id="s-cons"></div>
+  <div class="about" id="s-cons-note" style="margin:-8px 0 14px;font-size:12px"></div>
 
   <h2 class="h2" data-i18n="topLocations">En çok şarj edilen lokasyonlar</h2>
   <div class="toplist" id="d-locs"></div>

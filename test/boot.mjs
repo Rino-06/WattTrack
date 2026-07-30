@@ -1093,6 +1093,66 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   for (const n of ['sessions', 'vehicles', 'expenses']) A.db[n].toArray = orj[n];
 }
 
+// --- WT-41: kWh/100km verimlilik metriği ---
+{
+  const A = app();
+  A.S.period = 'year'; A.S.dashVeh = ''; A.S.dstatType = '';
+  await A.db.sessions.clear();
+  const y = new Date().getFullYear();
+  await A.db.sessions.bulkAdd([
+    // 40 kWh / 200 km -> 20,0 kWh/100km
+    {tarih: `${y}-03-10T10:00`, firma: 'ZES', tip: 'DC', kwh: 40, tutar: 400,
+      odenen: 400, cur: 'TRY', mesafeKm: 200, aracId: null},
+    // atlanan kayıt: hesaba GİRMEMELİ (WT-41/6)
+    {tarih: `${y}-03-12T10:00`, firma: 'ZES', tip: 'DC', kwh: 90, tutar: 900,
+      odenen: 900, cur: 'TRY', mesafeKm: 100, atlanan: true, aracId: null},
+    // Ev-İş şarjı: hesaba GİRMELİ (WT-41/5)
+    {tarih: `${y}-03-14T10:00`, firma: 'Ev-İş', tip: 'AC', kwh: 20, tutar: 100,
+      odenen: 100, cur: 'TRY', mesafeKm: 200, mekan: 'evis', aracId: null}
+  ]);
+  // trend için ikinci bir ay (kışın artışı görmek maddenin amacı)
+  const oncekiAy = new Date(); oncekiAy.setMonth(oncekiAy.getMonth() - 1);
+  const oa = oncekiAy.getFullYear() + '-'
+    + String(oncekiAy.getMonth() + 1).padStart(2, '0');
+  await A.db.sessions.add({tarih: `${oa}-05T10:00`, firma: 'ZES', tip: 'DC',
+    kwh: 50, tutar: 500, odenen: 500, cur: 'TRY', mesafeKm: 200, aracId: null});
+  await A.renderDashboard();
+  await sleep(250);
+  // (40+20) kWh / (200+200) km * 100 = 15,0
+  // (40+20+50) kWh / (200+200+200) km * 100 = 18,3
+  check('WT-41/1+5+6: ortalama tüketim doğru (Ev-İş dahil, atlanan hariç)',
+    /18,3/.test($('d-cons').textContent), 'd-cons=' + $('d-cons').textContent);
+
+  // DC/AC ayrımı korunuyor: yalnız DC -> (40+50)/(200+200)*100 = 22,5
+  A.S.dstatType = 'DC';
+  await A.renderDashboard();
+  await sleep(250);
+  check('WT-41/5: DC/AC ayrımı tüketimde de geçerli',
+    /22,5/.test($('d-cons').textContent), 'd-cons=' + $('d-cons').textContent);
+  A.S.dstatType = '';
+
+  check('WT-41/2: WLTP ile karşılaştırma YOK, kendi geçmişiyle',
+    !/WLTP/.test($('d-cons-d').textContent + $('d-cons').textContent));
+
+  await A.renderStats();
+  await sleep(250);
+  const cubuk = window.document.querySelectorAll('#s-cons .mb');
+  check('WT-41/3: aylık tüketim trendi 6 ay çiziliyor', cubuk.length === 6,
+    'çubuk=' + cubuk.length);
+  check('WT-41/3: trend notu ölçeğin kendi geçmişi olduğunu söylüyor',
+    /WLTP|geçmiş/i.test($('s-cons-note').textContent),
+    $('s-cons-note').textContent.slice(0, 60));
+
+  await A.renderHistory();
+  await sleep(250);
+  const satirlar = [...window.document.querySelectorAll('#h-groups .crow .sub')]
+    .map(e => e.textContent);
+  check('WT-41/4: kayıt satırında o şarjın kWh/100km değeri var',
+    satirlar.some(x => /20,0 kWh\/100/.test(x)), satirlar.join(' || ').slice(0, 140));
+  check('WT-41/4: atlanan kayıtta tüketim GÖSTERİLMİYOR',
+    !satirlar.some(x => /90,0 kWh\/100/.test(x)));
+}
+
 // --- WT-40: menzil gösterimi, veri tarihi ve elle düzeltme ---
 {
   const doc = window.document, A = app();
