@@ -56,7 +56,9 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
        fmtInput, checkNum, isValidDate, localISO, renderDashboard, scanBadData,
        isConv, amtB, renderStats, applyI18n, T, LANG_NAMES, CHARGERS,
        COUNTRIES, HOME_NAMES, PAN_EU, BANKS_BY, BANKS_DEFAULT, overlayClose,
-       initSegments, evSummaryHTML, carSVG};`;
+       initSegments, evSummaryHTML, carSVG, seedDemoData, clearDemoData,
+       syncEmptyStates, renderHistory, renderVehiclePage, backupPayload,
+       offerDemoCleanup};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -1002,6 +1004,95 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const tanimsiz = [...kullanilan].filter(k => !ref.has(k));
   check('i18n: HTML\'deki her data-i18n anahtarı sözlükte var',
     tanimsiz.length === 0, tanimsiz.join(',') || kullanilan.size + ' anahtar');
+}
+
+// --- WT-36: boş durumlar + örnek veri yaşam döngüsü ---
+{
+  const doc = window.document;
+  window.confirm = () => true;   // demoWarn / demoClearAsk onayları
+
+  await app().db.sessions.clear();
+  await app().db.vehicles.clear();
+  await app().db.expenses.clear();
+  await app().renderDashboard();
+  await app().renderHistory();
+  await app().renderVehiclePage();
+  await app().syncEmptyStates();
+  await sleep(200);
+
+  check('WT-36/1: ana sayfada boş durum ikon + cümle + buton',
+    !!$('d-empty').querySelector('.empty-ico')
+      && $('d-empty').querySelector('.empty-msg')?.textContent.trim().length > 10
+      && $('d-empty').querySelector('[data-empty-act="addCharge"]'),
+    $('d-empty').querySelector('.empty-msg')?.textContent);
+  check('WT-36/1: boş durumdayken veri blokları gizli',
+    [...doc.querySelectorAll('#page-dashboard .d-data')].every(e => e.style.display === 'none'),
+    [...doc.querySelectorAll('#page-dashboard .d-data')]
+      .filter(e => e.style.display !== 'none').map(e => e.id || e.className).join(','));
+  check('WT-36/1: Geçmiş boş durumu yönlendiriyor',
+    !!$('h-groups').querySelector('[data-empty-act="addCharge"]'));
+  check('WT-36/1: İstatistik boş durumu "3 kayıt" diyor',
+    /3/.test($('s-empty').textContent) && $('s-data').style.display === 'none',
+    $('s-empty').textContent.trim());
+  check('WT-36/1: Kıyasla boş durumu girdi istiyor',
+    $('c-empty').querySelector('.empty-msg')?.textContent.trim().length > 10);
+  check('WT-36/1: Aracım boş durumunda araç ekle butonu var',
+    !!$('v-empty').querySelector('[data-empty-act="addCar"]'));
+  check('WT-36/3b: örnek veri yokken şerit gizli',
+    !$('demo-bar').classList.contains('on'));
+
+  // --- gerçek bir kayıt ekle, sonra örnek veri üret ---
+  await app().db.sessions.add({ tarih: '2026-07-01T10:00', firma: 'GERÇEK', tip: 'DC',
+    kwh: 10, tutar: 100, odenen: 100, cur: 'TRY', aracId: null });
+  await app().seedDemoData();
+  await sleep(400);
+
+  const s1 = await app().db.sessions.toArray();
+  const v1 = await app().db.vehicles.toArray();
+  const e1 = await app().db.expenses.toArray();
+  check('WT-36/2: 10 örnek şarj + 1 araç + 3 gider üretildi',
+    s1.filter(r => r.demo).length === 10 && v1.filter(r => r.demo).length === 1
+      && e1.filter(r => r.demo).length === 3,
+    `şarj=${s1.filter(r => r.demo).length} araç=${v1.filter(r => r.demo).length} gider=${e1.filter(r => r.demo).length}`);
+  check('WT-36/3a: üretilen her kayıt demo:true işaretli',
+    s1.filter(r => r.firma !== 'GERÇEK').every(r => r.demo === true));
+  check('WT-36/3b KABUL: örnek veri şeridi görünür',
+    $('demo-bar').classList.contains('on'));
+  check('WT-36/3b: şerit kapatma düğmesi YOK, yalnız silme var',
+    !$('demo-bar').querySelector('[data-dismiss],.close')
+      && !!$('btn-demo-clear'));
+
+  // --- yedek örnek veriyi dışarı vermemeli ---
+  const yedek = await app().backupPayload();
+  check('WT-36/3f: yedekte hiç demo kaydı yok',
+    !yedek.sessions.some(r => r.demo) && !yedek.vehicles.some(r => r.demo)
+      && !yedek.expenses.some(r => r.demo),
+    `yedek şarj=${yedek.sessions.length}`);
+  check('WT-36/3f: gerçek kayıt yedekte duruyor',
+    yedek.sessions.length === 1 && yedek.sessions[0].firma === 'GERÇEK');
+
+  // --- tek dokunuşla temizlik ---
+  await app().clearDemoData();
+  await sleep(300);
+  const s2 = await app().db.sessions.toArray();
+  const v2 = await app().db.vehicles.toArray();
+  const e2 = await app().db.expenses.toArray();
+  check('WT-36/3c KABUL: hiç demo kayıt kalmadı',
+    !s2.some(r => r.demo) && !v2.some(r => r.demo) && !e2.some(r => r.demo),
+    `kalan demo şarj=${s2.filter(r => r.demo).length}`);
+  check('WT-36/3c KABUL: gerçek kayıt duruyor',
+    s2.length === 1 && s2[0].firma === 'GERÇEK', 'kalan=' + s2.map(r => r.firma).join(','));
+  check('WT-36/3b: temizlikten sonra şerit kayboldu',
+    !$('demo-bar').classList.contains('on'));
+
+  // --- 3d: gerçek kayıt varken otomatik sorup temizliyor mu? ---
+  await app().seedDemoData();
+  await sleep(300);
+  await app().offerDemoCleanup();
+  await sleep(300);
+  const s3 = await app().db.sessions.toArray();
+  check('WT-36/3d: gerçek kayıt varken örnek veri silinmesi öneriliyor (onayla siliniyor)',
+    !s3.some(r => r.demo) && s3.length === 1, 'kalan=' + s3.length);
 }
 
 const failed = results.filter(r => !r.pass);
