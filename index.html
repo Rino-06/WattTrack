@@ -490,10 +490,8 @@ nav button{min-height:48px;justify-content:center}
     <div class="tile"><div class="k"><span id="d-1km-lbl">1 km</span> · <span data-i18n="netLbl">net</span></div><div class="v" id="d-1km">—</div></div>
     <div class="tile"><div class="k"><span id="d-1km-lbl2">1 km</span> · <span data-i18n="grossLbl">indirimsiz</span></div><div class="v" id="d-1km-g">—</div></div>
   </div>
-  <div class="tiles">
-    <div class="tile"><div class="k"><span id="d-100-lbl">100 km</span> · <span data-i18n="netLbl">net</span></div><div class="v" id="d-100">—</div></div>
-    <div class="tile"><div class="k"><span id="d-100-lbl2">100 km</span> · <span data-i18n="grossLbl">indirimsiz</span></div><div class="v" id="d-100-g">—</div></div>
-  </div>
+  <!-- WT-32: "100 km · net / indirimsiz" kutuları kaldırıldı — 1 km kutularıyla
+       mükerrer. cost100 anahtarı Kıyasla sayfasında kullanılmaya devam ediyor. -->
   <!-- WT-14/B: mesafe kaynağı dönem seçicisinden bağımsızsa burada söylenir -->
   <div class="scope-note" id="d-dist-scope"></div>
   <div class="tiles">
@@ -515,26 +513,15 @@ nav button{min-height:48px;justify-content:center}
   </div>
   <div class="dstat">
     <div class="tile"><div class="k" data-i18n="avgDuration">Ort. şarj süresi</div><div class="v" id="d-dur">—</div></div>
-    <div class="tile"><div class="k" data-i18n="avgSocRange">Ort. şarj aralığı</div><div class="v" id="d-soc">—</div></div>
+    <div class="tile"><div class="k" data-i18n="avgSocRange">Ort. şarj aralığı</div><div class="v" id="d-soc">—</div><div class="yd" id="d-soc-add"></div></div>
   </div>
   <div class="tiles" style="margin-bottom:20px">
     <div class="tile"><div class="k" data-i18n="chargePower">Ort. şarj gücü</div><div class="v" id="d-power">—</div></div>
   </div>
 
-  <h2 class="h2"><span data-i18n="yearlyCompare">Yıllık karşılaştırma</span> <span class="scope-badge" id="d-yr-scope"></span></h2>
-  <div class="tiles">
-    <div class="tile"><div class="k" data-i18n="yearlySpendLbl">Toplam harcama (bu yıl)</div><div class="v" id="d-yr-spend">—</div><div class="yd" id="d-yr-spend-d"></div></div>
-    <div class="tile"><div class="k" data-i18n="yearlyKwhLbl">Enerji (bu yıl)</div><div class="v" id="d-yr-kwh">—</div><div class="yd" id="d-yr-kwh-d"></div></div>
-  </div>
-  <div class="tiles" style="margin-bottom:20px">
-    <div class="tile"><div class="k" data-i18n="yearlyPriceLbl">kWh fiyatı (bu yıl)</div><div class="v" id="d-yr-price">—</div><div class="yd" id="d-yr-price-d"></div></div>
-  </div>
-
-  <div class="h2row" style="margin-top:0">
-    <h2 class="h2" data-i18n="recentCharges">Son şarjlar</h2>
-    <button class="link" id="d-viewall" data-i18n="viewAll">Tümü</button>
-  </div>
-  <div class="rows" id="d-recent"></div>
+  <!-- WT-32: "Yıllık karşılaştırma" bölümü kaldırıldı — üstteki kutularla
+       mükerrerdi (özellikle "Enerji (bu yıl)" ile "Enerji (kWh)").
+       "Son şarjlar" bölümü de kaldırıldı — Geçmiş sekmesi zaten bunu yapıyor. -->
 </section>
 
 <!-- ============ İSTATİSTİK ============ -->

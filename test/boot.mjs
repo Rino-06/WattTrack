@@ -233,9 +233,46 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-14/A: detay bloğu kapsam rozeti taşıyor',
     $('d-dstat-scope').textContent.trim() !== '',
     'rozet=' + JSON.stringify($('d-dstat-scope').textContent));
-  check('WT-14: kasıtlı tüm-zamanlar olan yıllık blok da rozetli',
-    $('d-yr-scope').textContent.trim() !== '',
-    'rozet=' + JSON.stringify($('d-yr-scope').textContent));
+  // WT-14'te "kasıtlı tüm-zamanlar olan yıllık blok da rozetli" diye bir kontrol
+  // vardı; WT-32 o bloğu tamamen kaldırdı. Dönem seçicisine uymayan tek sayı
+  // kalmadığı için kontrol, bloğun geri gelmediğini doğrulamaya dönüştü.
+  check('WT-32/2: yıllık karşılaştırma bloğu ana sayfada yok',
+    !$('d-yr-scope') && !$('d-yr-spend') && !$('d-yr-kwh') && !$('d-yr-price'));
+  check('WT-32/1: "100 km" kutuları ana sayfada yok',
+    !$('d-100') && !$('d-100-g'));
+  check('WT-32/3: "Son şarjlar" bloğu ana sayfada yok',
+    !$('d-recent') && !$('d-viewall'));
+  check('WT-32: kalan "1 km" kutuları hâlâ dolduruluyor',
+    $('d-1km').textContent !== '' && $('d-1km-g').textContent !== '',
+    `1km=${$('d-1km').textContent} 1km-g=${$('d-1km-g').textContent}`);
+
+  // --- WT-32/4: ort. şarj aralığı hesabı ---
+  await app().db.sessions.clear();
+  const iso2 = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 10);
+  const bugun = iso2(new Date());
+  const base = { firma: 'ZES', tip: 'DC', kwh: 40, tutar: 400, odenen: 400,
+    cur: 'TRY', aracId: null };
+  await app().db.sessions.bulkAdd([
+    { ...base, tarih: bugun + 'T09:00', socB: 20, socA: 80 },   // +60
+    { ...base, tarih: bugun + 'T12:00', socB: 40, socA: 80 },   // +40
+    { ...base, tarih: bugun + 'T15:00', socB: 50, socA: 50 }    // anlamsız: eşit
+  ]);
+  app().S.period = 'week';
+  await app().renderDashboard();
+  await sleep(300);
+  // Eşit kayıt sayılsaydı ortalamalar %36,7 → %70 çıkardı; hariç tutulunca %30 → %80
+  check('WT-32/4b: socB === socA olan kayıt ortalamaya girmedi',
+    $('d-soc').textContent === '%30 → %80', 'd-soc=' + $('d-soc').textContent);
+  check('WT-32/4c: "ort. eklenen" değeri de gösteriliyor',
+    /50/.test($('d-soc-add').textContent), 'ek=' + $('d-soc-add').textContent);
+
+  // socA < socB olan bozuk eski kayıt da ortalamayı kaydırmamalı
+  await app().db.sessions.add({ ...base, tarih: bugun + 'T18:00', socB: 90, socA: 10 });
+  await app().renderDashboard();
+  await sleep(300);
+  check('WT-32/4: ters (socA < socB) bozuk kayıt da hariç tutuldu',
+    $('d-soc').textContent === '%30 → %80', 'd-soc=' + $('d-soc').textContent);
 }
 
 // --- WT-14/B: 1 km sayaç moduna düşünce kapsamı yazıyor mu? ---
@@ -406,8 +443,14 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       .filter(p => !p.querySelector('h1')).map(p => p.id).join(', ') || '(hepsi tamam)');
   check('WT-23/2: sayfa başına tam olarak BİR h1',
     [...doc.querySelectorAll('.content .page')].every(p => p.querySelectorAll('h1').length === 1));
-  check('WT-23/3: alt başlıklar <h2>', doc.querySelectorAll('h2.h2').length === 18,
-    'h2 sayısı=' + doc.querySelectorAll('h2.h2').length);
+  // Sabit sayı (18) WT-32 bölüm kaldırınca kırıldı; asıl kontrol edilmek istenen
+  // ".h2" görünümlü hiçbir öğenin <h2> DIŞINDA bir etiket olmaması.
+  check('WT-23/3: alt başlıklar <h2>',
+    doc.querySelectorAll('.h2').length >= 10
+      && [...doc.querySelectorAll('.h2')].every(e => e.tagName === 'H2'),
+    'h2 sayısı=' + doc.querySelectorAll('h2.h2').length
+      + ' h2 olmayan=' + [...doc.querySelectorAll('.h2')]
+        .filter(e => e.tagName !== 'H2').map(e => e.tagName).join(','));
   check('WT-23: h1 içinde buton/seçici yok (erişilebilir ad temiz)',
     [...doc.querySelectorAll('h1')].every(h => !h.querySelector('button,select,input')),
     [...doc.querySelectorAll('h1')].filter(h => h.querySelector('button,select,input'))
@@ -755,6 +798,35 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     check(`WT-31/3: ${theme} temada anahtarın sınır halkası var`,
       /\.sw i\{[^}]*box-shadow\s*:\s*inset[^}]*var\(--border\)/.test(flat));
   }
+}
+
+// --- Çeviri sözlüğü bütünlüğü (kullanıcı kuralı: 6 dili DOLDUR) ---
+// Anahtar ekleyip/silerken bir dili atlamak sessizce "undefined" metin üretiyor;
+// bu blok WT-32'de beş anahtar silinip biri eklenirken eklendi.
+{
+  const T = app().T, doc = window.document;
+  const diller = Object.keys(T);
+  check('i18n: altı dil de yüklü', diller.length === 6, diller.join(','));
+  const ref = new Set(Object.keys(T.tr));
+  const sorun = [];
+  for (const d of diller) {
+    if (d === 'tr') continue;
+    const k = new Set(Object.keys(T[d]));
+    const eksik = [...ref].filter(x => !k.has(x));
+    const fazla = [...k].filter(x => !ref.has(x));
+    if (eksik.length) sorun.push(`${d} eksik: ${eksik.join(',')}`);
+    if (fazla.length) sorun.push(`${d} fazla: ${fazla.join(',')}`);
+  }
+  check('i18n: her dilde aynı anahtar kümesi var', sorun.length === 0,
+    sorun.join(' | ') || `${ref.size} anahtar × ${diller.length} dil`);
+
+  const kullanilan = new Set();
+  for (const el of doc.querySelectorAll('[data-i18n],[data-i18n-aria],[data-i18n-ph]'))
+    for (const a of ['data-i18n', 'data-i18n-aria', 'data-i18n-ph'])
+      if (el.hasAttribute(a)) kullanilan.add(el.getAttribute(a));
+  const tanimsiz = [...kullanilan].filter(k => !ref.has(k));
+  check('i18n: HTML\'deki her data-i18n anahtarı sözlükte var',
+    tanimsiz.length === 0, tanimsiz.join(',') || kullanilan.size + ' anahtar');
 }
 
 const failed = results.filter(r => !r.pass);
