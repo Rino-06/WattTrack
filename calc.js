@@ -297,3 +297,25 @@ async function odoNowOf(v) {
   return fromRec >= manual
     ? {km: fromRec, src: 'records'} : {km: manual, src: 'manual'};
 }
+
+
+/* ---- WT-42: şarj verimi / kayıp analizi ---- */
+// Beklenen kWh = batarya × (socA - socB) / 100
+// Faturalanan - beklenen = şarj kaybı + istasyon ölçüm sapması.
+// YALNIZCA socB ve socA'nın İKİSİ de dolu olan kayıtlarda hesaplanır (madde 6).
+// Batarya kapasitesi yanlışsa metrik anlamsızlaşır — bu yüzden WT-40/C3
+// kullanıcıya kapasiteyi düzeltme imkânı veriyor.
+function kayipHesapla(rec, veh) {
+  const batt = veh?.batt;
+  if (!batt || rec.socB == null || rec.socA == null) return null;
+  const fark = rec.socA - rec.socB;
+  if (!(fark > 0)) return null;
+  const beklenen = batt * fark / 100;
+  if (!(beklenen > 0) || !(rec.kwh > 0)) return null;
+  return {
+    beklenen: Math.round(beklenen * 100) / 100,
+    faturalanan: rec.kwh,
+    pct: Math.round((rec.kwh - beklenen) / beklenen * 1000) / 10
+  };
+}
+const KAYIP_UYARI = 20;   // %20'yi aşan sapmada satırda uyarı (madde 4)

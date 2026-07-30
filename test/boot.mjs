@@ -1093,6 +1093,62 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   for (const n of ['sessions', 'vehicles', 'expenses']) A.db[n].toArray = orj[n];
 }
 
+// --- WT-42: şarj kaybı uçtan uca ---
+{
+  const A = app();
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  const vid = await A.db.vehicles.add({ad: 'Kayıp EV', batt: 60, body: 'suv'});
+  A.S.defaultVehicleId = vid;
+  A.S.period = 'year'; A.S.dashVeh = '';
+  const y = new Date().getFullYear();
+  // 60 kWh × %70 = 42 beklenen, 45,5 faturalanmış -> %8,3
+  const id1 = await A.db.sessions.add({tarih: `${y}-04-01T10:00`, firma: 'ZES',
+    tip: 'DC', kwh: 45.5, tutar: 500, odenen: 500, cur: 'TRY',
+    socB: 20, socA: 90, aracId: vid, kayipPct: 8.3});
+  // %20'yi aşan sapma -> satırda uyarı
+  await A.db.sessions.add({tarih: `${y}-04-02T10:00`, firma: 'Sapan', tip: 'DC',
+    kwh: 45, tutar: 500, odenen: 500, cur: 'TRY', socB: 0, socA: 50,
+    aracId: vid, kayipPct: 50});
+
+  await A.openAdd(id1);
+  await sleep(300);
+  check('WT-42/2: kayıt detayında kayıp satırı yazılı',
+    $('in-loss').style.display !== 'none' && /42/.test($('in-loss').textContent)
+      && /45,5/.test($('in-loss').textContent) && /8,3/.test($('in-loss').textContent),
+    $('in-loss').textContent);
+  await A.overlayClose('page-add', {force: true});
+
+  await A.renderStats();
+  await sleep(250);
+  const kayipSatir = window.document.querySelectorAll('#s-loss .tl');
+  check('WT-42/3: firma bazında ortalama kayıp listesi dolu',
+    kayipSatir.length >= 2, 'satır=' + kayipSatir.length);
+  check('WT-42/3: en çok sapan firma başta',
+    /Sapan/.test(kayipSatir[0].textContent), kayipSatir[0].textContent.replace(/\s+/g, ' '));
+
+  await A.renderHistory();
+  await sleep(250);
+  const gecmis = window.document.getElementById('h-groups').innerHTML;
+  check('WT-42/4: %20 üstü sapmada satırda uyarı ikonu var', /⚡/.test(gecmis));
+
+  // kayıt KAYDEDİLİRKEN hesaplanıyor mu? (kayipPct elle verilmeden)
+  await A.db.sessions.clear();
+  await A.openAdd();
+  await sleep(300);
+  $('in-date').value = `${y}-05-05`;
+  $('in-kwh').value = '45,5';
+  $('in-amount').value = '500';
+  $('in-socb').value = '20';
+  $('in-soca').value = '90';
+  $('adv-fields').classList.add('open');
+  $('btn-save').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(500);
+  const kayit = (await A.db.sessions.toArray())[0];
+  check('WT-42/1 KABUL: kayıt kaydedilirken kayipPct hesaplanıp saklandı',
+    kayit && Math.abs(kayit.kayipPct - 8.3) < 0.2, 'kayipPct=' + kayit?.kayipPct);
+}
+
 // --- WT-41: kWh/100km verimlilik metriği ---
 {
   const A = app();

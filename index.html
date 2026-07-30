@@ -657,6 +657,11 @@ nav button{min-height:48px;justify-content:center}
   <div class="toplist" id="d-banks"></div>
 
   <!-- WT-41/3: aylık tüketim trendi — kışın artışı görmek EV sahipleri için değerli -->
+  <!-- WT-42/3: hangi operatörün ölçümü sapıyor — kullanıcı bunu başka yerde göremiyor -->
+  <h2 class="h2" data-i18n="lossByFirm">Firma bazında ortalama şarj kaybı</h2>
+  <div class="toplist" id="s-loss"></div>
+  <div class="about" id="s-loss-note" style="margin:-8px 0 14px;font-size:12px" data-i18n="lossNote">Faturalanan enerji ile bataryaya giren enerji arasındaki fark. Şarj kaybını ve istasyonun ölçüm sapmasını birlikte içerir.</div>
+
   <h2 class="h2"><span data-i18n="consTrend">Aylık tüketim (kWh/100 km)</span></h2>
   <div class="monthbars" id="s-cons"></div>
   <div class="about" id="s-cons-note" style="margin:-8px 0 14px;font-size:12px"></div>
@@ -997,6 +1002,9 @@ nav button{min-height:48px;justify-content:center}
       <input type="file" id="ocr-file" accept="image/*" style="display:none">
       <div class="about" id="ocr-status" style="margin-top:6px"></div>
     </div>
+
+    <!-- WT-42/2: kayıt açılınca şarj kaybı burada yazılı -->
+    <div class="scope-note" id="in-loss" style="display:none;margin:0 0 12px"></div>
 
     <div class="row2">
       <div>

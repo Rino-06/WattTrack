@@ -195,6 +195,21 @@ async function renderStats() {
       <span class="tv">${x.n} ${t('sessions')}</span></div>`).join('')
     : `<div class="tl" style="color:var(--faint)">${t('noData')}</div>`;
 
+  // WT-42/3: firma bazında ortalama kayıp. Yalnız kayipPct'i hesaplanmış
+  // (yani socB+socA+batarya üçü de olan) kayıtlar sayılıyor.
+  const kayipG = {};
+  all.filter(r => r.kayipPct != null).forEach(r => {
+    (kayipG[r.firma] ||= []).push(r.kayipPct);
+  });
+  const kayipTop = Object.entries(kayipG)
+    .map(([ad, xs]) => [ad, xs.reduce((s, x) => s + x, 0) / xs.length, xs.length])
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 6);
+  $('s-loss').innerHTML = kayipTop.length ? kayipTop.map(([ad, ort, n], i) =>
+    `<div class="tl"><span class="rank">${i + 1}</span>
+      <span class="tn">${esc(ad)}<div class="ts">${n} ${t('sessions')}</div></span>
+      <span class="tv" style="color:${Math.abs(ort) > KAYIP_UYARI ? 'var(--red)' : 'var(--muted)'}">${ort >= 0 ? '+' : '−'}%${fmtNum(Math.abs(ort), 1)}</span></div>`).join('')
+    : `<div class="tl" style="color:var(--faint)">${t('lossNeed')}</div>`;
+
   // WT-41/3: aylık tüketim trendi. Son 6 ay; atlanan kayıtlar hariç.
   // Kışın artışı görmek EV sahipleri için en değerli sinyallerden biri.
   const consAy = [];
@@ -238,7 +253,7 @@ function rowHTML(r, withDelete) {
     <div class="avatar" style="background:${colorFor(r.firma)}">${esc(r.firma.charAt(0).toUpperCase())}</div>
     <div class="mid">
       <div class="name">${esc(r.firma)}</div>
-      <div class="sub">${shortDate(r.tarih)} · ${r.kwh} kWh · ${r.tip || 'DC'}${r.mesafeKm ? ' · ' + Math.round(distDisp(r.mesafeKm)) + ' ' + S.unit : ''}${rowCons(r)}${r.atlanan ? ` · <span title="${esc(t('missedTag'))}" aria-label="${esc(t('missedTag'))}">⚠︎</span>` : ''}</div>
+      <div class="sub">${shortDate(r.tarih)} · ${r.kwh} kWh · ${r.tip || 'DC'}${r.mesafeKm ? ' · ' + Math.round(distDisp(r.mesafeKm)) + ' ' + S.unit : ''}${rowCons(r)}${r.atlanan ? ` · <span title="${esc(t('missedTag'))}" aria-label="${esc(t('missedTag'))}">⚠︎</span>` : ''}${r.kayipPct != null && Math.abs(r.kayipPct) > KAYIP_UYARI ? ` · <span title="${esc(t('lossWarn', {p: fmtNum(Math.abs(r.kayipPct), 1)}))}" aria-label="${esc(t('lossWarn', {p: fmtNum(Math.abs(r.kayipPct), 1)}))}">⚡</span>` : ''}</div>
     </div>
     <div class="right">
       <div class="amt">${r.free ? '<span class="free-tag">' + t('free') + '</span>' : fm(cs, fmtNum(r.odenen, 0))}</div>

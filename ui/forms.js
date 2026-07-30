@@ -251,6 +251,19 @@ async function openAdd(id) {
   // WT-39: her açılışta OCR işaretleri sıfırlanır; düğme yalnız özellik
   // açıksa ve vendor dosyaları varsa görünür.
   if (typeof ocrTemizle === 'function') { ocrTemizle(); ocrRowSync(); }
+  // WT-42/2: kaydın şarj kaybı (varsa) formun üstünde
+  const lossEl = $('in-loss');
+  lossEl.style.display = 'none';
+  if (r) {
+    const veh = r.aracId != null ? (await allVehicles()).find(v => v.id === r.aracId) : null;
+    const k = kayipHesapla(r, veh);
+    if (k) {
+      lossEl.textContent = t('lossLine', {
+        b: fmtNum(k.beklenen, 1), f: fmtNum(k.faturalanan, 1),
+        p: fmtNum(Math.abs(k.pct), 1), y: k.pct >= 0 ? t('lossHigh') : t('lossLow')});
+      lossEl.style.display = '';
+    }
+  }
 
   const selCode = r?.ulke || S.country;
   $('in-country').innerHTML = COUNTRIES.map(c =>
@@ -453,6 +466,12 @@ $('btn-save').addEventListener('click', async () => {
     aracId: parseInt($('in-vehicle').value) || null,
     not: $('in-note').value.trim()
   };
+  // WT-42: şarj kaybı kaydedilirken hesaplanıp saklanır (kayipPct).
+  {
+    const veh = rec.aracId != null ? (await allVehicles()).find(v => v.id === rec.aracId) : null;
+    const k = kayipHesapla(rec, veh);
+    rec.kayipPct = k ? k.pct : null;
+  }
   // WT-39/BÖLÜM 7-8: ekran görüntüsü kayda eklenir, Geçmiş'te ataç ikonuyla
   // açılır. Blob olarak saklanıyor (WT-39/1).
   if (ocrShotBlob) { rec.ekranGor = ocrShotBlob; rec.ocrSablon = ocrSablonSon || 'genel'; }

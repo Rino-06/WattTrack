@@ -45,7 +45,8 @@ vm.createContext(sandbox);
 // window ile aynı durum) — köprüyü açıkça kur.
 const KOPRU = ['pf', 'fmtNum', 'fmtInput', 'savingsOf', 'netFromGross', 'convOf',
   'amtB', 'savB', 'expB', 'isConv', 'periodFilter', 'prevPeriodFilter', 'inPeriod',
-  'odoDistOf', 'S', 'localISO', 'localMonth', 'monthKey', 'esc', 'checkNum'];
+  'odoDistOf', 'S', 'localISO', 'localMonth', 'monthKey', 'esc', 'checkNum',
+  'kayipHesapla', 'KAYIP_UYARI'];
 const kaynak = ['calc.js', 'ui/dashboard.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
   + `\n;Object.assign(globalThis, {${KOPRU.join(', ')}});`;
@@ -227,6 +228,45 @@ test('odoDistOf: eksik ya da geriye gitmiş sayaç 0 döner', () => {
 // gelen maddelerde doğuyor (ocrSayi -> WT-39, fiyatBul -> WT-43); çalışma
 // sırası dosyası da "WT-39'un OCR testleri buraya oturacak" diyor.
 // O maddeler yazıldığında testleri bu dosyaya eklenecek.
+// ============================================================
+// WT-42 · şarj kaybı
+// ============================================================
+const {kayipHesapla, KAYIP_UYARI} = sandbox;
+
+test('WT-42: beklenen kWh = batarya × SoC farkı / 100', () => {
+  // 60 kWh batarya, %20 -> %90 = %70 -> beklenen 42 kWh
+  const k = kayipHesapla({socB: 20, socA: 90, kwh: 45.5}, {batt: 60});
+  assert.equal(k.beklenen, 42);
+  assert.equal(k.faturalanan, 45.5);
+  assert.equal(k.pct, 8.3, '(45,5-42)/42 = %8,3 kayıp');
+});
+
+test('WT-42/6: SoC eksikse ya da batarya yoksa hesap YAPILMAZ', () => {
+  assert.equal(kayipHesapla({socB: 20, kwh: 40}, {batt: 60}), null);
+  assert.equal(kayipHesapla({socA: 90, kwh: 40}, {batt: 60}), null);
+  assert.equal(kayipHesapla({socB: 20, socA: 90, kwh: 40}, {}), null);
+  assert.equal(kayipHesapla({socB: 20, socA: 90, kwh: 40}, null), null);
+});
+
+test('WT-42: bozuk SoC (bitiş <= başlangıç) hesaba girmez', () => {
+  assert.equal(kayipHesapla({socB: 90, socA: 20, kwh: 40}, {batt: 60}), null);
+  assert.equal(kayipHesapla({socB: 50, socA: 50, kwh: 40}, {batt: 60}), null);
+});
+
+test('WT-42/5: batarya kapasitesi metriği doğrudan değiştiriyor', () => {
+  // WT-40/C3 ile 84 -> 75 düzeltilirse kayıp oranı da değişmeli
+  const a = kayipHesapla({socB: 10, socA: 60, kwh: 45}, {batt: 84});
+  const b = kayipHesapla({socB: 10, socA: 60, kwh: 45}, {batt: 75});
+  assert.ok(a.pct !== b.pct, `84->${a.pct} 75->${b.pct}`);
+  assert.equal(b.beklenen, 37.5);
+});
+
+test('WT-42/4: uyarı eşiği %20', () => {
+  assert.equal(KAYIP_UYARI, 20);
+  const k = kayipHesapla({socB: 0, socA: 50, kwh: 45}, {batt: 60});
+  assert.ok(Math.abs(k.pct) > KAYIP_UYARI, 'pct=' + k.pct);
+});
+
 test('fiyatBul henüz yok (WT-43 ile gelecek)', () => {
   assert.equal(sandbox.fiyatBul, undefined);
 });
