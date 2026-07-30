@@ -168,7 +168,7 @@ function evIssueURL(v) {
 function evSummaryHTML(v) {
   const yr = v.y1 ? (v.y1 + (v.y2 ? '–' + v.y2 : '+')) : '—';
   const visual = v.photo
-    ? `<img class="carphoto" src="${v.photo}" alt="${esc(t('vehiclePhoto'))}" role="button" tabindex="0">`
+    ? `<img class="carphoto" src="${photoSrc(v.photo)}" alt="${esc(t('vehiclePhoto'))}" role="button" tabindex="0">`
     : carSVG(v.body, colorFor(v.brand || v.ad || ''));
   // WT-40/A: "Mimari (400 V)" çipi kaldırıldı — son kullanıcı için anlamsız.
   // `arch` alanı veride DURUYOR (ileride lazım olabilir), yalnız gösterilmiyor;
@@ -209,26 +209,125 @@ document.addEventListener('click', e => {
   const img = e.target.closest?.('.ev-summary img.carphoto');
   if (img) openPhotoView(img);
 });
+// WT-39/7: Geçmiş'teki ataç ikonu kaydın ekran görüntüsünü tam ekran açar.
+// Blob önbelleğe alınmıyor (WT-49/5) — tek kayıt okunuyor.
+document.addEventListener('click', async e => {
+  const b = e.target.closest?.('[data-shot]');
+  if (!b) return;
+  e.stopPropagation();
+  const r = await db.sessions.get(+b.dataset.shot);
+  if (!r?.ekranGor) return;
+  $('photo-view-img').src = photoSrc(r.ekranGor);
+  $('photo-view-img').alt = t('ocrAttach');
+  overlayOpen('photo-view');
+});
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
   const img = e.target.closest?.('.ev-summary img.carphoto');
   if (img) { e.preventDefault(); openPhotoView(img); }
 });
 // fotoğrafı küçültüp dataURL yap (max 640px genişlik)
-function resizePhoto(file) {
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.onload = () => {
-      const w = Math.min(640, img.width);
-      const h = Math.round(img.height * w / img.width);
-      const cv = document.createElement('canvas');
-      cv.width = w; cv.height = h;
-      cv.getContext('2d').drawImage(img, 0, 0, w, h);
-      res(cv.toDataURL('image/jpeg', 0.82));
-    };
-    img.onerror = rej;
-    img.src = URL.createObjectURL(file);
-  });
+// WT-39/BÖLÜM 1 — üç kusur düzeltildi:
+//  1) EXIF yön bilgisi işlenmiyordu: iPhone'dan dikey çekilen görüntü yan
+//     yatıyordu ve bu OCR doğruluğunu tamamen bozuyor.
+//  2) URL.revokeObjectURL() hiç çağrılmıyordu (bellek sızıntısı).
+//  3) dataURL yerine Blob saklanıyor — IndexedDB Blob destekliyor ve base64'e
+//     göre ~%33 daha az yer kaplıyor.
+// Ayrıca saklama kopyası 640px değil 900px: OCR'da çözünürlük doğruluğu
+// belirliyor, OCR kopyası ise HİÇ küçültülmüyor (ocr.js tam çözünürlüğü alır).
+async function decodeOriented(file) {
+  // Tercih edilen yol: tarayıcı EXIF yönünü kendisi uygular
+  if (typeof createImageBitmap === 'function') {
+    try { return await createImageBitmap(file, {imageOrientation: 'from-image'}); }
+    catch { /* desteklenmiyor -> aşağıdaki yedek yol */ }
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    return await new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = rej;
+      img.src = url;
+    });
+  } finally { URL.revokeObjectURL(url); }   // hem başarıda hem hatada
+}
+// EXIF Orientation etiketini oku (createImageBitmap yoksa yedek yol)
+async function exifOrientation(file) {
+  try {
+    const buf = new DataView(await file.slice(0, 128 * 1024).arrayBuffer());
+    if (buf.getUint16(0) !== 0xFFD8) return 1;          // JPEG değil
+    let off = 2;
+    while (off + 4 < buf.byteLength) {
+      const isaret = buf.getUint16(off);
+      const boy = buf.getUint16(off + 2);
+      if (isaret === 0xFFE1) {                           // APP1 (Exif)
+        const tiff = off + 10;
+        const le = buf.getUint16(tiff) === 0x4949;
+        const ifd = tiff + buf.getUint32(tiff + 4, le);
+        const n = buf.getUint16(ifd, le);
+        for (let i = 0; i < n; i++) {
+          const e = ifd + 2 + i * 12;
+          if (buf.getUint16(e, le) === 0x0112) return buf.getUint16(e + 8, le);
+        }
+        return 1;
+      }
+      if ((isaret & 0xFF00) !== 0xFF00) break;
+      off += 2 + boy;
+    }
+  } catch { /* okunamadı */ }
+  return 1;
+}
+function drawOriented(src, w0, h0, ori, maxW) {
+  const donuk = ori >= 5 && ori <= 8;                    // 90° katları
+  const gw = donuk ? h0 : w0, gh = donuk ? w0 : h0;
+  const w = Math.min(maxW || gw, gw);
+  const h = Math.round(gh * w / gw);
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const cx = cv.getContext('2d');
+  const s = w / gw;
+  cx.save();
+  switch (ori) {
+    case 2: cx.translate(w, 0); cx.scale(-1, 1); break;
+    case 3: cx.translate(w, h); cx.rotate(Math.PI); break;
+    case 4: cx.translate(0, h); cx.scale(1, -1); break;
+    case 5: cx.rotate(Math.PI / 2); cx.scale(1, -1); break;
+    case 6: cx.rotate(Math.PI / 2); cx.translate(0, -w); break;
+    case 7: cx.rotate(Math.PI / 2); cx.translate(h, -w); cx.scale(-1, 1); break;
+    case 8: cx.rotate(-Math.PI / 2); cx.translate(-h, 0); break;
+  }
+  cx.drawImage(src, 0, 0, w0 * s, h0 * s);
+  cx.restore();
+  return cv;
+}
+// Saklama kopyası: 900px genişlik, JPEG 0.8, BLOB döner.
+async function resizePhoto(file, {maxW = 900, quality = 0.8} = {}) {
+  const src = await decodeOriented(file);
+  // createImageBitmap yönü zaten uyguladıysa ori=1 kabul edilir
+  const ori = (typeof ImageBitmap !== 'undefined' && src instanceof ImageBitmap)
+    ? 1 : await exifOrientation(file);
+  const cv = drawOriented(src, src.width, src.height, ori, maxW);
+  src.close?.();
+  return await new Promise(res => cv.toBlob(b => res(b), 'image/jpeg', quality));
+}
+// OCR kopyası: KÜÇÜLTME YOK, yalnız yön düzeltilir. Ön işleme ocr.js'te.
+async function fullResCanvas(file) {
+  const src = await decodeOriented(file);
+  const ori = (typeof ImageBitmap !== 'undefined' && src instanceof ImageBitmap)
+    ? 1 : await exifOrientation(file);
+  const cv = drawOriented(src, src.width, src.height, ori, null);
+  src.close?.();
+  return cv;
+}
+// Blob da dataURL de gösterilebilsin (eski kayıtlar dataURL taşıyor).
+// Nesne URL'leri Blob başına bir kez üretilip saklanıyor: araç sayısı çok
+// düşük, erken revoke etmek kırık görsele yol açardı.
+const _blobURL = new WeakMap();
+function photoSrc(p) {
+  if (!p) return '';
+  if (typeof p === 'string') return p;                   // eski dataURL
+  if (!_blobURL.has(p)) _blobURL.set(p, URL.createObjectURL(p));
+  return _blobURL.get(p);
 }
 
 // ---------- döviz kuru (frankfurter — ECB) ----------

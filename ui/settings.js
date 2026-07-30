@@ -320,3 +320,36 @@ $('btn-wipe').addEventListener('click', async () => {
   toast(t('wiped'));
   location.reload();
 });
+
+
+/* ---- WT-39/BÖLÜM 2: OCR anahtarı ---- */
+// Kütüphane uygulama paketinde değil; anahtar açılınca indirilir ve Cache
+// API'ye yazılır (çevrimdışı çalışsın). Kapatılınca worker terminate edilir
+// ve önbelleği silme seçeneği sunulur.
+async function ocrAyarSync() {
+  const varMi = await ocrVarMi();
+  $('set-ocr').checked = S.ocrOn === true && varMi;
+  $('set-ocr').disabled = !varMi;
+  if (!varMi) { $('ocr-size-note').textContent = t('ocrMissing'); return; }
+  const b = await ocrIndirmeBoyutu();
+  $('ocr-size-note').textContent = b
+    ? t('ocrSize', {mb: fmtNum(b / 1048576, 1)}) : t('ocrSizeUnknown');
+}
+$('set-ocr').addEventListener('change', async e => {
+  if (e.target.checked) {
+    const b = await ocrIndirmeBoyutu();
+    if (b && !confirm(t('ocrDownloadAsk', {mb: fmtNum(b / 1048576, 1)}))) {
+      e.target.checked = false;
+      return;
+    }
+    S.ocrOn = true;
+    await saveSetting('ocrOn', true);
+    await ocrOnbellekle();
+    toast(t('savedLocal'));
+  } else {
+    S.ocrOn = false;
+    await saveSetting('ocrOn', false);
+    await ocrKapat();
+    if (confirm(t('ocrClearCacheAsk'))) await ocrOnbellekSil();
+  }
+});

@@ -173,7 +173,7 @@ async function renderVehiclePage() {
     const sub = [v.batt ? `${v.trim || ''} · ${v.batt} kWh` : '', kmTxt, srcTxt]
       .filter(Boolean).join(' · ');
     const isDef = v.id === S.defaultVehicleId || (!S.defaultVehicleId && vehicles[0].id === v.id);
-    const thumb = v.photo ? `<img class="vthumb" src="${v.photo}" alt="">` : '';
+    const thumb = v.photo ? `<img class="vthumb" src="${photoSrc(v.photo)}" alt="">` : '';
     return `<li data-vid="${v.id}">
       <button class="star ${isDef ? 'on' : ''}" data-star="${v.id}" title="varsayılan">★</button>
       ${thumb}
@@ -376,15 +376,15 @@ $('car-photo').addEventListener('change', async e => {
   e.target.value = '';
   if (!file) return;
   try {
-    const dataUrl = await resizePhoto(file);
+    const foto = await resizePhoto(file);   // WT-39/1: artık Blob
     if (photoTargetVid) {
-      const w = await safeWrite(() => db.vehicles.update(photoTargetVid, {photo: dataUrl}));   // WT-12
+      const w = await safeWrite(() => db.vehicles.update(photoTargetVid, {photo: foto}));   // WT-12
       photoTargetVid = null;
       if (!w.ok) return;
       toast(t('photoAdded'));
       renderVehiclePage();
     } else if (carPick) {
-      carPick.photo = dataUrl;
+      carPick.photo = foto;
       $('car-summary').innerHTML = evSummaryHTML(carPick) + photoBtnHTML(true);
       bindPhotoBtn();
     }

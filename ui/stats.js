@@ -209,6 +209,8 @@ function rowHTML(r, withDelete) {
       <div class="amt">${r.free ? '<span class="free-tag">' + t('free') + '</span>' : fm(cs, fmtNum(r.odenen, 0))}</div>
       <div class="sav">${s > 0 ? '−' + fm(cs, fmtNum(s, 0)) : ''}</div>
     </div>
+    ${r.ekranGor ? `<button class="del" data-shot="${r.id}" title="${esc(t('ocrAttach'))}"
+      aria-label="${esc(t('ocrAttach'))}">📎</button>` : ''}
     ${withDelete ? `<button class="del" data-del="${r.id}">×</button>` : ''}
   </div>`;
 }
