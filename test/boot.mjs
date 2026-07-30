@@ -56,7 +56,7 @@ window.HTMLMediaElement.prototype.play = function () {
 // Dört dosya tarayıcıda AYNI global kapsamı paylaşıyor; ayrı ayrı eval
 // edilirse const/let bildirimleri birbirini görmez. Tek eval'de birleştir.
 // WT-50: uygulama kodu 12 klasik script'e bölündü; index.html'deki sıra.
-const APP_FILES = ['db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js',
+const APP_FILES = ['db.js', 'calc.js', 'i18n.js', 'ocr.js', 'ui/shell.js', 'ui/dashboard.js',
   'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js',
   'ui/settings.js', 'app.js'];
 const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]

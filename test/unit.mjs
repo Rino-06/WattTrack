@@ -227,7 +227,190 @@ test('odoDistOf: eksik ya da geriye gitmiş sayaç 0 döner', () => {
 // gelen maddelerde doğuyor (ocrSayi -> WT-39, fiyatBul -> WT-43); çalışma
 // sırası dosyası da "WT-39'un OCR testleri buraya oturacak" diyor.
 // O maddeler yazıldığında testleri bu dosyaya eklenecek.
-test('ocrSayi ve fiyatBul henüz yok (WT-39 / WT-43 ile gelecek)', () => {
-  assert.equal(sandbox.ocrSayi, undefined);
+test('fiyatBul henüz yok (WT-43 ile gelecek)', () => {
   assert.equal(sandbox.fiyatBul, undefined);
+});
+
+// ============================================================
+// WT-39 · OCR ayrıştırıcıları (ocr.js — tesseract GEREKMEZ)
+// ============================================================
+const ocrSb = {
+  KURALLAR: sandbox.KURALLAR ?? {kwh: {max: 300}, tutar: {max: 1000000},
+    indirim: {max: 1000000}},
+  console, document: {createElement: () => ({getContext: () => ({})})},
+  window: {}, caches: {}, fetch: () => Promise.reject(new Error('offline'))
+};
+vm.createContext(ocrSb);
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'ocr.js'), 'utf8')
+  + ';Object.assign(globalThis, {ocrSayi, ocrTarih, ocrSure, ocrSoc, ocrNorm,'
+  + ' ocrSatirlar, ocrAlanlar, ocrSablonSec});', ocrSb, {filename: 'ocr.js'});
+const {ocrSayi, ocrTarih, ocrSure, ocrSoc, ocrSatirlar, ocrAlanlar, ocrSablonSec} = ocrSb;
+
+test('WT-39/5 KABUL: "45.820 kWh" 45820 DEĞİL 45,82 okunur', () => {
+  // Türkçe kuralıyla okunsa 1000x hatalı veri üretirdi — maddenin asıl uyarısı
+  assert.equal(ocrSayi('45.820 kWh', 'kwh'), 45.82);
+  assert.equal(ocrSayi('49.023 kWh', 'kwh'), 49.02);
+});
+
+test('WT-39/5: şartnamedeki yedi sayı örneği', () => {
+  assert.equal(ocrSayi('4,52 kWh', 'kwh'), 4.52);
+  assert.equal(ocrSayi('22.57 kWh', 'kwh'), 22.57);
+  assert.equal(ocrSayi('503.56 TRY', 'tutar'), 503.56);
+  assert.equal(ocrSayi('58,65 ₺', 'tutar'), 58.65);
+  assert.equal(ocrSayi('685.83 TRY', 'tutar'), 685.83);
+});
+
+test('WT-39/5: üç basamaklı belirsizlik alan sınırıyla çözülür', () => {
+  // tutar alanında 1.234 -> binlik yorumu sınırın altında kaldığı için 1234
+  assert.equal(ocrSayi('1.234 TRY', 'tutar'), 1234);
+  // kWh alanında üç basamaklı ondalık yaygın -> her zaman ondalık
+  assert.equal(ocrSayi('12.500 kWh', 'kwh'), 12.5);
+});
+
+test('WT-39/5: okunamayan metin null döner (tahmin üretilmez)', () => {
+  assert.equal(ocrSayi('', 'kwh'), null);
+  assert.equal(ocrSayi('kWh', 'kwh'), null);
+  assert.equal(ocrSayi(null, 'kwh'), null);
+});
+
+test('WT-39/5: üç tarih formatı da destekleniyor', () => {
+  assert.equal(ocrTarih('30 01 2025 21:05:36'), '2025-01-30T21:05');
+  assert.equal(ocrTarih('15/05/2024 23:35:32'), '2024-05-15T23:35');
+  assert.equal(ocrTarih('13 Şub 2026 13:54'), '2026-02-13T13:54');
+});
+
+test('WT-39/5: 2000-2100 dışındaki yıl reddedilir', () => {
+  assert.equal(ocrTarih('01 01 1900 10:00'), null);
+  assert.equal(ocrTarih('01 01 2200 10:00'), null);
+  assert.equal(ocrTarih('bir şey yok'), null);
+});
+
+test('WT-39/5: süre örnekleri', () => {
+  assert.equal(ocrSure('1 saat 13 dakika 33 saniye'), 74);   // 33 sn yukarı yuvarlanır
+  assert.equal(ocrSure('48 dakika 39 saniye'), 49);
+  assert.equal(ocrSure('6 dk.'), 6);
+  assert.equal(ocrSure('17 dk.'), 17);
+  assert.equal(ocrSure('süre yok'), null);
+});
+
+// NOT: vm bağlamında üretilen nesnelerin prototipi farklı olduğu için
+// deepStrictEqual "same structure but not reference-equal" diyor; alanlar
+// tek tek karşılaştırılıyor.
+const soc = (m, bas, bit) => {
+  const v = ocrSoc(m);
+  assert.equal(v.bas, bas, m + ' bas');
+  assert.equal(v.bit, bit, m + ' bit');
+};
+test('WT-39/5: SoC — iki yüzde başlangıç/bitiş, tek yüzde yalnız biri', () => {
+  soc('%2  %90', 2, 90);
+  soc('% 12,00', 12, null);
+  soc('yok', null, null);
+});
+
+test('WT-39: Türkçe karakter normalizasyonu (OCR "Şarj"ı "Sarj" okuyor)', () => {
+  assert.equal(ocrSb.ocrNorm('Şarj Süresi'), 'sarj suresi');
+  assert.equal(ocrSb.ocrNorm('İstasyon ID'), 'istasyon id');
+});
+
+// --- Uzamsal alan çıkarımı: gerçek görüntü yerine sentetik kelime kutuları ---
+// Tesseract'ın verdiği biçimde {text, bbox, confidence} üretiliyor.
+let _y = 0;
+const satir = (metin, {conf = 95, x0 = 10, dy = 40} = {}) => {
+  _y += dy;
+  let x = x0;
+  return metin.split(' ').map(w => {
+    const kutu = {x0: x, y0: _y, x1: x + w.length * 12, y1: _y + 24};
+    x = kutu.x1 + 8;
+    return {text: w, bbox: kutu, confidence: conf};
+  });
+};
+const duzenA = () => { _y = 0; return [
+  ...satir('Highway Outlet DC-1'),
+  ...satir('Başlangıç Zamanı'), ...satir('30 01 2025 21:05:36'),
+  ...satir('Şarj Süresi'), ...satir('1 saat 13 dakika 33 saniye'),
+  ...satir('Kullanılan Enerji'), ...satir('45.820 kWh'),
+  ...satir('Başlangıç Bitiş'), ...satir('%2 %90'),
+  ...satir('Toplam Ödeme: 503.56 TRY')
+]; };
+const duzenB = () => { _y = 0; return [
+  ...satir('13 Şub 2026 13:54'),
+  ...satir('Başlangıç • % 12,00'),
+  ...satir('Bitiş • % 18,00'),
+  ...satir('Aktarılan Enerji • 4,52 kWh'),
+  ...satir('Şarj Süresi 6 dk.'),
+  ...satir('Blokaj Ücreti 0,00 ₺'),
+  ...satir('Şarj Hizmeti Ücreti 58,65 ₺'),
+  ...satir('İndirim 0,00 ₺'),
+  ...satir('Toplam Tutar 58,65 ₺')
+]; };
+const duzenC = () => { _y = 0; return [
+  ...satir('Şarj Noktası: Otomol (2), İstanbul'),
+  ...satir('Başlangıç Tarihi 15/05/2024 23:35:32'),
+  ...satir('Tüketilen Enerji: 22.57 kWh'),
+  ...satir('Batarya Doluluğu: % 80'),
+  ...satir('Toplam Tutar: 203.13 TL'),
+  ...satir('İstasyon ID: TR-IST-190'),
+  ...satir('Soket: #2, DC (CCS), 120 kW'),
+  ...satir('Şarj Süresi: 17 dk.')
+]; };
+
+test('WT-39/4: kelimeler satırlara doğru gruplanıyor', () => {
+  const s = ocrSatirlar(duzenA());
+  assert.ok(s.length >= 9, 'satır sayısı=' + s.length);
+  assert.equal(s[0].text, 'Highway Outlet DC-1');
+});
+
+test('WT-39/6: üç düzen de anahtar kelimeden tanınıyor', () => {
+  assert.equal(ocrSablonSec(ocrSatirlar(duzenA())), 'A');
+  assert.equal(ocrSablonSec(ocrSatirlar(duzenB())), 'B');
+  assert.equal(ocrSablonSec(ocrSatirlar(duzenC())), 'C');
+  assert.equal(ocrSablonSec(ocrSatirlar([])), null, 'tanınmazsa genel algoritma');
+});
+
+test('WT-39 KABUL — Düzen A (Astor/Trugo): enerji, net tutar, tarih doğru', () => {
+  const {alanlar: a} = ocrAlanlar(duzenA());
+  assert.equal(a.kwh, 45.82, 'değer etiketin ALTINDA');
+  assert.equal(a.odenen, 503.56);
+  assert.equal(a.tarih?.slice(0, 10), '2025-01-30');
+  assert.equal(a.dur, 74);
+  assert.equal(a.socB, 2);
+  assert.equal(a.socA, 90, 'tek satırda iki yüzde');
+});
+
+test('WT-39 KABUL — Düzen B (ZES): brüt/indirim/net üçlüsü', () => {
+  const {alanlar: a} = ocrAlanlar(duzenB());
+  assert.equal(a.kwh, 4.52, 'değer etiketin SAĞINDA');
+  assert.equal(a.odenen, 58.65);
+  assert.equal(a.brut, 58.65);
+  assert.equal(a.indirim, 0);
+  assert.equal(a.tarih?.slice(0, 10), '2026-02-13');
+  assert.equal(a.dur, 6);
+  assert.equal(a.socB, 12);
+  assert.equal(a.socA, 18);
+});
+
+test('WT-39 KABUL — Düzen C (Eşarj): yalnız bitiş SoC, soket ve istasyon', () => {
+  const {alanlar: a} = ocrAlanlar(duzenC());
+  assert.equal(a.kwh, 22.57);
+  assert.equal(a.odenen, 203.13);
+  assert.equal(a.tarih?.slice(0, 10), '2024-05-15');
+  assert.equal(a.dur, 17);
+  assert.equal(a.socA, 80, 'Batarya Doluluğu yalnız bitişi verir');
+  assert.equal(a.socB, undefined, 'başlangıç YOK — tahmin üretilmemeli');
+  assert.equal(a.soket, 'CCS');
+  assert.equal(a.istGuc, 120);
+  assert.equal(a.istasyonId, 'TR-IST-190');
+});
+
+test('WT-39/7: güven skoru alan bazında taşınıyor', () => {
+  _y = 0;
+  const k = [...satir('Kullanılan Enerji'), ...satir('45.820 kWh', {conf: 42})];
+  const {guven} = ocrAlanlar(k);
+  assert.ok(guven.kwh < 60, 'düşük güven kırmızı işaret için taşınmalı: ' + guven.kwh);
+});
+
+test('WT-39/4: bulunamayan alan BOŞ bırakılır (tahmin yok)', () => {
+  const {alanlar, sablon} = ocrAlanlar([]);
+  assert.equal(Object.keys(alanlar).length, 0, JSON.stringify(alanlar));
+  assert.equal(sablon, null);
 });

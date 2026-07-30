@@ -248,6 +248,9 @@ async function openAdd(id) {
   const r = id ? await db.sessions.get(id) : null;
   $('add-title').textContent = t(id ? 'editTitle' : 'addTitle');
   $('form-err').classList.remove('show');
+  // WT-39: her açılışta OCR işaretleri sıfırlanır; düğme yalnız özellik
+  // açıksa ve vendor dosyaları varsa görünür.
+  if (typeof ocrTemizle === 'function') { ocrTemizle(); ocrRowSync(); }
 
   const selCode = r?.ulke || S.country;
   $('in-country').innerHTML = COUNTRIES.map(c =>
@@ -450,6 +453,9 @@ $('btn-save').addEventListener('click', async () => {
     aracId: parseInt($('in-vehicle').value) || null,
     not: $('in-note').value.trim()
   };
+  // WT-39/BÖLÜM 7-8: ekran görüntüsü kayda eklenir, Geçmiş'te ataç ikonuyla
+  // açılır. Blob olarak saklanıyor (WT-39/1).
+  if (ocrShotBlob) { rec.ekranGor = ocrShotBlob; rec.ocrSablon = ocrSablonSon || 'genel'; }
   // WT-19: iki komşuya birden doğrulama — yazmadan ÖNCE
   if (odoKm != null) {
     const nb = await odoNeighbourCheck(rec.aracId, rec.tarih, odoKm, editingId);
@@ -500,4 +506,118 @@ $('btn-save').addEventListener('click', async () => {
     if (got) db.sessions.update(recId, {fxTable: got.rates, fxDate: got.date})
       .then(() => { if (screen === 'dashboard') renderDashboard(); });
   });
+});
+
+
+/* ---- WT-39/BÖLÜM 7: OCR doğrulama arayüzü ---- */
+// Kural: OCR formu DOLDURUR ama KAYDETMEZ. Doldurulan her alan sarı,
+// güveni %60 altındaki alan kırmızı işaretlenir; kullanıcı alana dokununca
+// işaret kalkar. Ekran görüntüsü formun üstünde küçük durur, dokununca
+// tam ekran açılır (WT-38'in photo-view overlay'i).
+const OCR_GUVEN_ESIK = 60;
+let ocrShotBlob = null;      // kaydedilecek ekran görüntüsü (Blob)
+let ocrSablonSon = null;
+
+function ocrIsaretle(id, dusuk) {
+  const el = $(id);
+  if (!el) return;
+  el.classList.add(dusuk ? 'ocr-low' : 'ocr-filled');
+  if (dusuk) el.setAttribute('title', t('ocrLowConf'));
+  const temizle = () => {
+    el.classList.remove('ocr-filled', 'ocr-low');
+    el.removeAttribute('title');
+  };
+  el.addEventListener('input', temizle, {once: true});
+  el.addEventListener('focus', temizle, {once: true});
+}
+function ocrTemizle() {
+  document.querySelectorAll('.ocr-filled, .ocr-low').forEach(el => {
+    el.classList.remove('ocr-filled', 'ocr-low');
+    el.removeAttribute('title');
+  });
+  $('ocr-bar').style.display = 'none';
+  $('ocr-shot-wrap').style.display = 'none';
+  ocrShotBlob = null;
+  ocrSablonSon = null;
+}
+// "Tümünü temizle": işaretleri ve otomatik doldurulan değerleri kaldır
+$('ocr-clear').addEventListener('click', () => {
+  document.querySelectorAll('.ocr-filled, .ocr-low').forEach(el => { el.value = ''; });
+  ocrTemizle();
+});
+
+// Alan -> form girdisi eşlemesi
+const OCR_ALAN_ID = {
+  kwh: 'in-kwh', odenen: 'in-amount', indirim: 'in-disc-val', dur: null,
+  socB: 'in-socb', socA: 'in-soca', tarih: 'in-date', loc: 'in-loc'
+};
+
+async function ocrFormaUygula(sonuc) {
+  const {alanlar: a, guven: g} = sonuc;
+  ocrSablonSon = sonuc.sablon;
+  const koy = (id, deger, alan) => {
+    if (deger == null || !$(id)) return;
+    $(id).value = deger;
+    ocrIsaretle(id, (g[alan] ?? 100) < OCR_GUVEN_ESIK);
+  };
+  if (a.tarih) koy('in-date', a.tarih.slice(0, 10), 'tarih');
+  if (a.kwh != null) koy('in-kwh', fmtInput(a.kwh, 2), 'kwh');
+  if (a.odenen != null) koy('in-amount', fmtInput(a.odenen, 2), 'odenen');
+  // Düzen B brüt/indirim/net üçlüsünü birebir veriyor
+  if (a.indirim != null && a.indirim > 0) {
+    // indirim tipi "tutar" (segment kontrolü)
+    $('in-disc-type').querySelectorAll('button').forEach(b =>
+      b.classList.toggle('sel', b.dataset.v === 'amount'));
+    koy('in-disc-val', fmtInput(a.indirim, 2), 'indirim');
+  }
+  if (a.socB != null) koy('in-socb', String(a.socB), 'socB');
+  if (a.socA != null) koy('in-soca', String(a.socA), 'socA');
+  if (a.dur != null) {
+    if ($('in-dur-h')) { $('in-dur-h').value = Math.floor(a.dur / 60); ocrIsaretle('in-dur-h', false); }
+    if ($('in-dur-m')) { $('in-dur-m').value = a.dur % 60; ocrIsaretle('in-dur-m', false); }
+  }
+  if (a.loc) koy('in-loc', a.loc, 'loc');
+  if (a.tip && $('in-tip')) {
+    $('in-tip').querySelectorAll('button').forEach(b =>
+      b.classList.toggle('sel', b.dataset.v === a.tip));
+  }
+  // Blokaj ücreti NETE EKLENMEZ; nota yazılır
+  if (a.blokaj) {
+    const not = $('in-note');
+    if (not) { not.value = (not.value ? not.value + ' · ' : '') + t('ocrBlokaj', {v: fmtNum(a.blokaj, 2)}); }
+  }
+  // Gelişmiş alanlar doluysa bloğu aç ki kullanıcı görebilsin
+  if (a.socB != null || a.socA != null || a.dur != null)
+    $('adv-fields').classList.add('open');
+  $('ocr-bar').style.display = 'flex';
+}
+
+// Ayarlar'daki anahtar açıksa ve vendor dosyaları varsa görünür
+async function ocrRowSync() {
+  const acik = S.ocrOn === true && await ocrVarMi();
+  $('ocr-row').style.display = acik ? '' : 'none';
+}
+$('btn-ocr').addEventListener('click', () => $('ocr-file').click());
+$('ocr-file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  $('ocr-status').textContent = t('ocrWorking');
+  try {
+    const sonuc = await ocrOku(file);
+    ocrShotBlob = await resizePhoto(file);       // kayda eklenecek kopya
+    $('ocr-shot').src = photoSrc(ocrShotBlob);
+    $('ocr-shot-wrap').style.display = '';
+    await ocrFormaUygula(sonuc);
+    $('ocr-status').textContent = sonuc.sablon
+      ? t('ocrTemplate', {s: sonuc.sablon}) : t('ocrNoTemplate');
+  } catch (err) {
+    console.error('[WattTrack] OCR:', err);
+    $('ocr-status').textContent = t('ocrFailed');
+  }
+});
+// Küçük görüntüye dokununca tam ekran (WT-38'in overlay'i)
+$('ocr-shot').addEventListener('click', () => openPhotoView($('ocr-shot')));
+$('ocr-shot').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPhotoView($('ocr-shot')); }
 });

@@ -62,6 +62,19 @@ db.version(4).stores({
   settings: 'key',
   expenses: '++id, tarih, tur, aracId'
 });
+// WT-39/BÖLÜM 8: OCR'dan gelen isteğe bağlı alanlar. İNDEKS EKLENMEDİ —
+// hiçbiri sorgulanmıyor, yalnız kayıtla birlikte saklanıyor:
+//   soket ('CCS'|'Type2'|'CHAdeMO'|'Tesla') · istGuc (kW) · istasyonId
+//   ekranGor (Blob) · ocrSablon (hangi düzenle okundu)
+// upgrade GÖVDESİ BOŞ ve öyle kalmalı: mevcut kayıtların hiçbiri yeniden
+// yazılmıyor, bu yüzden bu sürüm geçişi geri alınabilir (v3/v4'ün aksine).
+db.version(5).stores({
+  sessions: '++id, tarih, firma, tip, aracId, mekan, odo',
+  vehicles: '++id, ad',
+  settings: 'key',
+  expenses: '++id, tarih, tur, aracId'
+}).upgrade(() => { /* yalnız isteğe bağlı alanlar eklendi, veri dokunulmadı */ });
+
 const EXP_TYPES = ['tax', 'insurance', 'maintenance', 'tire', 'inspection',
                    'repair', 'parking', 'equipment', 'other'];
 const EXP_ICON = {tax: '🧾', insurance: '🛡️', maintenance: '🔧', tire: '🛞',
