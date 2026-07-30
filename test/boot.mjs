@@ -661,6 +661,102 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   }
 }
 
+// --- WT-31: 12px alt sınırı ve kontrast oranları (statik CSS denetimi) ---
+// Maddede kabul kriteri yazılmadığı için ölçülebilir olanı burada sabitliyoruz:
+// WCAG 1.4.3 (metin 4.5:1), 1.4.11 (denetim sınırı / grafik nesne 3:1).
+{
+  const doc = window.document;
+  const css = [...doc.querySelectorAll('style')].map(x => x.textContent).join('\n');
+  let flat = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  for (let i = 0; i < 20; i++) {
+    const m = /@media[^{]*\{/.exec(flat);
+    if (!m) break;
+    let depth = 1, j = m.index + m[0].length;
+    while (j < flat.length && depth > 0) {
+      if (flat[j] === '{') depth++;
+      else if (flat[j] === '}') depth--;
+      j++;
+    }
+    flat = flat.slice(0, m.index) + flat.slice(m.index + m[0].length, j - 1) + flat.slice(j);
+  }
+  const rules = [];
+  for (const m of flat.matchAll(/([^{}]+)\{([^}]*)\}/g))
+    rules.push([m[1].split(',').map(x => x.trim().replace(/\s+/g, ' ')), m[2]]);
+  const decl = sel => rules.filter(([sels]) => sels.includes(sel))
+    .map(([, body]) => body).join(';');
+  const size = sel => {
+    const m = [...decl(sel).matchAll(/font-size\s*:\s*(\d+(?:\.\d+)?)px/g)];
+    return m.length ? parseFloat(m[m.length - 1][1]) : null;
+  };
+
+  // 1) Maddede adı geçen dört öğe en az 12px olmalı
+  const tooSmall = [];
+  for (const sel of ['.tile .k', '.tile .yd', '.crow .sav', '.about']) {
+    const s = size(sel);
+    if (s == null || s < 12) tooSmall.push(`${sel}=${s}`);
+  }
+  // .about'un satır içi style ile ezildiği yerler de dahil
+  for (const el of doc.querySelectorAll('.about[style*="font-size"]')) {
+    const s = parseFloat(/font-size:\s*(\d+(?:\.\d+)?)px/.exec(el.getAttribute('style'))[1]);
+    if (s < 12) tooSmall.push(`.about#${el.id || '?'}=${s}`);
+  }
+  check('WT-31/1: .tile .k, .tile .yd, .crow .sav ve .about en az 12px',
+    tooSmall.length === 0, tooSmall.join(' | '));
+
+  // 2-3) Renk simgeleri ve kontrast
+  const token = (theme, name) => {
+    const body = decl(theme === 'dark' ? '[data-theme="dark"]' : ':root');
+    const m = [...body.matchAll(new RegExp('--' + name + '\\s*:\\s*(#[0-9a-fA-F]{6})', 'g'))];
+    return m.length ? m[m.length - 1][1] : null;
+  };
+  const lum = h => {
+    const c = [0, 2, 4].map(i => parseInt(h.slice(1 + i, 3 + i), 16) / 255)
+      .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const cr = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  };
+  const r2 = v => Math.round(v * 100) / 100;
+
+  for (const theme of ['light', 'dark']) {
+    const card = token(theme, 'card'), bg = token(theme, 'bg');
+    // .tile .v 16px normal metin -> AA 4.5:1
+    const bad = [];
+    for (const n of ['red', 'blue', 'accent', 'accent-dark']) {
+      const v = cr(token(theme, n), card);
+      if (v < 4.5) bad.push(`--${n}=${token(theme, n)} ${r2(v)}`);
+    }
+    check(`WT-31/2: ${theme} temada kutu değer renkleri kart üzerinde 4.5:1`,
+      bad.length === 0, bad.join(' | '));
+
+    // Kaydet butonu ve seçili segment: accent zemin üzerindeki metin
+    const btnText = theme === 'dark'
+      ? (/\[data-theme="dark"\] \.save-btn[^{]*\{[^}]*color\s*:\s*(#[0-9a-fA-F]{6})/
+        .exec(flat) || [])[1]
+      : '#ffffff';
+    const onAccent = cr(btnText || '#ffffff', token(theme, 'accent'));
+    check(`WT-31/2: ${theme} temada Kaydet butonu metni 4.5:1`,
+      onAccent >= 4.5, `${btnText} / ${token(theme, 'accent')} = ${r2(onAccent)}`);
+
+    // Denetim çerçevesi hem kart hem sayfa zemininde 3:1 (WCAG 1.4.11)
+    const bC = cr(token(theme, 'border'), card), bB = cr(token(theme, 'border'), bg);
+    check(`WT-31/3: ${theme} temada --border kart ve zemine karşı 3:1`,
+      bC >= 3 && bB >= 3,
+      `${token(theme, 'border')}: kart=${r2(bC)} zemin=${r2(bB)}`);
+
+    // Oluk/dolgu ayrımı: ilerleme ve anahtar dolgusu oluktan 3:1 ayrılmalı
+    const fill = cr(token(theme, 'accent'), token(theme, 'track'));
+    check(`WT-31/3: ${theme} temada dolgu (--accent) oluktan (--track) 3:1 ayrı`,
+      fill >= 3, `${r2(fill)}`);
+
+    // Anahtarın kendi sınırı (WT-31 halkası) zeminden ayrılıyor mu?
+    check(`WT-31/3: ${theme} temada anahtarın sınır halkası var`,
+      /\.sw i\{[^}]*box-shadow\s*:\s*inset[^}]*var\(--border\)/.test(flat));
+  }
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
