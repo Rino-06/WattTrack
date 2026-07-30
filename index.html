@@ -1247,6 +1247,21 @@ nav button{min-height:48px;justify-content:center}
 
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
+<!-- WT-50: app.js tek dosyaydı (3700 satır). Klasik script olarak bölündü —
+     modül sistemi KULLANILMADI, TWA ve file:// protokolünde sorun çıkarıyor.
+     SIRA ÖNEMLİ: veri katmanı -> hesap -> çeviri -> ortak arayüz -> sayfalar
+     -> başlangıç. app.js artık yalnız yönlendirme ve init. -->
+<script src="db.js"></script>
+<script src="calc.js"></script>
+<script src="i18n.js"></script>
+<script src="ui/shell.js"></script>
+<script src="ui/dashboard.js"></script>
+<script src="ui/stats.js"></script>
+<script src="ui/history.js"></script>
+<script src="ui/compare.js"></script>
+<script src="ui/vehicle.js"></script>
+<script src="ui/forms.js"></script>
+<script src="ui/settings.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -5,6 +5,17 @@ const ASSETS = [
   './',
   './index.html',
   './version.js',
+  './db.js',
+  './calc.js',
+  './i18n.js',
+  './ui/shell.js',
+  './ui/dashboard.js',
+  './ui/stats.js',
+  './ui/history.js',
+  './ui/compare.js',
+  './ui/vehicle.js',
+  './ui/forms.js',
+  './ui/settings.js',
   './app.js',
   './manifest.json',
   './icon-192.png',
@@ -27,8 +38,10 @@ const OPTIONAL_ASSETS = ['./splash.mp4', './splash.webm', './splash-poster.png']
 // WT-11: uygulamanın kendi kabuğu network-first olmalı. Cache-first olduğu
 // sürece yeni sürüm ancak SW değişince geliyordu. Görseller ve dexie.min.js
 // değişmediği için cache-first kalabilir.
-const NETWORK_FIRST = ['./', './index.html', './app.js', './evdata.js',
-                       './version.js', './manifest.json'];
+// WT-50: uygulama kodu artık 12 dosya; hepsi network-first olmalı ki
+// yeni sürüm service worker değişmeden de gelsin.
+const NETWORK_FIRST = ['./', './index.html', './evdata.js', './version.js',
+                       './manifest.json', './db.js', './calc.js', './i18n.js', './ui/shell.js', './ui/dashboard.js', './ui/stats.js', './ui/history.js', './ui/compare.js', './ui/vehicle.js', './ui/forms.js', './ui/settings.js', './app.js'];
 const NET_TIMEOUT = 3000;
 
 self.addEventListener('install', e => {

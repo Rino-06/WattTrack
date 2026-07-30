@@ -55,7 +55,11 @@ window.HTMLMediaElement.prototype.play = function () {
 
 // Dört dosya tarayıcıda AYNI global kapsamı paylaşıyor; ayrı ayrı eval
 // edilirse const/let bildirimleri birbirini görmez. Tek eval'de birleştir.
-const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
+// WT-50: uygulama kodu 12 klasik script'e bölündü; index.html'deki sıra.
+const APP_FILES = ['db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js',
+  'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js',
+  'ui/settings.js', 'app.js'];
+const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
   .map(f => `/* ==== ${f} ==== */\n` + fs.readFileSync(path.join(ROOT, f), 'utf8'))
   .join('\n;\n')
   // const/let bildirimleri window'a iliştirilmez; teste açmak için köprü kur
@@ -1013,6 +1017,39 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     tanimsiz.length === 0, tanimsiz.join(',') || kullanilan.size + ' anahtar');
 }
 
+// --- WT-50: dosya yapısı bölündü mü? ---
+{
+  const oku = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  check('WT-50/8: index.html on iki dosyayı da sırasıyla yüklüyor', (() => {
+    const sira = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1]);
+    const i = sira.indexOf(APP_FILES[0]);
+    return i >= 0 && APP_FILES.every((f, k) => sira[i + k] === f);
+  })(), [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1]).join(' '));
+  const sw = oku('sw.js');
+  check('WT-50/8: sw.js ASSETS listesi güncel',
+    APP_FILES.every(f => sw.includes(`'./${f}'`)),
+    APP_FILES.filter(f => !sw.includes(`'./${f}'`)).join(',') || 'tamam');
+  check('WT-50: modül sistemi KULLANILMADI (TWA/file:// için)',
+    APP_FILES.every(f => !/^\s*(import|export)\s/m.test(oku(f))),
+    APP_FILES.filter(f => /^\s*(import|export)\s/m.test(oku(f))).join(','));
+  check('WT-50/6: app.js yalnız başlangıç ve yönlendirme (200 satırın altında)',
+    oku('app.js').split('\n').length < 200 && /function showScreen/.test(oku('app.js'))
+      && /function init/.test(oku('app.js')),
+    'app.js=' + oku('app.js').split('\n').length + ' satır');
+  check('WT-50/1: i18n.js sözlüğü ve applyI18n\'i taşıyor',
+    /const T = \{/.test(oku('i18n.js')) && /function applyI18n/.test(oku('i18n.js')));
+  check('WT-50/2: db.js şema, migration ve safeWrite taşıyor',
+    /db\.version\(4\)/.test(oku('db.js')) && /async function safeWrite/.test(oku('db.js')));
+  check('WT-50/3: calc.js saf hesap fonksiyonlarını taşıyor',
+    ['function pf(', 'function fmtNum(', 'function savingsOf(', 'function convOf(',
+     'function tureMesafe('].every(x => oku('calc.js').includes(x)));
+  check('WT-50/7: kök dizinde i18n-dictionary.js kopyası yok',
+    !fs.existsSync(path.join(ROOT, 'i18n-dictionary.js')));
+  check('WT-50: hiçbir dosya boş kalmadı',
+    APP_FILES.every(f => oku(f).split('\n').length > 20),
+    APP_FILES.map(f => f + '=' + oku(f).split('\n').length).join(' '));
+}
+
 // --- WT-37: video splash ve yedek yolları ---
 {
   const doc = window.document;
@@ -1033,7 +1070,8 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     !/splashLogoIn|splashWordIn/.test(html));
   check('WT-37/2: statik logo yedek olarak DOM\'da tutuldu',
     /class="splash-static"/.test(html) && /class="splash-logo"/.test(html));
-  const js = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  // WT-50 sonrası kod 12 dosyaya dağıldı; kaynak sözleşmeleri hepsinde aransın
+  const js = APP_FILES.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
   check('WT-37/3: sabit SPLASH_MIN_MS beklemesi kaldırıldı',
     !/(const|let|var)\s+SPLASH_MIN_MS/.test(js));
   check('WT-37/3: güvenlik ağı 2500 ms',

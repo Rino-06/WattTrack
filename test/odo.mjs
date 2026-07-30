@@ -41,7 +41,7 @@ w.HTMLMediaElement.prototype.play = () => Promise.reject(new Error('autoplay blo
 w.confirm = () => true;
 w.alert = () => {};
 
-w.eval(['version.js', 'dexie.min.js', 'evdata.js', 'app.js']
+w.eval(['version.js', 'dexie.min.js', 'evdata.js', 'db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js', 'app.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
   + `\n;window.__app = {db, S, t, openAdd, tureMesafe, odoNowOf, odoNeighbourCheck,
        saveSetting, renderVehiclePage, renderDashboard, looksLikeMissedCharge,
