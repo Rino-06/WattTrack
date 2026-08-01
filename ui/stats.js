@@ -246,13 +246,20 @@ function rowCons(r) {
   if (r.atlanan || !(r.mesafeKm > 0) || !(r.kwh > 0)) return '';
   return ' · ' + fmtNum(r.kwh / r.mesafeKm * 100, 1) + ' kWh/100 ' + S.unit;
 }
+// WT-46/3: çok araçlı kullanıcıda satır hangi araca ait olduğunu söylemeli.
+// VEH_ADI'yi ui/history.js dolduruyor; tek araçlı kullanıcıda null kalır ve
+// rozet hiç çizilmez (tek araçta zaten bilgi taşımıyor, yer kaplıyor).
+function vehChip(r) {
+  const ad = VEH_ADI && r.aracId != null ? VEH_ADI[r.aracId] : null;
+  return ad ? ` <span class="chip veh-chip">${esc(ad)}</span>` : '';
+}
 function rowHTML(r, withDelete) {
   const s = savingsOf(r);
   const cs = symOf(r.cur || S.currency);
   return `<div class="crow" data-id="${r.id}">
     <div class="avatar" style="background:${colorFor(r.firma)}">${esc(r.firma.charAt(0).toUpperCase())}</div>
     <div class="mid">
-      <div class="name">${esc(r.firma)}</div>
+      <div class="name">${esc(r.firma)}${vehChip(r)}</div>
       <div class="sub">${shortDate(r.tarih)} · ${r.kwh} kWh · ${r.tip || 'DC'}${r.mesafeKm ? ' · ' + Math.round(distDisp(r.mesafeKm)) + ' ' + S.unit : ''}${rowCons(r)}${r.atlanan ? ` · <span title="${esc(t('missedTag'))}" aria-label="${esc(t('missedTag'))}">⚠︎</span>` : ''}${r.kayipPct != null && Math.abs(r.kayipPct) > KAYIP_UYARI ? ` · <span title="${esc(t('lossWarn', {p: fmtNum(Math.abs(r.kayipPct), 1)}))}" aria-label="${esc(t('lossWarn', {p: fmtNum(Math.abs(r.kayipPct), 1)}))}">⚡</span>` : ''}</div>
     </div>
     <div class="right">
@@ -262,5 +269,7 @@ function rowHTML(r, withDelete) {
     ${r.ekranGor ? `<button class="del" data-shot="${r.id}" title="${esc(t('ocrAttach'))}"
       aria-label="${esc(t('ocrAttach'))}">📎</button>` : ''}
     ${withDelete ? `<button class="del" data-del="${r.id}">×</button>` : ''}
+    <!-- WT-46/5: satıra dokununca düzenleme açıldığını göster -->
+    <span class="crow-chev" aria-hidden="true">›</span>
   </div>`;
 }

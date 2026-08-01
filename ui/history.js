@@ -10,6 +10,11 @@
 // ============================================================
 // GEÇMİŞ
 // ============================================================
+// WT-46/3: çok araç varsa satırda hangi araç olduğu belli olmalı. Satırı
+// çizen rowHTML() ui/stats.js'te ve SENKRON; ad tablosunu buradaki (async)
+// renderHistory dolduruyor, bu yüzden dosya düzeyinde duruyor.
+// Tek araçlı kullanıcıda null bırakılıyor — rozet o zaman bilgi taşımıyor.
+let VEH_ADI = null;
 async function renderHistory() {
   const all = await allSessions();
   const vehicles = await allVehicles();
@@ -44,6 +49,10 @@ async function renderHistory() {
   // WT-04/6: uyarı şeridindeki "Göster" yalnız bozuk kayıtları listeler
   const badOnly = S.histBadOnly;
   S.histBadOnly = null;
+  // WT-46/1: serbest metin araması — firma, lokasyon, not, banka
+  const q = ($('h-search').value || '').toLocaleLowerCase('tr').trim();
+  const arar = r => !q || [r.firma, r.loc, r.not, r.banka]
+    .some(x => (x || '').toLocaleLowerCase('tr').includes(q));
   const rows = badOnly
     ? sorted.filter(r => badOnly.includes(r.id))   // diğer filtreleri atla
     : sorted.filter(r =>
@@ -52,7 +61,20 @@ async function renderHistory() {
         (!vt || (vt === 'free' ? r.free : r.tip === vt)) &&
         (!vv || String(r.aracId) === vv) &&
         (!vb || r.banka === vb) &&
-        (!vl || r.loc === vl));
+        (!vl || r.loc === vl) && arar(r));
+
+  // WT-46/2: filtrelenmiş sonucun TOPLAMI — maddeye göre asıl istenen bu
+  const cv = rows.filter(isConv);
+  const tut = cv.reduce((s, r) => s + amtB(r), 0);
+  const kwhT = cv.reduce((s, r) => s + r.kwh, 0);
+  $('h-summary').textContent = rows.length
+    ? [rows.length + ' ' + t('sessions'), money(tut), fmtNum(kwhT, 0) + ' kWh',
+       kwhT > 0 ? t('avgPerKwhShort', {v: fm(sym(), fmtNum(tut / kwhT, 2))}) : null]
+      .filter(Boolean).join(' · ')
+    : '';
+  // Çok araçlı kullanıcıda satırdaki rozet için ad tablosu (WT-46/3)
+  VEH_ADI = vehicles.length > 1
+    ? Object.fromEntries(vehicles.map(v => [v.id, vehName(v)])) : null;
   if (badOnly) { fy.value = ''; ff.value = ''; ft.value = ''; fv.value = ''; fb.value = ''; fl.value = ''; }
 
   const box = $('h-groups');
@@ -90,7 +112,14 @@ async function renderHistory() {
       // WT-19: silme de bir yazmadır — ortadaki bir odo kaydı silinince
   // haleflerinin mesafesi yeniden hesaplanmalı
   if (delRec) await tureMesafe(delRec.aracId ?? null);
-      toast(t('deleted'));
+      // WT-46/4: silme geri alınabilir (5 sn). Kayıt aynı id ile geri konuyor
+      // ki türetilmiş mesafe zinciri de eski hâline dönsün.
+      toastUndo(t('deleted'), async () => {
+        if (!delRec) return;
+        await db.sessions.add(delRec);
+        await tureMesafe(delRec.aracId ?? null);
+        renderHistory(); renderDashboard();
+      });
       renderHistory();
     }));
   box.querySelectorAll('.crow').forEach(el =>
@@ -98,3 +127,16 @@ async function renderHistory() {
 }
 ['f-year','f-firm','f-type','f-veh','f-bank','f-loc'].forEach(id => $(id).addEventListener('change', renderHistory));
 let histYear = null;
+
+
+/* ---- WT-46: arama ve filtre paneli ---- */
+let _araTimer = null;
+$('h-search').addEventListener('input', () => {
+  clearTimeout(_araTimer);
+  _araTimer = setTimeout(() => renderHistory(), 200);
+});
+$('h-filter-btn').addEventListener('click', () => {
+  const box = $('h-filters'), acik = box.style.display === 'none';
+  box.style.display = acik ? '' : 'none';
+  $('h-filter-btn').setAttribute('aria-expanded', String(acik));
+});
