@@ -649,16 +649,22 @@ async function ocrRowSync() {
   $('ocr-row').style.display = acik ? '' : 'none';
 }
 $('btn-ocr').addEventListener('click', () => $('ocr-file').click());
-$('ocr-file').addEventListener('change', async e => {
-  const file = e.target.files[0];
-  e.target.value = '';
+// WT-53: paylaşım yolu da buraya giriyor, o yüzden ayrı fonksiyon.
+// Ekran görüntüsü OCR'dan ÖNCE iliştiriliyor: OCR başarısız olsa bile
+// kullanıcının paylaştığı görsel kayda eklensin (eskiden OCR hata verince
+// görsel de kayboluyordu).
+async function ocrDosyaIsle(file) {
   if (!file) return;
   $('ocr-status').textContent = t('ocrWorking');
   try {
-    const sonuc = await ocrOku(file);
     ocrShotBlob = await resizePhoto(file);       // kayda eklenecek kopya
     $('ocr-shot').src = photoSrc(ocrShotBlob);
     $('ocr-shot-wrap').style.display = '';
+  } catch (err) {
+    console.error('[WattTrack] görsel:', err);
+  }
+  try {
+    const sonuc = await ocrOku(file);
     await ocrFormaUygula(sonuc);
     $('ocr-status').textContent = sonuc.sablon
       ? t('ocrTemplate', {s: sonuc.sablon}) : t('ocrNoTemplate');
@@ -666,6 +672,11 @@ $('ocr-file').addEventListener('change', async e => {
     console.error('[WattTrack] OCR:', err);
     $('ocr-status').textContent = t('ocrFailed');
   }
+}
+$('ocr-file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  await ocrDosyaIsle(file);
 });
 // Küçük görüntüye dokununca tam ekran (WT-38'in overlay'i)
 $('ocr-shot').addEventListener('click', () => openPhotoView($('ocr-shot')));

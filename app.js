@@ -80,7 +80,20 @@ const SETTING_KEYS = ['country','currency','unit','lang','advOpen','defaultVehic
   renderDashboard();
   // PWA kısayolları (?action=add | ?page=history/compare/settings)
   const q = new URLSearchParams(location.search);
-  if (S.onboarded && (q.get('share_text') || q.get('share_title'))) {
+  // WT-53: paylaşılan EKRAN GÖRÜNTÜSÜ (share_target artık POST + dosya).
+  // Service worker dosyayı Cache API'ye bırakıp buraya GET ile yönlendiriyor.
+  if (S.onboarded && q.get('share') === 'shot') {
+    await openAdd();
+    // Splash'ı BEKLETME: OCR saniyeler sürebilir, ocrDosyaIsle kendi
+    // "Okunuyor…" durumunu zaten yazıyor. Fonksiyonun tamamı try/catch
+    // içinde, o yüzden await'siz çağrı sahipsiz reddetme üretmez.
+    paylasilanGorseliAl();
+  }
+  // Paylaşım ONBOARDING sırasında geldiyse form açılmıyor ama kutu yine de
+  // BOŞALTILMALI: sürümden bağımsız olduğu için kendiliğinden temizlenmez,
+  // aylar sonraki ilk paylaşımda bayat görsel olarak geri gelirdi.
+  else if (!S.onboarded && q.get('share') === 'shot') paylasimKutusunuBosalt();
+  else if (S.onboarded && (q.get('share') === 'text' || q.get('share_text') || q.get('share_title'))) {
     await openAdd();
     $('in-note').value = [q.get('share_title'), q.get('share_text'), q.get('share_url')]
       .filter(Boolean).join(' ').slice(0, 200);
@@ -93,6 +106,35 @@ const SETTING_KEYS = ['country','currency','unit','lang','advOpen','defaultVehic
   syncEmptyStates();   // WT-36
   hideSplash();
 })();
+
+// WT-53/WT-39: paylaşılan ekran görüntüsünü service worker'ın bıraktığı
+// kutudan al ve OCR yoluna ver. Kutu okunduktan sonra HEMEN boşaltılıyor —
+// yoksa sonraki her açılışta aynı görsel yeniden yapışırdı.
+async function paylasimKutusunuBosalt() {
+  if (!('caches' in window)) return null;
+  try {
+    const c = await caches.open('watttrack-share');
+    const res = await c.match('./__paylasilan__');
+    await c.delete('./__paylasilan__');
+    return res || null;
+  } catch (err) {
+    console.error('[WattTrack] paylaşım:', err);
+    return null;
+  }
+}
+async function paylasilanGorseliAl() {
+  try {
+    const res = await paylasimKutusunuBosalt();
+    if (!res) return;
+    const blob = await res.blob();
+    if (!blob.size) return;
+    $('ocr-row').style.display = '';   // OCR kapalı olsa da görsel iliştirilecek
+    await ocrDosyaIsle(new File([blob], 'paylasilan.jpg',
+      {type: blob.type || 'image/jpeg'}));
+  } catch (err) {
+    console.error('[WattTrack] paylaşım:', err);
+  }
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

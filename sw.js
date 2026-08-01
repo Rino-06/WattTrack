@@ -1,6 +1,10 @@
 /* WattTrack service worker — çevrimdışı çalışma */
 importScripts('./version.js');   // WT-52: sürüm tek kaynaktan
 const CACHE = WT_CACHE;
+// WT-53: paylaşılan ekran görüntüsünün bırakıldığı kutu. Sürüm adından
+// BAĞIMSIZ — activate temizliği bunu silmemeli (aşağıda muaf tutuluyor).
+const SHARE_CACHE = 'watttrack-share';
+const SHARE_URL = './__paylasilan__';
 const ASSETS = [
   './',
   './index.html',
@@ -54,7 +58,10 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      // WT-53: paylaşım kutusu sürümden bağımsız — silinirse güncelleme
+      // sırasında paylaşılan ekran görüntüsü kaybolur.
+      Promise.all(keys.filter(k => k !== CACHE && k !== SHARE_CACHE)
+        .map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
@@ -95,9 +102,39 @@ function cacheFirst(req) {
   );
 }
 
+// WT-53: share_target artık POST + multipart — kullanıcı şarj uygulamasından
+// ekran görüntüsünü doğrudan WattTrack'e paylaşabiliyor (WT-39 ile bağlanıyor).
+// Paylaşım POST'u sayfaya ULAŞMADAN burada yakalanmak zorunda: navigasyon
+// POST'unun gövdesini sayfa okuyamaz. Dosya Cache API'ye bırakılıp sayfa
+// GET ile açılıyor, açılışta oradan alınıyor.
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
+  if (e.request.method === 'POST' && url.searchParams.has('share-target')) {
+    e.respondWith((async () => {
+      try {
+        const form = await e.request.formData();
+        const file = form.get('screenshot');
+        const c = await caches.open(SHARE_CACHE);
+        if (file && file.size) {
+          await c.put(SHARE_URL, new Response(file, {
+            headers: {'Content-Type': file.type || 'image/jpeg'}
+          }));
+        } else {
+          await c.delete(SHARE_URL);
+        }
+        const metin = ['title', 'text', 'url']
+          .map(k => form.get('share_' + k)).filter(Boolean).join(' ');
+        const hedef = new URL('./', self.registration.scope);
+        hedef.searchParams.set('share', file && file.size ? 'shot' : 'text');
+        if (metin) hedef.searchParams.set('share_text', metin.slice(0, 200));
+        return Response.redirect(hedef.href, 303);
+      } catch {
+        return Response.redirect(new URL('./', self.registration.scope).href, 303);
+      }
+    })());
+    return;
+  }
+  if (e.request.method !== 'GET') return;
   // WT-11: origin kontrolü yoktu — frankfurter, Nominatim ve OpenChargeMap
   // yanıtları cache-first olarak kalıcı saklanıyordu. Bir kez cache'lenen
   // "?latest" kur sorgusu kuru SONSUZA KADAR donduruyordu.

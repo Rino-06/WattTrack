@@ -6,12 +6,6 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": [
-    "standalone",
-    "minimal-ui",
-    "window-controls-overlay",
-    "tabbed"
-  ],
   "orientation": "portrait-primary",
   "background_color": "#F1F7F2",
   "theme_color": "#F1F7F2",
@@ -22,10 +16,6 @@
     "utilities",
     "productivity"
   ],
-  "prefer_related_applications": false,
-  "launch_handler": {
-    "client_mode": "auto"
-  },
   "icons": [
     {
       "src": "icon-192.png",
@@ -91,36 +81,37 @@
       "accept": {
         "application/json": [
           ".json"
+        ],
+        "text/csv": [
+          ".csv"
         ]
       }
     }
   ],
-  "protocol_handlers": [
-    {
-      "protocol": "web+watttrack",
-      "url": "./?proto=%s"
-    }
-  ],
   "share_target": {
-    "action": "./",
-    "method": "GET",
+    "action": "./?share-target=1",
+    "method": "POST",
+    "enctype": "multipart/form-data",
     "params": {
       "title": "share_title",
       "text": "share_text",
-      "url": "share_url"
+      "url": "share_url",
+      "files": [
+        {
+          "name": "screenshot",
+          "accept": [
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+          ]
+        }
+      ]
     }
-  },
-  "edge_side_panel": {
-    "preferred_width": 412
-  },
-  "note_taking": {
-    "new_note_url": "./?action=add"
   },
   "related_applications": [
     {
       "platform": "play",
       "id": "app.watttrack.twa"
     }
-  ],
-  "scope_extensions": []
+  ]
 }
