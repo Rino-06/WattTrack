@@ -245,6 +245,10 @@ h1,h2{font-size:inherit;font-weight:inherit}
 .ov-body{flex:1;overflow:auto;padding:14px 20px 30px;display:flex;flex-direction:column;gap:16px}
 .chips{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .chip{padding:6px 12px;border-radius:100px;background:var(--chip);color:var(--accent-text);font-size:12px;font-weight:600}
+/* WT-46/3: satır içi araç rozeti. Dokunulabilir bir çip değil, etiket —
+   bu yüzden hem küçültülüyor hem de .chip::after dokunma payı iptal ediliyor. */
+.crow .veh-chip{padding:1px 7px;font-size:11px;vertical-align:middle}
+.crow .veh-chip::after{content:none}
 .row2{display:flex;gap:10px}
 .row2>div{flex:1;min-width:0}
 .calcline{display:flex;justify-content:space-between;align-items:center;margin-top:10px;background:var(--pill);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--accent-text);font-weight:600}
@@ -690,7 +694,7 @@ nav button{min-height:48px;justify-content:center}
     <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
   </div>
   <!-- WT-46/1: arama kutusu (firma, lokasyon, not, banka) -->
-  <input type="search" id="h-search" data-i18n-ph="searchPh" placeholder="Ara — firma, lokasyon, not, banka" style="margin-bottom:10px">
+  <input type="search" id="h-search" data-i18n-ph="searchPh" data-i18n-aria="searchPh" aria-label="Ara — firma, lokasyon, not, banka" placeholder="Ara — firma, lokasyon, not, banka" style="margin-bottom:10px">
   <!-- WT-46/6: altı açılır liste tek "Filtrele" düğmesinin arkasında -->
   <button type="button" class="mini-btn" id="h-filter-btn"
     aria-expanded="false" aria-controls="h-filters" data-i18n="filterBtn">⚙ Filtrele</button>
@@ -703,7 +707,7 @@ nav button{min-height:48px;justify-content:center}
     <select id="f-loc" data-i18n-aria="ariaLocFilter" aria-label="Lokasyon filtresi"></select>
   </div>
   <!-- WT-46/2: asıl istenen — filtrelenmiş sonucun toplamı -->
-  <div class="scope-note" id="h-summary" style="margin:10px 0 12px"></div>
+  <div class="scope-note" id="h-summary" aria-live="polite" style="margin:10px 0 12px"></div>
   <div id="h-groups"></div>
 </section>
 

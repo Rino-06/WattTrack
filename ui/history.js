@@ -10,8 +10,10 @@
 // ============================================================
 // GEÇMİŞ
 // ============================================================
-// WT-46/3: çok araç varsa satırda hangi araç olduğu belli olmalı.
-// rowHTML() Geçmiş dışında da kullanıldığı için tablo modül düzeyinde.
+// WT-46/3: çok araç varsa satırda hangi araç olduğu belli olmalı. Satırı
+// çizen rowHTML() ui/stats.js'te ve SENKRON; ad tablosunu buradaki (async)
+// renderHistory dolduruyor, bu yüzden dosya düzeyinde duruyor.
+// Tek araçlı kullanıcıda null bırakılıyor — rozet o zaman bilgi taşımıyor.
 let VEH_ADI = null;
 async function renderHistory() {
   const all = await allSessions();

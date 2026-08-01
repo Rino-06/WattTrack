@@ -1123,6 +1123,17 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-46/3: çok araçlı kullanıcıda satırda araç rozeti var',
     [...doc.querySelectorAll('#h-groups .crow .name .chip')].length === 2,
     doc.querySelector('#h-groups .crow .name')?.textContent.trim());
+  // Rozet SATIRIN aracını göstermeli. Sayı kontrolü tek başına yetmiyordu:
+  // kusurlu sürümde rozet İstatistik'teki firma dağılımına konmuştu (orada
+  // `r` firma toplamı, aracId'si yok) ve Geçmiş'te hiç çizilmiyordu.
+  {
+    const rozet = ad => [...doc.querySelectorAll('#h-groups .crow')]
+      .find(el => el.querySelector('.name')?.textContent.includes(ad))
+      ?.querySelector('.name .chip')?.textContent.trim();
+    check('WT-46/3: rozet satırın KENDİ aracını yazıyor',
+      rozet('ZES') === 'Araç A' && rozet('Esarj') === 'Araç B',
+      'ZES=' + rozet('ZES') + ' Esarj=' + rozet('Esarj'));
+  }
   check('WT-46/5: satırda düzenleme çevronu var',
     doc.querySelectorAll('#h-groups .crow-chev').length === 2);
 
@@ -1185,6 +1196,22 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await sleep(300);
   check('WT-46/7: ekran görüntüsü olan kayıtta ataç ikonu (WT-39)',
     /📎/.test($('h-groups').innerHTML));
+
+  // WT-46/3: tek araçlı kullanıcıda rozet BİLGİ TAŞIMIYOR, çizilmemeli
+  await A.db.vehicles.delete(v2);
+  await A.renderHistory();
+  await sleep(200);
+  check('WT-46/3: tek araçlı kullanıcıda rozet çizilmiyor',
+    doc.querySelectorAll('#h-groups .crow .name .chip').length === 0);
+
+  // Paylaşılan DOM: bu blok arama kutusunu, filtre panelini ve araç tablosunu
+  // sonraki bloklara devrediyor — hepsi geri veriliyor.
+  await A.db.vehicles.clear();
+  await A.db.sessions.clear();
+  $('h-search').value = '';
+  $('h-filters').style.display = 'none';
+  $('h-filter-btn').setAttribute('aria-expanded', 'false');
+  await A.renderHistory();
 }
 
 // --- WT-45: bütçe takibi ---
