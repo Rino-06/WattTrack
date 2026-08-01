@@ -140,16 +140,30 @@ $('btn-gps').addEventListener('click', () => {
     const place = await reverseGeo(lat, lon);
     $('in-loc').value = place || (lat.toFixed(5) + ', ' + lon.toFixed(5));
     // 2) yakındaki şarj istasyonları (Open Charge Map) — çip olarak öner
+    // WT-54/3: null = istek başarısız. Eskiden boş dizi dönüp SESSİZ kalıyordu;
+    // kullanıcı "yakında istasyon yok" sanıyordu. Artık bilgilendiriliyor.
     const st = await nearbyStations(lat, lon);
+    $('btn-gps').textContent = '📍';
+    if (st === null) { $('loc-chips').innerHTML = ''; return toast(t('stationsFail')); }
     $('loc-chips').innerHTML = st.map(s =>
       `<button type="button" class="chip" data-n="${esc(s)}">${esc(s)}</button>`).join('');
     $('loc-chips').querySelectorAll('button').forEach(b =>
       b.addEventListener('click', () => { $('in-loc').value = b.dataset.n; }));
-    $('btn-gps').textContent = '📍';
   }, () => { toast(t('gpsFail')); $('btn-gps').textContent = '📍'; },
   {timeout: 8000, maximumAge: 60000});
 });
+// WT-54/4: Nominatim kullanım politikası aynı koordinatın tekrar tekrar
+// sorulmasını yasaklıyor. Konum düğmesine arka arkaya basmak (geolocation
+// maximumAge'i 60 sn, yani aynı koordinat dönüyor) her seferinde istek
+// üretiyordu. 5 dakikalık bellek içi önbellek: anahtar ~11 m'ye yuvarlı
+// koordinat, çünkü GPS gürültüsü tam eşleşmeyi neredeyse imkânsız kılar.
+const GEO_TTL = 5 * 60 * 1000;
+const geoCache = new Map();
+const geoKey = (lat, lon) => lat.toFixed(4) + ',' + lon.toFixed(4);
 async function reverseGeo(lat, lon) {
+  const k = geoKey(lat, lon);
+  const hit = geoCache.get(k);
+  if (hit && Date.now() - hit.t < GEO_TTL) return hit.v;
   try {
     const ctrl = new AbortController();
     const tm = setTimeout(() => ctrl.abort(), 5000);
@@ -160,23 +174,55 @@ async function reverseGeo(lat, lon) {
     const a = (await res.json()).address || {};
     const narrow = a.neighbourhood || a.suburb || a.quarter || a.village || a.hamlet;
     const town = a.town || a.city || a.county || '';
-    return narrow ? (narrow + (town ? ', ' + town : '')) : (town || null);
+    const ad = narrow ? (narrow + (town ? ', ' + town : '')) : (town || null);
+    // Ağ/HTTP hatası buraya GELMEZ (yukarıda erken dönülüyor), yani geçici
+    // hata önbelleğe yazılmıyor. Nominatim'in geçerli ama isimsiz yanıtı
+    // (kırsal koordinat) ise BİLİNÇLİ olarak önbellekleniyor: gerçek bir
+    // cevap, 5 dk içinde tekrar sorulması politikaya aykırı olurdu.
+    geoCache.set(k, {t: Date.now(), v: ad});
+    return ad;
   } catch { return null; }
 }
+
+/* WT-54/2 — OpenChargeMap API ANAHTARI.
+   OCM v3 anonim erişimi kısıtlıyor; anahtarsız istek 403 dönebiliyor ve
+   "yakındaki istasyon" özelliği sessizce çalışmıyor olabilir.
+   Anahtar https://openchargemap.org/site/develop adresinden ÜCRETSİZ alınır
+   ve BURAYA yazılır — kod değişikliği gerekmez, tek satır.
+   Anahtar istemcide görünür olacağı için KISITLI KOTALI bir anahtar seç.
+   Boş bırakılırsa istek anahtarsız gider (eski davranış).                */
+const OCM_KEY = '';
+
+// Dönüş: istasyon adları dizisi, ya da İSTEK BAŞARISIZSA null.
+// Ayrım şart — eskiden hem "istasyon yok" hem "istek patladı" boş dizi
+// dönüyordu, bu yüzden 403 sessizce yutuluyordu (WT-54'ün tespiti).
 async function nearbyStations(lat, lon) {
   try {
     const ctrl = new AbortController();
     const tm = setTimeout(() => ctrl.abort(), 5000);
-    const res = await fetch(`https://api.openchargemap.io/v3/poi/?output=json&latitude=${lat}&longitude=${lon}&distance=1&distanceunit=km&maxresults=4&compact=true&verbose=false`,
+    const res = await fetch('https://api.openchargemap.io/v3/poi/?output=json'
+      + `&latitude=${lat}&longitude=${lon}&distance=1&distanceunit=km`
+      + '&maxresults=4&compact=true&verbose=false'
+      + (OCM_KEY ? '&key=' + encodeURIComponent(OCM_KEY) : ''),
       {signal: ctrl.signal});
     clearTimeout(tm);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      // Durum kodu konsola YAZILIYOR: WT-54/1 gerçek cihaz doğrulaması
+      // (403 mü, kota mı) ağ sekmesi açmadan da görülebilsin.
+      console.error('[WattTrack] OpenChargeMap ' + res.status
+        + (res.status === 403 || res.status === 401
+          ? ' — API anahtarı gerekiyor (ui/forms.js → OCM_KEY)' : ''));
+      return null;
+    }
     const j = await res.json();
     return (j || []).map(p => {
       const op = p.OperatorInfo && p.OperatorInfo.Title ? p.OperatorInfo.Title + ' — ' : '';
       return (op + (p.AddressInfo?.Title || '')).slice(0, 60);
     }).filter(Boolean);
-  } catch { return []; }
+  } catch (err) {
+    console.error('[WattTrack] OpenChargeMap:', err);
+    return null;
+  }
 }
 
 function fillFirmSelect(code, current, usedCounts) {

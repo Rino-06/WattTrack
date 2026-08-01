@@ -75,6 +75,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
        renderYaklasanlar, tekrarOner,
        csvPayload, parseCSV, csvAutoMap, csvRowToRec, csvSig, CSV_FIELDS, savingsOf,
        paylasilanGorseliAl, paylasimKutusunuBosalt, ocrDosyaIsle,
+       reverseGeo, nearbyStations,
        openCsvImport, importFileText, importBackupText, overlayOpen,
        renderVehiclePage: renderVehiclePage};`;
 try {
@@ -2190,6 +2191,112 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const beklenen = errors.splice(errBefore).filter(e => !/vendor yok \(test\)/.test(e));
   check('WT-53: yalnız KASITLI OCR hatası oluştu, başka konsol hatası yok',
     beklenen.length === 0, beklenen.slice(0, 3).join(' | '));
+}
+
+// --- WT-54: OpenChargeMap sessiz hatası + Nominatim önbelleği ---
+{
+  const A = app();
+  const orjFetch = window.fetch;
+  const errBefore = errors.length;
+  let cagrilar = [];
+  const stub = (yanit) => { window.fetch = async (u) => { cagrilar.push(String(u)); return yanit(String(u)); }; };
+
+  // 1) OCM 403 (anahtarsız anonim erişimin beklenen yanıtı): SESSİZ KALMA
+  cagrilar = [];
+  stub(() => ({ok: false, status: 403}));
+  const r403 = await A.nearbyStations(41.01, 29.02);
+  check('WT-54/3: OCM 403 dönünce boş dizi DEĞİL null dönüyor (hata ayırt ediliyor)',
+    r403 === null, JSON.stringify(r403));
+  check('WT-54/1: durum kodu konsola yazılıyor (gerçek cihaz doğrulaması için)',
+    errors.slice(errBefore).some(e => /OpenChargeMap 403/.test(e)),
+    errors.slice(errBefore).join(' | '));
+  check('WT-54/2: 403 mesajı anahtarın nereye yazılacağını söylüyor',
+    errors.slice(errBefore).some(e => /OCM_KEY/.test(e)));
+
+  // 2) Ağ patlaması da null — "istasyon yok" ile karıştırılmamalı
+  window.fetch = async () => { throw new Error('offline test'); };
+  check('WT-54/3: ağ hatası da null dönüyor',
+    (await A.nearbyStations(41.01, 29.02)) === null);
+
+  // 3) Başarılı yanıtta gerçekten dizi dönüyor (null yalnız hataya özel)
+  stub(() => ({ok: true, status: 200, json: async () => ([
+    {OperatorInfo: {Title: 'ZES'}, AddressInfo: {Title: 'Ataşehir'}},
+    {AddressInfo: {Title: 'Kadıköy Meydan'}}
+  ])}));
+  const rOK = await A.nearbyStations(41.01, 29.02);
+  check('WT-54: başarılı yanıt dizi olarak dönüyor (null hataya özel kaldı)',
+    Array.isArray(rOK) && rOK[0] === 'ZES — Ataşehir' && rOK[1] === 'Kadıköy Meydan',
+    JSON.stringify(rOK));
+  stub(() => ({ok: true, status: 200, json: async () => []}));
+  const rBos = await A.nearbyStations(41.01, 29.02);
+  check('WT-54: gerçekten istasyon yoksa BOŞ DİZİ dönüyor (null değil)',
+    Array.isArray(rBos) && rBos.length === 0, JSON.stringify(rBos));
+
+  // 4) Nominatim 5 dk önbelleği — aynı koordinat İKİNCİ kez sorulmuyor
+  cagrilar = [];
+  stub(() => ({ok: true, status: 200,
+    json: async () => ({address: {suburb: 'Ataşehir', city: 'İstanbul'}})}));
+  const g1 = await A.reverseGeo(41.0100, 29.0200);
+  const g2 = await A.reverseGeo(41.0100, 29.0200);
+  const nomCagri = cagrilar.filter(u => /nominatim/.test(u)).length;
+  check('WT-54/4 KABUL: aynı koordinat 5 dk içinde YALNIZ BİR KEZ sorgulanıyor',
+    nomCagri === 1, 'çağrı=' + nomCagri);
+  check('WT-54/4: önbellekten dönen değer birebir aynı',
+    g1 === 'Ataşehir, İstanbul' && g2 === g1, g1 + ' / ' + g2);
+
+  // GPS gürültüsü: ~11 m'lik yuvarlama aynı kovaya düşmeli
+  cagrilar = [];
+  await A.reverseGeo(41.010002, 29.020003);
+  check('WT-54/4: GPS gürültüsü aynı önbellek kovasına düşüyor',
+    cagrilar.filter(u => /nominatim/.test(u)).length === 0,
+    'çağrı=' + cagrilar.filter(u => /nominatim/.test(u)).length);
+
+  // Uzak koordinat önbelleği PAYLAŞMAMALI
+  cagrilar = [];
+  await A.reverseGeo(39.9200, 32.8500);
+  check('WT-54/4: farklı koordinat yeniden sorgulanıyor (önbellek fazla geniş değil)',
+    cagrilar.filter(u => /nominatim/.test(u)).length === 1);
+
+  // BAŞARISIZ sorgu önbelleklenmemeli: geçici hata kalıcı boş ada dönüşmesin
+  cagrilar = [];
+  stub(() => ({ok: false, status: 500}));
+  await A.reverseGeo(38.4200, 27.1400);
+  stub(() => ({ok: true, status: 200,
+    json: async () => ({address: {suburb: 'Konak', city: 'İzmir'}})}));
+  const tekrar = await A.reverseGeo(38.4200, 27.1400);
+  check('WT-54/4: BAŞARISIZ sorgu önbelleklenmiyor (geçici hata kalıcılaşmıyor)',
+    tekrar === 'Konak, İzmir', String(tekrar));
+
+  // İSİMSİZ ama GEÇERLİ yanıt (kırsal koordinat) önbelleklenmeli: gerçek bir
+  // cevap, 5 dk içinde tekrar sorulması Nominatim politikasına aykırı olurdu.
+  // Yukarıdaki "başarısız sorgu önbelleklenmiyor" kontrolüyle karıştırılmasın:
+  // orada HTTP hatası var, burada sunucu "burada isim yok" diyor.
+  cagrilar = [];
+  stub(() => ({ok: true, status: 200, json: async () => ({address: {}})}));
+  const bos1 = await A.reverseGeo(37.1234, 33.5678);
+  const bos2 = await A.reverseGeo(37.1234, 33.5678);
+  check('WT-54/4: isimsiz AMA GEÇERLİ yanıt da önbellekleniyor',
+    bos1 === null && bos2 === null
+      && cagrilar.filter(u => /nominatim/.test(u)).length === 1,
+    'çağrı=' + cagrilar.filter(u => /nominatim/.test(u)).length);
+
+  // Kaynak denetimi: anahtar yuvası ve toast bağlantısı
+  const forms = fs.readFileSync(path.join(ROOT, 'ui/forms.js'), 'utf8');
+  check('WT-54/2: OCM_KEY yuvası var ve boşken URL\'ye eklenmiyor',
+    /const OCM_KEY = '';/.test(forms)
+      && /OCM_KEY \? '&key=' \+ encodeURIComponent\(OCM_KEY\)/.test(forms));
+  check('WT-54/3: çağıran taraf null görünce toast gösteriyor',
+    /st === null.*toast\(t\('stationsFail'\)\)/.test(forms));
+  check('WT-54/3: stationsFail altı dilde de dolu',
+    Object.keys(A.T).every(l => A.T[l].stationsFail),
+    Object.keys(A.T).filter(l => !A.T[l].stationsFail).join(','));
+
+  // Yukarıdaki console.error'lar KASITLI (403/500/ağ hatası senaryoları)
+  const kalan = errors.splice(errBefore)
+    .filter(e => !/OpenChargeMap/.test(e));
+  check('WT-54: yalnız kasıtlı OCM hataları oluştu',
+    kalan.length === 0, kalan.slice(0, 3).join(' | '));
+  window.fetch = orjFetch;
 }
 
 const failed = results.filter(r => !r.pass);
