@@ -991,7 +991,8 @@ nav button{min-height:48px;justify-content:center}
   <button class="setting-btn" id="btn-export-json" data-i18n="exportJson">Dışa Aktar (JSON)</button>
   <button class="setting-btn" id="btn-export-csv" data-i18n="exportCsv">Dışa Aktar (CSV — Excel/Power BI)</button>
   <button class="setting-btn" id="btn-import" data-i18n="importJson">Yedeği Geri Yükle (JSON)</button>
-  <input type="file" id="file-import" accept=".json" style="display:none">
+  <!-- WT-48/1: içe aktarma .json VE .csv kabul ediyor -->
+  <input type="file" id="file-import" accept=".json,.csv,text/csv" style="display:none">
   <!-- WT-36/2: örnek veri. Üretilen her kayıt demo:true ile işaretlenir,
        yedeklere GİRMEZ ve tek dokunuşla silinir. -->
   <!-- WT-39/BÖLÜM 2: tesseract TEMBEL yüklenir, pakete girmez. Açılırken
@@ -1353,6 +1354,25 @@ nav button{min-height:48px;justify-content:center}
     <button class="save-btn" id="fp-save" style="margin-top:16px" data-i18n="add">Ekle</button>
     <div class="section-lbl" data-i18n="fuelHistList">Kayıtlı fiyatlar</div>
     <ul class="vlist" id="fp-list"></ul>
+  </div>
+</section>
+
+<!-- ============ CSV İÇE AKTARMA (WT-48) ============
+     Önizleme ve sütun eşleme, yazma işleminden ÖNCE. Kullanıcı ne
+     geleceğini görmeden hiçbir şey kaydedilmiyor. -->
+<section class="overlay" id="page-csv" role="dialog" aria-modal="true" aria-labelledby="csv-title">
+  <div class="ov-head">
+    <button class="close" id="btn-close-csv">×</button>
+    <div class="title" id="csv-title" data-i18n="csvTitle">CSV içe aktar</div>
+    <div style="width:32px"></div>
+  </div>
+  <div class="ov-body">
+    <div class="scope-note" id="csv-summary" role="status" aria-live="polite"></div>
+    <ul class="vlist" id="csv-errors"></ul>
+    <div class="about" data-i18n="csvMapD">Sütunlar otomatik eşlendi. Başlıklar farklıysa aşağıdan elle seçebilirsin. Yıldızlı alanlar zorunlu.</div>
+    <div class="section-lbl" data-i18n="csvMapTitle">Sütun eşleme</div>
+    <div id="csv-map"></div>
+    <button class="save-btn" id="csv-confirm" style="margin-top:16px" data-i18n="csvNothing">İçe aktarılacak satır yok</button>
   </div>
 </section>
 

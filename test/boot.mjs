@@ -73,6 +73,8 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
        invalidateCache, allExpenses, allFuelPrices, searchEV, openEvSpecs,
        EV_DB, EV_DB_TARIH, openFuelHist, openExpense, yaklasanlar,
        renderYaklasanlar, tekrarOner,
+       csvPayload, parseCSV, csvAutoMap, csvRowToRec, csvSig, CSV_FIELDS, savingsOf,
+       openCsvImport, importFileText, importBackupText, overlayOpen,
        renderVehiclePage: renderVehiclePage};`;
 try {
   window.eval(bundle);
@@ -1903,6 +1905,155 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.overlayClose('page-add', {force: true});
 
   // Paylaşılan DOM: sonraki bloklara temiz durum bırak
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  A.S.defaultVehicleId = null;
+}
+
+// --- WT-48: CSV içe aktarma ---
+{
+  const A = app();
+  const doc = window.document;
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  A.S.currency = 'TRY'; A.S.country = 'TR';
+  const v1 = await A.db.vehicles.add({ad: 'Kia EV6', batt: 77});
+  const v2 = await A.db.vehicles.add({ad: 'BMW i4', batt: 84});
+  A.S.defaultVehicleId = v1;
+  const y = new Date().getFullYear();
+
+  // --- GİDİŞ-DÖNÜŞ: dışa aktar → sil → içe aktar → aynı rakamlar mı? ---
+  await A.db.sessions.bulkAdd([
+    // İndirim uygulamada indirimTip/indirimDeger ile saklanıyor; savingsOf()
+    // `tutar - odenen` FARKINA bakmıyor. Fikstür de öyle kurulu olmalı.
+    {tarih: `${y}-03-01T10:30`, firma: 'ZES', tip: 'DC', mekan: 'firma',
+      kwh: 40, tutar: 500, odenen: 400, cur: 'TRY', aracId: v1,
+      indirimTip: 'amount', indirimDeger: 100,
+      loc: 'Kadıköy', banka: 'Visa', socB: 20, socA: 80, dur: 45},
+    {tarih: `${y}-03-05T18:00`, firma: 'Ev-İş', tip: 'AC', mekan: 'evis',
+      kwh: 20, tutar: 180, odenen: 180, cur: 'TRY', aracId: v2, atlanan: true},
+    {tarih: `${y}-03-09T08:15`, firma: 'Trugo', tip: 'DC', mekan: 'firma',
+      kwh: 55, tutar: 610, odenen: 610, cur: 'TRY', aracId: v1, odo: 12000}
+  ]);
+  const oncekiSess = (await A.allSessions())
+    .sort((a, b) => a.tarih.localeCompare(b.tarih));
+  const csv = await A.csvPayload();
+
+  const p = A.parseCSV(csv);
+  check('WT-48/2: dışa aktarma ayracı (;) ve başlık okunuyor',
+    p.delim === ';' && p.head[0] === 'Tarih' && p.rows.length === 3,
+    'ayraç=' + p.delim + ' sütun=' + p.head.length + ' satır=' + p.rows.length);
+  check('WT-48/2: BOM başlığı kirletmiyor',
+    !/﻿/.test(p.head[0]), JSON.stringify(p.head[0]));
+  const m = A.csvAutoMap(p.head);
+  check('WT-48/4: kendi başlığımız tamamen otomatik eşleşiyor',
+    A.CSV_FIELDS.filter(f => m[f.key] == null).length === 0,
+    'eşleşmeyen: ' + A.CSV_FIELDS.filter(f => m[f.key] == null).map(f => f.key).join(','));
+
+  await A.db.sessions.clear();
+  await A.openCsvImport(csv);
+  await sleep(300);
+  check('WT-48/3: önizleme "3 satır okundu · 0 mükerrer · 0 hatalı" diyor',
+    /3/.test($('csv-summary').textContent) &&
+      /0.*0/.test($('csv-summary').textContent.replace(/^[^·]*·/, '')),
+    $('csv-summary').textContent);
+  check('WT-48/3: hata listesi boş', $('csv-errors').innerHTML === '');
+  check('WT-48/4: eşleme ekranı her alan için satır çiziyor',
+    doc.querySelectorAll('#csv-map select').length === A.CSV_FIELDS.length);
+  check('WT-48: önizlemede henüz HİÇBİR ŞEY yazılmadı',
+    (await A.allSessions()).length === 0);
+  $('csv-confirm').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(600);
+
+  const sonra = (await A.allSessions()).sort((a, b) => a.tarih.localeCompare(b.tarih));
+  check('WT-48 KABUL: gidiş-dönüşte üç kayıt da geri geldi',
+    sonra.length === 3, 'kayıt=' + sonra.length);
+  check('WT-48: tarih SAATİYLE birlikte korundu (gün kırpılmadı)',
+    sonra.map(r => r.tarih).join(',') === oncekiSess.map(r => r.tarih).join(','),
+    sonra.map(r => r.tarih).join(','));
+  check('WT-48: kWh ve ödenen tutar birebir aynı',
+    sonra.every((r, i) => r.kwh === oncekiSess[i].kwh
+      && r.odenen === oncekiSess[i].odenen),
+    sonra.map(r => r.kwh + '/' + r.odenen).join(' '));
+  // İndirim sütunu eşlenmezse savingsOf() sıfır döner ve kazanç kaybolur
+  check('WT-48: indirim/kazanç korundu (savingsOf sıfırlanmıyor)',
+    A.savingsOf(sonra[0]) === 100 && sonra[0].tutar === 500,
+    'kazanç=' + A.savingsOf(sonra[0]) + ' tutar=' + sonra[0].tutar);
+  // WT-16: mekan sütunu olmasa bile firmadan türetiliyor
+  check('WT-48: WT-16 mekan boyutu korundu (evis / firma)',
+    sonra.map(r => r.mekan).join(',') === oncekiSess.map(r => r.mekan).join(','),
+    sonra.map(r => r.firma + '=' + r.mekan).join(' '));
+  check('WT-48: araç ADI ile doğru araca bağlandı (WT-08 mantığı)',
+    sonra.map(r => r.aracId).join(',') === oncekiSess.map(r => r.aracId).join(','),
+    sonra.map(r => r.aracId).join(','));
+  check('WT-48: WT-20 atlanan bayrağı ve WT-19 odometresi korundu',
+    sonra[1].atlanan === true && sonra[2].odo === 12000,
+    'atlanan=' + sonra[1].atlanan + ' odo=' + sonra[2].odo);
+  check('WT-48: SoC, süre, lokasyon ve banka korundu',
+    sonra[0].socB === 20 && sonra[0].socA === 80 && sonra[0].dur === 45
+      && sonra[0].loc === 'Kadıköy' && sonra[0].banka === 'Visa',
+    JSON.stringify({b: sonra[0].socB, d: sonra[0].dur, l: sonra[0].loc}));
+
+  // --- WT-48/3: aynı dosya İKİNCİ kez -> hepsi mükerrer ---
+  await A.openCsvImport(csv);
+  await sleep(300);
+  check('WT-48/3 KABUL: aynı dosya ikinci kez tamamen mükerrer sayılıyor',
+    /3/.test($('csv-summary').textContent) && $('csv-confirm').disabled,
+    $('csv-summary').textContent);
+  await A.overlayClose('page-csv', {force: true});
+
+  // --- YABANCI dosya: virgül ayraçlı, tırnaklı, farklı başlıklar ---
+  await A.db.sessions.clear();
+  const yabanci = 'Date,Network,Energy,Cost,Location\r\n' +
+    `${y}-06-01,"ZES, Ataşehir",30,300,"Ataşehir, İstanbul"\r\n` +
+    `01.06.${y},Trugo,25,250,Ankara\r\n` +
+    `${y}-06-03,Voltrun,,90,İzmir\r\n` +
+    `not-a-date,Voltrun,10,90,İzmir\r\n`;
+  await A.openCsvImport(yabanci);
+  await sleep(300);
+  check('WT-48/2: virgül ayraçlı yabancı dosya sezildi',
+    doc.querySelectorAll('#csv-map select[data-f="firma"] option').length === 6,
+    'sütun=' + (doc.querySelectorAll('#csv-map select[data-f="firma"] option').length - 1));
+  check('WT-48/4: farklı başlıklar takma adlarla eşleşti (Date/Network/Energy/Cost)',
+    doc.querySelector('#csv-map select[data-f="tarih"]').value === '0' &&
+    doc.querySelector('#csv-map select[data-f="firma"]').value === '1' &&
+    doc.querySelector('#csv-map select[data-f="kwh"]').value === '2' &&
+    doc.querySelector('#csv-map select[data-f="odenen"]').value === '3',
+    'tarih=' + doc.querySelector('#csv-map select[data-f="tarih"]').value);
+  check('WT-48/3: iki hatalı satır sayıldı ve LİSTELENDİ (boş kWh + bozuk tarih)',
+    /2/.test($('csv-summary').textContent.split('·').pop()) &&
+      doc.querySelectorAll('#csv-errors li').length === 2,
+    $('csv-summary').textContent + ' | li=' + doc.querySelectorAll('#csv-errors li').length);
+  check('WT-48/3: hatalı satırın NUMARASI veriliyor',
+    /4/.test(doc.querySelectorAll('#csv-errors li')[0].textContent),
+    doc.querySelectorAll('#csv-errors li')[0].textContent);
+  $('csv-confirm').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(600);
+  const yab = (await A.allSessions()).sort((a, b) => a.tarih.localeCompare(b.tarih));
+  check('WT-48/2: tırnak içindeki ayraç alan verisi sayıldı, sütun bölmedi',
+    yab.length === 2 && yab[0].firma === 'ZES, Ataşehir'
+      && yab[0].loc === 'Ataşehir, İstanbul',
+    yab.map(r => r.firma).join(' | '));
+  check('WT-48/2: gg.aa.yyyy yerel tarih biçimi ISO\'ya çevrildi',
+    yab.some(r => r.tarih.startsWith(`${y}-06-01T`) && r.firma === 'Trugo'),
+    yab.map(r => r.tarih).join(','));
+  check('WT-48: saat sütunu yoksa 12:00 yazılıyor (sıralama bozulmasın)',
+    yab.every(r => r.tarih.endsWith('T12:00')), yab.map(r => r.tarih).join(','));
+  check('WT-48: araç sütunu yokken varsayılan araca bağlandı',
+    yab.every(r => r.aracId === v1), yab.map(r => r.aracId).join(','));
+
+  // --- WT-48/1: aynı düğme hem JSON hem CSV alıyor ---
+  await A.db.sessions.clear();
+  window.confirm = () => true; window.alert = () => {};
+  await A.importFileText(JSON.stringify({app: 'WattTrack', version: 8,
+    sessions: [{tarih: `${y}-07-01T10:00`, firma: 'ZES', kwh: 5, odenen: 50,
+      cur: 'TRY', aracId: v1}], vehicles: [], expenses: [], settings: []}));
+  await sleep(500);
+  check('WT-48/1: JSON yolu aynı girişten çalışmaya devam ediyor',
+    (await A.allSessions()).length === 1);
+
+  // Paylaşılan DOM: temiz bırak
+  await A.overlayClose('page-csv', {force: true});
   await A.db.sessions.clear();
   await A.db.vehicles.clear();
   A.S.defaultVehicleId = null;

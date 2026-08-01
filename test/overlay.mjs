@@ -51,10 +51,16 @@ await A.overlayClose('ob', { force: true });
 await sleep(100);
 
 // --- dialog semantiği ---
-const ovl = ['page-add', 'page-expense', 'page-country', 'page-addcar', 'ob'];
-check('WT-24/1: beş overlay de role=dialog + aria-modal taşıyor',
+// Liste DOM'dan TÜRETİLİYOR, elle yazılmıyor: yeni bir overlay eklenince
+// (WT-48'in CSV ekranı gibi) WT-24 denetimine kendiliğinden girsin.
+const ovl = [...doc.querySelectorAll('.overlay')].map(el => el.id);
+check('WT-24/1: overlay sayısı beklenenden az değil',
+  ovl.length >= 9, ovl.length + ' tane: ' + ovl.join(', '));
+check('WT-24/1: her overlay role=dialog + aria-modal taşıyor',
   ovl.every(id => $(id).getAttribute('role') === 'dialog'
-    && $(id).getAttribute('aria-modal') === 'true'));
+    && $(id).getAttribute('aria-modal') === 'true'),
+  ovl.filter(id => $(id).getAttribute('role') !== 'dialog'
+    || $(id).getAttribute('aria-modal') !== 'true').join(', '));
 check('WT-24/1: hepsinde aria-labelledby var ve hedefi mevcut',
   ovl.every(id => {
     const lb = $(id).getAttribute('aria-labelledby');

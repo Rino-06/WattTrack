@@ -169,7 +169,16 @@ $('btn-export-json').addEventListener('click', async () => {
   download(JSON.stringify(payload, null, 2), `watttrack-yedek-${today()}.json`, 'application/json');
   toast(t('jsonDone'));
 });
-$('btn-export-csv').addEventListener('click', async () => {
+// WT-48: dışa aktarma gövdesi ayrı fonksiyona alındı — JSON tarafındaki
+// backupPayload() ile aynı gerekçe: gidiş-dönüş testten doğrulanabilsin.
+// İçe aktarmanın kayıpsız olabilmesi için başlığa dört sütun EKLENDİ:
+// Saat (eskiden gün kırpılıyordu, mükerrer tespiti ve sıralama bozuluyordu),
+// Mekan (WT-16'nın evis/firma boyutu), Odometre (WT-19) ve Atlanan (WT-20).
+const CSV_HEAD = ['Tarih','Saat','Ulke','ParaBirimi','Kur','Firma','Mekan','Tip',
+  'Ucretsiz','kWh','Odenen','OdenenTemel','Indirim','ListeTutar','BirimFiyat',
+  'Banka','MesafeKm','Odometre','SureDk','SoCOnce','SoCSonra','Atlanan',
+  'Lokasyon','Arac','Not'];
+async function csvPayload() {
   const rows = (await allSessions()).filter(r => !isDemo(r))   // WT-36/3f
     .sort((a, b) => a.tarih.localeCompare(b.tarih));
   const vehicles = await allVehicles();
@@ -181,23 +190,293 @@ $('btn-export-csv').addEventListener('click', async () => {
     if (/^[=+\-@]/.test(v)) v = "'" + v;
     return v;
   };
-  const head = ['Tarih','Ulke','ParaBirimi','Kur','Firma','Tip','Ucretsiz','kWh','Odenen','OdenenTemel','Indirim','ListeTutar','BirimFiyat','Banka','MesafeKm','SureDk','SoCOnce','SoCSonra','Lokasyon','Arac','Not'];
-  const lines = [head.join(';')];
+  const lines = [CSV_HEAD.join(';')];
   rows.forEach(r => {
     const sav = savingsOf(r);
     lines.push([
-      r.tarih.slice(0, 10), r.ulke || '', r.cur || '', r.rate ? num(r.rate) : '',
-      safe(r.firma), r.tip || '', r.free ? 1 : 0, num(r.kwh),
+      r.tarih.slice(0, 10), r.tarih.slice(11, 16), r.ulke || '', r.cur || '',
+      r.rate ? num(r.rate) : '',
+      safe(r.firma), r.mekan || '', r.tip || '', r.free ? 1 : 0, num(r.kwh),
       num(r.odenen), num(amtB(r)), num(sav), num(r.odenen + sav),
       r.kwh ? num(r.odenen / r.kwh) : '', safe(r.banka),
-      r.mesafeKm ? num(r.mesafeKm) : '', r.dur ?? '', r.socB ?? '', r.socA ?? '',
+      r.mesafeKm ? num(r.mesafeKm) : '', r.odo ?? '',
+      r.dur ?? '', r.socB ?? '', r.socA ?? '', r.atlanan ? 1 : 0,
       safe(r.loc), safe(vn(r.aracId)), safe(r.not)
     ].join(';'));
   });
-  download('\uFEFF' + lines.join('\r\n'), `watttrack-${today()}.csv`, 'text/csv;charset=utf-8');
+  return '\uFEFF' + lines.join('\r\n');
+}
+$('btn-export-csv').addEventListener('click', async () => {
+  download(await csvPayload(), `watttrack-${today()}.csv`, 'text/csv;charset=utf-8');
   toast(t('csvDone'));
 });
 $('btn-import').addEventListener('click', () => $('file-import').click());
+
+/* ---- WT-48: CSV içe aktarma ---- */
+// Dışa aktarma CSV + JSON'du, içe aktarma yalnız JSON. Kullanıcı verisini
+// Excel/Power BI'da düzenleyip geri koyamıyordu.
+//
+// Ayrıştırıcı KENDİ dışa aktarmamızdan fazlasını okumak zorunda: madde
+// "başka uygulamalardan göç mümkün olsun" diyor. Bizim çıktımız hiç tırnak
+// kullanmıyor (safe() `;` yerine `,` yazıyor), ama yabancı bir dosya `,`
+// ayraçlı ve RFC4180 tırnaklı gelir.
+function csvSplitLines(text) {
+  // Tırnak İÇİNDEKİ satır sonu alan verisidir, satır sonu değil.
+  const out = [];
+  let cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') { q = !q; cur += c; continue; }
+    if (!q && (c === '\n' || c === '\r')) {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      out.push(cur); cur = '';
+      continue;
+    }
+    cur += c;
+  }
+  if (cur) out.push(cur);
+  return out.filter(l => l.trim() !== '');
+}
+function csvSplitFields(line, delim) {
+  const out = [];
+  let cur = '', q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) {
+      if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+      else if (c === '"') q = false;
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === delim) { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur);
+  // Excel'in metin kaçışı ('=1+1) geri alınıyor — dışa aktarmada biz koyduk
+  return out.map(v => v.trim().replace(/^'(?=[=+\-@])/, ''));
+}
+function parseCSV(text) {
+  const lines = csvSplitLines(String(text).replace(/^﻿/, ''));
+  if (!lines.length) return {head: [], rows: [], delim: ';'};
+  // Ayraç sezgisi: başlık satırında TIRNAK DIŞINDA en çok geçen aday kazanır
+  const sayim = d => csvSplitFields(lines[0], d).length;
+  const delim = [';', ',', '\t', '|'].reduce((a, b) => sayim(b) > sayim(a) ? b : a, ';');
+  const head = csvSplitFields(lines[0], delim);
+  const rows = lines.slice(1).map(l => csvSplitFields(l, delim));
+  return {head, rows, delim};
+}
+
+// Eşlenebilir alanlar. `alias` yalnız OTOMATİK eşleme içindir; kullanıcı
+// eşleme ekranından her zaman elle değiştirebilir (maddenin 4. şıkkı).
+const CSV_FIELDS = [
+  {key: 'tarih',  lbl: 'date',        zorunlu: true,
+   alias: ['tarih', 'date', 'datum', 'fecha', 'data', 'gun']},
+  {key: 'saat',   lbl: 'time',        alias: ['saat', 'time', 'zeit', 'heure', 'hora', 'ora']},
+  {key: 'firma',  lbl: 'firm',        zorunlu: true,
+   alias: ['firma', 'operator', 'sarjfirmasi', 'anbieter', 'operateur', 'operador', 'network', 'provider']},
+  {key: 'kwh',    lbl: 'fldKwh',      zorunlu: true, alias: ['kwh', 'energy', 'enerji', 'energie', 'energia']},
+  {key: 'odenen', lbl: 'fldAmount',   zorunlu: true,
+   alias: ['odenen', 'tutar', 'amount', 'paid', 'cost', 'betrag', 'montant', 'importe', 'importo', 'ucret']},
+  {key: 'tutar',  lbl: 'listAmount',  alias: ['listetutar', 'listprice', 'gross', 'brut', 'brutto']},
+  {key: 'indirim', lbl: 'fldDisc',    alias: ['indirim', 'discount', 'rabatt', 'remise', 'descuento', 'sconto', 'saving']},
+  {key: 'tip',    lbl: 'chargeType',  alias: ['tip', 'type', 'typ', 'tipo']},
+  {key: 'mekan',  lbl: 'place',       alias: ['mekan', 'place', 'ort', 'lieu', 'lugar', 'luogo']},
+  {key: 'free',   lbl: 'free',        alias: ['ucretsiz', 'free', 'gratis', 'gratuit', 'gratuito']},
+  {key: 'cur',    lbl: 'currency',    alias: ['parabirimi', 'currency', 'wahrung', 'devise', 'moneda', 'valuta']},
+  {key: 'ulke',   lbl: 'country',     alias: ['ulke', 'country', 'land', 'pays', 'pais', 'paese']},
+  {key: 'rate',   lbl: 'fldRate',     alias: ['kur', 'rate', 'kurs', 'taux', 'tasa', 'tasso']},
+  {key: 'banka',  lbl: 'bank',        alias: ['banka', 'bank', 'banque', 'banco', 'banca', 'card', 'kart']},
+  {key: 'mesafeKm', lbl: 'fldDist',   alias: ['mesafekm', 'mesafe', 'distance', 'distanz', 'km', 'strecke']},
+  {key: 'odo',    lbl: 'fldOdo',      alias: ['odometre', 'odometer', 'odo', 'kilometerstand', 'sayac']},
+  {key: 'dur',    lbl: 'duration',    alias: ['suredk', 'sure', 'duration', 'dauer', 'duree', 'duracion', 'durata']},
+  {key: 'socB',   lbl: 'socStart',    alias: ['soconce', 'socbefore', 'socstart', 'baslangicsoc']},
+  {key: 'socA',   lbl: 'socEnd',      alias: ['socsonra', 'socafter', 'socend', 'bitissoc']},
+  {key: 'atlanan', lbl: 'missedTag',  alias: ['atlanan', 'missed', 'skipped']},
+  {key: 'loc',    lbl: 'location',    alias: ['lokasyon', 'location', 'ort', 'lieu', 'ubicacion', 'posizione', 'yer']},
+  {key: 'arac',   lbl: 'vehicle',     alias: ['arac', 'vehicle', 'fahrzeug', 'vehicule', 'vehiculo', 'veicolo', 'car']},
+  {key: 'not',    lbl: 'note',        alias: ['not', 'note', 'notiz', 'nota', 'comment', 'aciklama']}
+];
+// Başlıkları eşlerken aksan, boşluk ve noktalama atılıyor: "Şarj Firması",
+// "sarj_firmasi" ve "SARJFIRMASI" aynı anahtara düşsün.
+const csvNorm = s => String(s || '').toLocaleLowerCase('tr')
+  .replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+  .replace(/ö/g, 'o').replace(/ç/g, 'c')
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^a-z0-9]/g, '');
+function csvAutoMap(head) {
+  const norm = head.map(csvNorm);
+  const map = {};
+  for (const f of CSV_FIELDS) {
+    const i = norm.findIndex((h, ix) => h && f.alias.includes(h) &&
+      !Object.values(map).includes(ix));
+    if (i > -1) map[f.key] = i;
+  }
+  return map;
+}
+
+// Bir CSV satırını kayda çevirir. Doğrulama form ile AYNI yardımcıları
+// kullanıyor (pf / checkNum / isValidDate) — "hatalı" sayılan satır formun
+// da reddedeceği satır olsun.
+function csvRowToRec(cols, map, vehId) {
+  const al = k => map[k] == null ? '' : (cols[map[k]] ?? '').trim();
+  const bool = v => /^(1|true|evet|yes|ja|oui|si|sì|x)$/i.test(v.trim());
+  const hata = [];
+
+  let tarih = al('tarih');
+  // gg.aa.yyyy ve aa/gg/yyyy gibi yerel biçimler ISO'ya çevrilir
+  const m = /^(\d{1,2})[./](\d{1,2})[./](\d{4})$/.exec(tarih);
+  if (m) tarih = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  tarih = tarih.slice(0, 10);
+  if (!isValidDate(tarih)) hata.push(t('csvBadDate'));
+
+  // Saat: sütun yoksa 12:00. WT-19'un mesafe türetmesi ve mükerrer tespiti
+  // tarih DİZGİSİNİ sıralıyor, bu yüzden boş bırakılamaz.
+  const sa = /^(\d{1,2}):(\d{2})/.exec(al('saat'));
+  const saat = sa ? `${sa[1].padStart(2, '0')}:${sa[2]}` : '12:00';
+
+  const firma = al('firma');
+  if (!firma) hata.push(t('csvNoFirm'));
+
+  const free = bool(al('free'));
+  const k = checkNum('kwh', al('kwh'), {required: true});
+  if (!k.ok) hata.push(k.msg);
+  const o = checkNum('tutar', al('odenen'), {required: !free});
+  if (!o.ok) hata.push(o.msg);
+
+  if (hata.length) return {hata};
+
+  const rec = {
+    tarih: `${tarih}T${saat}`,
+    firma,
+    // WT-16: mekan boyutu CSV'de yoksa firmadan TÜRETİLİR. Atlanırsa
+    // ev şarjları donutta ve Ev-İş hesabında yanlış sınıflanır.
+    mekan: al('mekan') === 'evis' || al('mekan') === 'firma'
+      ? al('mekan') : (isHomeFirm(firma) ? 'evis' : 'firma'),
+    kwh: k.value,
+    odenen: free ? 0 : (o.value ?? 0),
+    free,
+    cur: al('cur').toUpperCase() || S.currency,
+    aracId: vehId ?? null
+  };
+  const tip = al('tip').toUpperCase();
+  rec.tip = tip === 'AC' ? 'AC' : 'DC';
+  const ulke = al('ulke').toUpperCase();
+  if (ulke && COUNTRIES.some(c => c[0] === ulke)) rec.ulke = ulke;
+  // İndirim: savingsOf() ÖNCE `indirim` alanına bakıyor (calc.js). Bu sütun
+  // atlanırsa içe aktarılan her satırın kazancı sıfırlanır — form yolunda
+  // indirim `indirimTip`/`indirimDeger` ile saklanıyor ama CSV'de tek bir
+  // tutar var, `indirim` alanı tam olarak bunun için duruyor.
+  const ind = checkNum('indirim', al('indirim'));
+  if (ind.ok && ind.value) rec.indirim = ind.value;
+  // ListeTutar brüt tutar; tutarlı olsun diye indirimle birlikte yazılıyor.
+  const lt = checkNum('tutar', al('tutar'));
+  if (lt.ok && lt.value != null && lt.value >= rec.odenen) rec.tutar = lt.value;
+  else if (rec.indirim) rec.tutar = rec.odenen + rec.indirim;
+  const opt = [['rate', 'kur'], ['mesafeKm', 'mesafe'], ['odo', 'odo'],
+    ['socB', 'soc'], ['socA', 'soc']];
+  for (const [key, kural] of opt) {
+    const c = checkNum(kural, al(key));
+    if (c.ok && c.value != null) rec[key] = c.value;
+  }
+  const dur = pf(al('dur'), 0);
+  if (!isNaN(dur) && dur > 0 && dur <= 48 * 60) rec.dur = Math.round(dur);
+  if (bool(al('atlanan'))) rec.atlanan = true;     // WT-20
+  ['loc', 'banka', 'not'].forEach(key => { if (al(key)) rec[key] = al(key); });
+  return {rec};
+}
+// WT-48/3: mükerrer tespiti. JSON tarafındaki imza TAM `tarih` dizgisini
+// kullanıyor; CSV'de saat sütunu olmayabildiği için burada GÜN'e iniliyor,
+// yoksa kendi dışa aktarmamızı geri okumak her satırı mükerrer değil sayardı.
+const csvSig = r => [r.tarih.slice(0, 10), r.firma,
+  Math.round(r.kwh * 100), Math.round((r.odenen || 0) * 100), r.cur || ''].join('|');
+
+// WT-48/3+4: önizleme ve sütun eşleme ekranı. İkisi de KULLANICI ETKİLEŞİMİ
+// olduğu için transaction'dan ÖNCE bitiyor — bir onay beklemesi Dexie
+// transaction'ını bloklar ve zaman aşımına düşürür (aynı gerekçe JSON
+// yolunda da yazılı).
+let _csvDurum = null;
+async function openCsvImport(text) {
+  const {head, rows} = parseCSV(text);
+  if (!rows.length) { toast(t('importFail')); return; }
+  _csvDurum = {head, rows, map: csvAutoMap(head)};
+  const box = $('csv-map');
+  // Eşleme ekranı: her uygulama alanı için CSV sütunu seçilebiliyor. Bizim
+  // kendi çıktımızda hepsi otomatik dolu gelir, yabancı dosyada kullanıcı seçer.
+  box.innerHTML = CSV_FIELDS.map(f => `
+    <div class="switchrow">
+      <div><div class="k">${esc(t(f.lbl))}${f.zorunlu ? ' *' : ''}</div></div>
+      <select data-f="${f.key}" aria-label="${esc(t(f.lbl))}">
+        <option value="">—</option>
+        ${head.map((h, i) => `<option value="${i}">${esc(h || '#' + (i + 1))}</option>`).join('')}
+      </select>
+    </div>`).join('');
+  box.querySelectorAll('select').forEach(s => {
+    s.value = _csvDurum.map[s.dataset.f] ?? '';
+    s.addEventListener('change', () => {
+      const v = s.value;
+      if (v === '') delete _csvDurum.map[s.dataset.f];
+      else _csvDurum.map[s.dataset.f] = +v;
+      csvOnizle();
+    });
+  });
+  await csvOnizle();
+  overlayOpen('page-csv');
+}
+async function csvOnizle() {
+  const {rows, map} = _csvDurum;
+  const mevcut = new Set((await allSessions()).map(csvSig));
+  const gorulen = new Set();
+  const iyi = [], hatali = [];
+  let mukerrer = 0;
+  rows.forEach((cols, i) => {
+    const {rec, hata} = csvRowToRec(cols, map, null);
+    if (hata) { hatali.push({no: i + 2, msg: hata.join(', ')}); return; }
+    const s = csvSig(rec);
+    // Dosyanın KENDİ içindeki tekrarlar da mükerrer sayılıyor
+    if (mevcut.has(s) || gorulen.has(s)) { mukerrer++; return; }
+    gorulen.add(s);
+    // Kaynak sütunlar kayıtla birlikte taşınıyor: araç adı → id eşlemesi
+    // onaydan SONRA yapılıyor ve o zaman satırı yeniden bulmak gerekiyor.
+    iyi.push({rec, cols});
+  });
+  _csvDurum.iyi = iyi;
+  $('csv-summary').textContent =
+    t('csvSummary', {n: rows.length, m: mukerrer, k: hatali.length});
+  // Hatalı satırlar LİSTELENİYOR (madde şart koşuyor): kullanıcı dosyayı
+  // düzeltip yeniden denesin diye satır numarası da veriliyor.
+  $('csv-errors').innerHTML = hatali.length
+    ? `<div class="section-lbl">${esc(t('csvBadRows'))}</div>` +
+      hatali.slice(0, 20).map(h =>
+        `<li class="vd">${t('csvLine', {n: h.no})}: ${esc(h.msg)}</li>`).join('') +
+      (hatali.length > 20 ? `<li class="vd">…</li>` : '')
+    : '';
+  $('csv-confirm').disabled = !iyi.length;
+  $('csv-confirm').textContent = iyi.length
+    ? t('csvImportN', {n: iyi.length}) : t('csvNothing');
+}
+$('csv-confirm').addEventListener('click', async () => {
+  const iyi = _csvDurum?.iyi || [];
+  if (!iyi.length) return;
+  // Araç adı → id. WT-08'in JSON tarafında kurduğu eşlemeyle aynı mantık:
+  // ad tutuyorsa mevcut araca bağla, tutmuyorsa varsayılana düşür.
+  const vehicles = await allVehicles();
+  const adMap = new Map(vehicles.map(v => [csvNorm(vehName(v)), v.id]));
+  const varsayilan = S.defaultVehicleId ?? vehicles[0]?.id ?? null;
+  const adSut = _csvDurum.map.arac;
+  const kayitlar = iyi.map(({rec, cols}) => {
+    const ad = adSut == null ? '' : csvNorm(cols[adSut] || '');
+    return {...rec, aracId: (ad && adMap.get(ad)) || varsayilan};
+  });
+  const res = await safeWrite(() =>
+    db.transaction('rw', db.sessions, async () => { await db.sessions.bulkAdd(kayitlar); }));
+  if (!res.ok) return;
+  // WT-19: içe aktarılan odometre kayıtları mesafe zincirini değiştiriyor
+  for (const vid of new Set(kayitlar.map(r => r.aracId))) await tureMesafe(vid ?? null);
+  await overlayClose('page-csv', {force: true});
+  toast(t('csvImported', {n: kayitlar.length}));
+  await renderDashboard(); await renderHistory();
+});
+$('btn-close-csv').addEventListener('click', () => overlayClose('page-csv'));
+
 async function importBackupText(text) {
   const data = JSON.parse(text);
   if (data.app !== 'WattTrack' || !Array.isArray(data.sessions)) throw 0;
@@ -303,10 +582,16 @@ async function importBackupText(text) {
   toast(dupes.length ? t('importPartial', {n: fresh.length, d: dupes.length}) : t('imported'));
   showScreen('dashboard');
 }
+// WT-48/1: aynı düğme .json ve .csv kabul ediyor. Uzantı yerine İÇERİĞE
+// bakılıyor — bazı sistemler CSV'yi .txt olarak, JSON'u uzantısız veriyor.
+async function importFileText(text) {
+  if (/^\s*[{[]/.test(text)) return importBackupText(text);
+  return openCsvImport(text);
+}
 $('file-import').addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
-  try { await importBackupText(await file.text()); }
+  try { await importFileText(await file.text()); }
   catch { toast(t('importFail')); }
   e.target.value = '';
 });
@@ -316,7 +601,7 @@ if ('launchQueue' in window) {
     if (!params.files || !params.files.length) return;
     try {
       const file = await params.files[0].getFile();
-      await importBackupText(await file.text());
+      await importFileText(await file.text());
     } catch { toast(t('importFail')); }
   });
 }
