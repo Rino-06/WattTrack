@@ -763,6 +763,30 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-31/1: .tile .k, .tile .yd, .crow .sav ve .about en az 12px',
     tooSmall.length === 0, tooSmall.join(' | '));
 
+  // WT-31/1 (dondurulmuş liste): 12px'in ALTINDA kalan seçiciler kullanıcıya
+  // tek tek bildirilmiş ve bilerek bırakılmıştı. Bu kontrol yenisinin SESSİZCE
+  // eklenmesini engelliyor — jsdom'un yerleşim motoru yok, göz denetimi de
+  // kaçırıyor (WT-46 rozeti 11px olarak girmişti ve hiçbir test kızarmadı).
+  // Listeye ekleme yapmak serbest, ama bilinçli olmalı ve kullanıcıya söylenmeli.
+  {
+    const BILINEN = ['.toplist .rank', '.toplist .ts',
+      '.compactfirm .cmp-head .avatar', '.donut-col .legend', '.mb .amt',
+      '.mb .m', '.cmp-head .sub', '.scope-note', '.scope-badge',
+      '.switchrow .d', '.vlist .vd', 'nav button'];
+    const kucuk = [];
+    for (const [sels, body] of rules) {
+      const m = [...body.matchAll(/font-size\s*:\s*(\d+(?:\.\d+)?)px/g)];
+      if (!m.length) continue;
+      const v = parseFloat(m[m.length - 1][1]);
+      if (v < 12) sels.forEach(s => kucuk.push([s, v]));
+    }
+    const yeni = kucuk.filter(([s]) => !BILINEN.includes(s));
+    check('WT-31/1: 12px altında BİLDİRİLMEMİŞ yeni seçici yok',
+      yeni.length === 0, yeni.map(([s, v]) => `${s}=${v}`).join(' | '));
+  }
+  check('WT-46/3: araç rozeti 12px alt sınırına uyuyor',
+    size('.crow .veh-chip') >= 12, '.crow .veh-chip=' + size('.crow .veh-chip'));
+
   // 2-3) Renk simgeleri ve kontrast
   const token = (theme, name) => {
     const body = decl(theme === 'dark' ? '[data-theme="dark"]' : ':root');
