@@ -153,7 +153,12 @@ async function backupPayload() {
   return {
     app: 'WattTrack', version: SCHEMA_VERSION, appVersion: APP_VERSION,
     exportedAt: new Date().toISOString(),
-    sessions: (await allSessions()).filter(r => !isDemo(r)),
+    // WT-49/5: `ekranGorVar` bir ÖNBELLEK artefaktı, veri değil — yedeğe
+    // girerse geri yüklemede görselsiz bir ataç ikonu çıkar. Ekran
+    // görüntüleri yedeğe HİÇ girmiyor: JSON.stringify bir Blob'u `{}` yapar,
+    // yani zaten aktarılamıyorlardı; artık sessizce bozuk çıkmıyorlar.
+    sessions: (await allSessions()).filter(r => !isDemo(r))
+      .map(({ekranGorVar, ...r}) => r),
     vehicles: (await allVehicles()).filter(r => !isDemo(r)),
     expenses: (await allExpenses()).filter(r => !isDemo(r)),
     settings: await db.settings.toArray()
@@ -203,7 +208,16 @@ async function importBackupText(text) {
   const sig = r => [r.tarih, r.firma, r.kwh, r.odenen, r.cur || ''].join('|');
   const existing = new Set((await allSessions()).map(sig));
   const fresh = [], dupes = [];
-  data.sessions.forEach(({id, ...r}) => (existing.has(sig(r)) ? dupes : fresh).push({...r, _oldVeh: r.aracId}));
+  // WT-49/5: eski yedeklerde `ekranGor` bir Blob değil, JSON.stringify'ın
+  // ürettiği boş nesne (`{}`) — truthy olduğu için geri yüklemede kırık bir
+  // ataç ikonu doğuruyordu. Blob olmayan görsel alanı ve önbellek artefaktı
+  // `ekranGorVar` içeri alınmıyor.
+  const temizle = ({id, ekranGorVar, ekranGor, ...r}) =>
+    ekranGor instanceof Blob ? {...r, ekranGor} : r;
+  data.sessions.forEach(s => {
+    const r = temizle(s);
+    (existing.has(sig(r)) ? dupes : fresh).push({...r, _oldVeh: r.aracId});
+  });
   if (!fresh.length && data.sessions.length) { alert(t('importAllDup')); return; }
 
   const msg = dupes.length

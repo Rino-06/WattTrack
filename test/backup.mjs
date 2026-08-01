@@ -49,7 +49,8 @@ async function boot() {
     + `\n;window.__app = {db, S, applyI18n, applyTheme, importBackupText,
          deleteVehicleFlow, moveRecordsFlow, scanOrphans, warnings,
          SETTING_KEYS, saveSetting, renderVehiclePage, openExpense,
-         migrateExpenseVehicles, renderCompare};`;
+         migrateExpenseVehicles, renderCompare,
+         allSessions, backupPayload, renderHistory};`;
   window.eval(bundle);
   await new Promise(r => setTimeout(r, 1200));
   return window;
@@ -298,6 +299,70 @@ dlgPick('__yok__');   // hiçbir seçenekle eşleşmez → Vazgeç butonuna bas�
   check('WT-18: hiç araç yokken gider formu açılmıyor',
     !w.document.getElementById('page-expense').classList.contains('active') && toasted !== '',
     'toast=' + toasted);
+}
+
+// ---------------- WT-49/5: ekran görüntüsü Blob'u önbelleğe GİRMEZ ----------
+// _all() tablonun tamamını bellekte tutuyor. WT-39 ile gelen `ekranGor` Blob'u
+// ayıklanmazsa her şarj kaydının görseli kalıcı olarak bellekte kalır.
+{
+  const w3 = await boot();
+  const C = w3.__app;
+  w3.confirm = () => true;
+  w3.alert = () => {};
+  const vid = await C.db.vehicles.add({ ad: 'Kia EV6', batt: 77 });
+  const sid = await C.db.sessions.add({
+    tarih: '2026-04-01T12:00', firma: 'ZES', tip: 'DC', kwh: 30, tutar: 300,
+    odenen: 300, cur: 'TRY', aracId: vid,
+    ekranGor: new w3.Blob(['xxxxx'], { type: 'image/jpeg' })
+  });
+
+  const cached = (await C.allSessions()).find(r => r.id === sid);
+  check('WT-49/5: önbellekteki kayıtta Blob YOK',
+    !('ekranGor' in cached), 'alanlar: ' + Object.keys(cached).join(','));
+  check('WT-49/5: yerine ekranGorVar bayrağı var', cached.ekranGorVar === true);
+
+  // Ayıklama YALNIZ önbellek yolunda: tek kayıt okuması görseli hâlâ veriyor.
+  // (fake-indexeddb'nin structured clone'u jsdom Blob'unu düz nesneye
+  // çeviriyor, bu yüzden TİPİ değil VARLIĞI kontrol ediliyor — gerçek
+  // tarayıcıda IndexedDB Blob'u Blob olarak döndürür.)
+  const taze = await C.db.sessions.get(sid);
+  check('WT-49/5: görsel alanı diskte duruyor (tek kayıt okumasıyla geliyor)',
+    'ekranGor' in taze && taze.ekranGor != null && !('ekranGorVar' in taze),
+    'alanlar: ' + Object.keys(taze).join(','));
+
+  // Geçmiş satırı ataç ikonunu artık bayraktan çiziyor
+  await C.renderHistory();
+  await sleep(300);
+  check('WT-49/5: ataç ikonu bayraktan çiziliyor (WT-39/7 bozulmadı)',
+    /📎/.test(w3.document.getElementById('h-groups').innerHTML));
+
+  // Yedek: ne Blob ne de önbellek artefaktı çıkmalı
+  const payload = await C.backupPayload();
+  const yRow = payload.sessions.find(r => r.tarih === '2026-04-01T12:00');
+  check('WT-49/5: yedekte ekranGorVar artefaktı yok',
+    yRow && !('ekranGorVar' in yRow) && !('ekranGor' in yRow),
+    'alanlar: ' + (yRow ? Object.keys(yRow).join(',') : 'satır yok'));
+
+  // ESKİ yedek: JSON.stringify bir Blob'u {} yapıyordu — truthy olduğu için
+  // geri yüklemede görselsiz, kırık bir ataç ikonu doğuruyordu.
+  const eskiYedek = JSON.stringify({
+    app: 'WattTrack', version: 8, exportedAt: new Date().toISOString(),
+    sessions: [{ id: 99, tarih: '2026-04-09T12:00', firma: 'Trugo', tip: 'DC',
+      kwh: 11, tutar: 111, odenen: 111, cur: 'TRY', aracId: vid,
+      ekranGor: {}, ekranGorVar: true }],
+    vehicles: [{ id: vid, ad: 'Kia EV6', batt: 77 }], expenses: [], settings: []
+  });
+  await C.importBackupText(eskiYedek);
+  await sleep(500);
+  const geri = (await C.db.sessions.toArray()).find(r => r.firma === 'Trugo');
+  check('WT-49/5: içe aktarmada Blob OLMAYAN ekranGor eleniyor',
+    geri && !('ekranGor' in geri) && !('ekranGorVar' in geri),
+    geri ? 'alanlar: ' + Object.keys(geri).join(',') : 'kayıt gelmedi');
+  await C.renderHistory();
+  await sleep(300);
+  check('WT-49/5: geri yüklenen kayıtta kırık ataç ikonu çıkmıyor',
+    (w3.document.getElementById('h-groups').innerHTML.match(/📎/g) || []).length === 1,
+    'ataç sayısı: ' + (w3.document.getElementById('h-groups').innerHTML.match(/📎/g) || []).length);
 }
 
 const failed = results.filter(r => !r.pass);

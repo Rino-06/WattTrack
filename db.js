@@ -167,10 +167,24 @@ CACHED_TABLES.forEach(n => {
     db[n].hook(ev, () => { invalidateCache(n); }));
 });
 
+// WT-49/5: ekran görüntüsü (WT-39) ÖNBELLEĞE ALINMAZ. `_all` tablonun tamamını
+// bellekte tuttuğu için her şarj kaydının Blob'u kalıcı olarak bellekte kalırdı
+// — birkaç yüz kayıtlı bir telefonda onlarca MB. Yerine yalnız bayrak tutuluyor;
+// görselin kendisi istendiğinde ui/shell.js tek kaydı db.sessions.get() ile
+// okuyor. Kayıt yazma yolları partial update kullandığı için (add/update(id,{..}))
+// ayıklanmış nesnenin geri yazılıp Blob'u silmesi mümkün değil.
+const stripBlob = r => {
+  if (!r.ekranGor) return r;
+  const {ekranGor, ...kalan} = r;
+  return {...kalan, ekranGorVar: true};
+};
 // Çağıranlar diziyi yerinde sıralayabiliyor (sort), bu yüzden sığ kopya
 // dönüyor: IndexedDB gidiş-dönüşü kalkıyor ama önbellek bozulmuyor.
 async function _all(n) {
-  if (!_cache[n]) _cache[n] = await db[n].toArray();
+  if (!_cache[n]) {
+    const rows = await db[n].toArray();
+    _cache[n] = n === 'sessions' ? rows.map(stripBlob) : rows;
+  }
   return [..._cache[n]];
 }
 const allSessions = () => _all('sessions');
