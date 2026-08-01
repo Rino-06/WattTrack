@@ -1814,6 +1814,100 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     !s3.some(r => r.demo) && s3.length === 1, 'kalan=' + s3.length);
 }
 
+// --- WT-47: otomatik doldurma ve akıllı varsayılanlar ---
+{
+  const A = app();
+  const doc = window.document;
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  const bugun = A.localISO();
+  const dun = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  const v1 = await A.db.vehicles.add({ad: 'Araç A', batt: 77});
+  const v2 = await A.db.vehicles.add({ad: 'Araç B', batt: 60});
+  A.S.defaultVehicleId = v1;
+  const secTip = () => doc.querySelector('#in-tip button.sel')?.dataset.v;
+
+  // 1) Aynı GÜN: tip, banka ve lokasyon önerilir
+  await A.db.sessions.add({tarih: `${bugun}T09:00`, firma: 'ZES', tip: 'AC',
+    kwh: 10, tutar: 100, odenen: 100, cur: 'TRY', aracId: v1,
+    banka: 'Visa', loc: 'Kadıköy'});
+  await A.openAdd();
+  await sleep(300);
+  check('WT-47: yeni kayıtta şarj tipi son kayıttan geliyor',
+    secTip() === 'AC', 'tip=' + secTip());
+  check('WT-47: banka son kayıttan geliyor',
+    $('in-bank').value === 'Visa', 'banka=' + $('in-bank').value);
+  check('WT-47: aynı gün içinde lokasyon da öneriliyor',
+    $('in-loc').value === 'Kadıköy', 'loc=' + $('in-loc').value);
+  check('WT-47: öneri gelişmiş alanlara düştüğü için panel açık',
+    $('adv-fields').classList.contains('open'));
+  check('WT-47: araç zaten varsayılandan geliyordu (bozulmadı)',
+    $('in-vehicle').value === String(v1), 'araç=' + $('in-vehicle').value);
+  await A.overlayClose('page-add', {force: true});
+
+  // 2) DÜNKÜ kayıt: lokasyon önerilmez (dünkü istasyon bugünün yeri değil),
+  //    tip ve banka önerilmeye devam eder
+  await A.db.sessions.clear();
+  await A.db.sessions.add({tarih: `${dun}T09:00`, firma: 'ZES', tip: 'AC',
+    kwh: 10, tutar: 100, odenen: 100, cur: 'TRY', aracId: v1,
+    banka: 'Visa', loc: 'Kadıköy'});
+  await A.openAdd();
+  await sleep(300);
+  check('WT-47: dünkü kaydın lokasyonu ÖNERİLMİYOR',
+    $('in-loc').value === '', 'loc=' + $('in-loc').value);
+  check('WT-47: dünkü kayıtta tip ve banka yine öneriliyor',
+    secTip() === 'AC' && $('in-bank').value === 'Visa',
+    'tip=' + secTip() + ' banka=' + $('in-bank').value);
+  await A.overlayClose('page-add', {force: true});
+
+  // 3) Çok araçlı kullanıcı: öneri SEÇİLİ aracın son kaydından gelmeli
+  await A.db.sessions.clear();
+  await A.db.sessions.bulkAdd([
+    {tarih: `${dun}T08:00`, firma: 'ZES', tip: 'DC', kwh: 10, tutar: 100,
+      odenen: 100, cur: 'TRY', aracId: v1, banka: 'Visa'},
+    {tarih: `${bugun}T09:00`, firma: 'Trugo', tip: 'AC', kwh: 10, tutar: 100,
+      odenen: 100, cur: 'TRY', aracId: v2, banka: 'Mastercard'}
+  ]);
+  await A.openAdd();
+  await sleep(300);
+  check('WT-47: öneri başka aracın DAHA YENİ kaydından değil, seçili araçtan',
+    secTip() === 'DC' && $('in-bank').value === 'Visa',
+    'tip=' + secTip() + ' banka=' + $('in-bank').value);
+  await A.overlayClose('page-add', {force: true});
+
+  // 4) DÜZENLEME modunda öneri ASLA çalışmaz — kaydın kendi değerleri kalır
+  const dId = await A.db.sessions.add({tarih: `${dun}T20:00`, firma: 'Esarj',
+    tip: 'DC', kwh: 5, tutar: 50, odenen: 50, cur: 'TRY', aracId: v1});
+  await A.db.sessions.add({tarih: `${bugun}T21:00`, firma: 'ZES', tip: 'AC',
+    kwh: 5, tutar: 50, odenen: 50, cur: 'TRY', aracId: v1,
+    banka: 'Mastercard', loc: 'Beşiktaş'});
+  await A.openAdd(dId);
+  await sleep(300);
+  check('WT-47: düzenlemede öneri kaydın tipini EZMİYOR',
+    secTip() === 'DC', 'tip=' + secTip());
+  check('WT-47: düzenlemede boş banka ve lokasyon boş kalıyor',
+    $('in-bank').value === '' && $('in-loc').value === '',
+    'banka=' + $('in-bank').value + ' loc=' + $('in-loc').value);
+  await A.overlayClose('page-add', {force: true});
+
+  // 5) Örnek veri (WT-36) öneri üretmez — kullanıcının alışkanlığı değil
+  await A.db.sessions.clear();
+  await A.db.sessions.add({tarih: `${bugun}T09:00`, firma: 'ZES', tip: 'AC',
+    kwh: 10, tutar: 100, odenen: 100, cur: 'TRY', aracId: v1,
+    banka: 'Visa', loc: 'Kadıköy', demo: true});
+  await A.openAdd();
+  await sleep(300);
+  check('WT-47: örnek veriden öneri ÜRETİLMİYOR',
+    secTip() === 'DC' && $('in-bank').value === '' && $('in-loc').value === '',
+    'tip=' + secTip() + ' banka=' + $('in-bank').value + ' loc=' + $('in-loc').value);
+  await A.overlayClose('page-add', {force: true});
+
+  // Paylaşılan DOM: sonraki bloklara temiz durum bırak
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  A.S.defaultVehicleId = null;
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);

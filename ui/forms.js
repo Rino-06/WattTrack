@@ -353,7 +353,39 @@ async function openAdd(id) {
     `<option value="${v.id}">${esc(vehName(v))}</option>`).join('');
   $('in-vehicle').value = r?.aracId ?? S.defaultVehicleId ?? (vehicles[0]?.id || '');
 
-  const advOpen = S.advOpen || !!(r && (r.dur || r.loc || r.not || r.banka));
+  // WT-47: yeni kayıt modunda son kaydın alışkanlıkları önerilir. Düzenlemede
+  // ASLA çalışmaz — kaydın kendi değerleri yukarıda yazıldı, üzerine yazmak
+  // kullanıcının verisini bozar. Araç/birim fiyat zaten hazır geliyordu
+  // (varsayılan araç, WT-16'nın homeKwhPrice'ı); bu blok tip, banka ve
+  // lokasyonu ekliyor.
+  const oneri = (() => {
+    if (r) return null;
+    const secilen = $('in-vehicle').value ? +$('in-vehicle').value : null;
+    // Örnek veri (WT-36) öneri üretmez: kullanıcının alışkanlığı değil.
+    const aday = allSess.filter(x => !isDemo(x));
+    // Çok araçlı kullanıcıda BAŞKA bir aracın bankası/lokasyonu öneri değil
+    // gürültüdür; seçili aracın kaydı yoksa genele düşülüyor.
+    const kendi = secilen != null ? aday.filter(x => x.aracId === secilen) : [];
+    const havuz = kendi.length ? kendi : aday;
+    return havuz.reduce((a, b) =>
+      !a || b.tarih > a.tarih || (b.tarih === a.tarih && b.id > a.id) ? b : a, null);
+  })();
+  if (oneri) {
+    if (oneri.tip) $('in-tip').querySelectorAll('button').forEach(b =>
+      b.classList.toggle('sel', b.dataset.v === oneri.tip));
+    // Listede olmayan bir banka atanırsa select kendiliğinden boşa düşer.
+    if (oneri.banka) $('in-bank').value = oneri.banka;
+    // Lokasyon YALNIZ aynı gün önerilir: dünkü istasyon bugünkü şarjın yeri
+    // değil, ama aynı gün ikinci kez şarj eden kullanıcı büyük olasılıkla
+    // aynı yerdedir. (Madde de "aynı gün içindeyse" diyor.)
+    if (oneri.loc && oneri.tarih.slice(0, 10) === $('in-date').value)
+      $('in-loc').value = oneri.loc;
+  }
+
+  // WT-47: öneri gelişmiş alanlara (banka/lokasyon) düştüyse panel açılmalı —
+  // kapalı panelde sessizce doldurulan alan kullanıcıyı yanıltır.
+  const advOpen = S.advOpen || !!(r && (r.dur || r.loc || r.not || r.banka))
+    || !!($('in-bank').value || $('in-loc').value);
   $('adv-fields').classList.toggle('open', advOpen);
   $('btn-adv').textContent = advOpen ? t('advancedHide') : t('advanced');
 
