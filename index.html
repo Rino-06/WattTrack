@@ -640,7 +640,13 @@ nav button{min-height:48px;justify-content:center}
     <button data-v="week" data-i18n="week">Hafta</button>
     <button data-v="month" class="sel" data-i18n="month">Ay</button>
     <button data-v="year" data-i18n="year">Yıl</button>
+    <button data-v="all" data-i18n="periodAll">Tümü</button>
   </div>
+
+  <!-- WT-56: seçili dönemde kayıt yokken bloklar "Henüz kayıt yok" diyordu;
+       yedeğini geri yükleyen kullanıcı bunu VERİ KAYBI sanıyordu. -->
+  <!-- .warn-host DEĞİL: renderWarnings() o sınıftaki her kutuyu boşaltıyor -->
+  <div id="s-period-empty" style="display:none;margin-bottom:14px"></div>
 
   <div class="h2row" style="margin-top:0">
     <h2 class="h2" data-i18n="spendChart">Harcama grafiği</h2>

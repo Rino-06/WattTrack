@@ -50,6 +50,9 @@ function prevPeriodFilter(all) {
 // seçicisini (S.gran) kullanıyor; aynı anlamları paylaşsınlar diye tek gövde.
 function inPeriod(all, period) {
   const now = new Date();
+  // WT-56: yalnız İstatistik sayfasının seçicisinde var. Ana sayfa S.period
+  // gönderiyor ve orada 'all' seçeneği YOK — dönem kutuları anlamsızlaşırdı.
+  if (period === 'all') return all;
   if (period === 'week') {
     const from = new Date(now); from.setDate(now.getDate() - 6);
     const key = localISO(from);
@@ -61,7 +64,8 @@ function inPeriod(all, period) {
 }
 const granFilter = all => inPeriod(all, S.gran);
 // Kısa ad (rozet/etiket için: "Hafta"/"Ay"/"Yıl") ve uzun ad ("Bu hafta toplam")
-const periodShort = p => t(p === 'week' ? 'week' : p === 'year' ? 'year' : 'month');
+const periodShort = p => t(p === 'week' ? 'week' : p === 'year' ? 'year'
+  : p === 'all' ? 'periodAll' : 'month');
 const periodName = p => t(p === 'week' ? 'periodWeek' : p === 'year' ? 'periodYear' : 'periodMonth');
 const vehFilter = (list, vid) => vid ? list.filter(r => String(r.aracId) === vid) : list;
 // odometre için araç: seçili > tek araç > varsayılan araç

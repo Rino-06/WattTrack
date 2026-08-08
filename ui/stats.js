@@ -33,6 +33,27 @@ async function renderStats() {
   $('s-gran-lbl').textContent = t('periodLbl', {p: periodShort(S.gran)});
   $('s-chart-scope').textContent = t('chartTrendNote');
 
+  // WT-56: aşağıdaki dağılımların HEPSİ `cur`, yani seçili döneme bağlı
+  // (WT-15 bilerek böyle yaptı). Yedeğini geri yükleyen kullanıcının kayıtları
+  // bu ay içinde olmadığı için bloklar "Henüz kayıt yok" yazıyordu ve bu
+  // VERİ KAYBI gibi okunuyordu. Artık farkı söyleyen bir şerit ve tek
+  // dokunuşla "Tümü"ne geçiş var.
+  const pEmpty = $('s-period-empty');
+  if (!cur.length && all.length) {
+    pEmpty.style.display = '';
+    pEmpty.innerHTML = `<div class="warn-strip"><span class="msg"></span>
+      <button type="button" data-act></button></div>`;
+    pEmpty.querySelector('.msg').textContent = t('periodEmpty', {n: all.length});
+    const btn = pEmpty.querySelector('[data-act]');
+    btn.textContent = t('periodEmptyBtn');
+    // Seçicinin kendi düğmesine tıkla: durum, seçili sınıf ve yeniden çizim
+    // tek yerde kalsın (ui/dashboard.js'deki d-gran dinleyicisi).
+    btn.addEventListener('click', () => $('d-gran').querySelector('[data-v="all"]').click());
+  } else pEmpty.style.display = 'none';
+  // Blokların boş metni de ayrışsın: "hiç kaydın yok" ile "bu dönemde yok"
+  // aynı cümle olmamalı.
+  const bosMetin = (!cur.length && all.length) ? 'noDataPeriod' : 'noData';
+
   // WT-49/4: her çubuk için diziyi baştan taramak (all.filter(...) × 7) yerine
   // gün/ay/yıl toplamları TEK geçişte çıkarılıyor ve önbellek kuşağına bağlı
   // memoize ediliyor. Anahtar araç filtresini ve para birimini içeriyor —
@@ -68,6 +89,12 @@ async function renderStats() {
       bars.push({label: y, year: y,
         sum: T_.yil[y] || 0});
     }
+  } else if (S.gran === 'all') {
+    // WT-56: son 5 takvim yılı DEĞİL, verinin kendi yılları — eski bir yedeği
+    // geri yükleyen kullanıcının çubukları boş çıkmasın.
+    const yls = Object.keys(T_.yil).sort().slice(-6);
+    (yls.length ? yls : [String(now.getFullYear())]).forEach(y =>
+      bars.push({label: y, year: y, sum: T_.yil[y] || 0}));
   } else {
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -128,7 +155,7 @@ async function renderStats() {
         <div class="total">${money(r.total)}</div>
       </div>
       <div class="track"><div class="fill" style="width:${Math.round(r.total / maxF * 100)}%"></div></div>
-    </div>`).join('') : `<div class="empty">${t('noData')}</div>`;
+    </div>`).join('') : `<div class="empty">${t(bosMetin)}</div>`;
 
   // WT-16/5: İKİ AYRI donut. Eskiden tek donutta DC / AC / Ev vardı; DC-AC bir
   // TEKNOLOJİ boyutu, "Ev" bir FİRMA değeriydi — ev şarjı da fiziksel olarak AC
@@ -149,7 +176,7 @@ async function renderStats() {
     $(legendId).innerHTML = segs.map(x =>
       `<div class="li"><span class="dot" style="background:${x.col}"></span>${esc(x.name)}
        <span class="lv">${Math.round(x.kwh)} kWh · %${Math.round(x.kwh / tot * 100)}</span></div>`).join('') ||
-      `<div class="li" style="color:var(--faint)">${t('noData')}</div>`;
+      `<div class="li" style="color:var(--faint)">${t(bosMetin)}</div>`;
     // WT-30: donut ekran okuyucuya görünmezdi
     labelBarChart(svgId, title, segs.map(x => ({
       label: x.name,
@@ -180,7 +207,7 @@ async function renderStats() {
     `<div class="tl"><span class="rank">${i + 1}</span>
       <span class="tn">${esc(name)}<div class="ts">${x.n} ${t('sessions')}</div></span>
       <span class="tv" style="color:var(--accent-dark)">−${money(x.sav)}</span></div>`).join('')
-    : `<div class="tl" style="color:var(--faint)">${t('noData')}</div>`;
+    : `<div class="tl" style="color:var(--faint)">${t(bosMetin)}</div>`;
 
   // en çok lokasyonlar
   const bL = {};
@@ -193,7 +220,7 @@ async function renderStats() {
     `<div class="tl"><span class="rank">${i + 1}</span>
       <span class="tn">${esc(name)}<div class="ts">${money(x.tl)}</div></span>
       <span class="tv">${x.n} ${t('sessions')}</span></div>`).join('')
-    : `<div class="tl" style="color:var(--faint)">${t('noData')}</div>`;
+    : `<div class="tl" style="color:var(--faint)">${t(bosMetin)}</div>`;
 
   // WT-42/3: firma bazında ortalama kayıp. Yalnız kayipPct'i hesaplanmış
   // (yani socB+socA+batarya üçü de olan) kayıtlar sayılıyor.
