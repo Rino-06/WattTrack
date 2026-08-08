@@ -1157,7 +1157,6 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     {tarih: `${y}-05-02T10:00`, firma: 'Esarj', tip: 'AC', kwh: 10, tutar: 100,
       odenen: 100, cur: 'TRY', loc: 'Besiktas', not: 'otoparkta', aracId: v2}
   ]);
-  $('h-search').value = '';
   await A.renderHistory();
   await sleep(300);
 
@@ -1184,28 +1183,17 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-46/5: satırda düzenleme çevronu var',
     doc.querySelectorAll('#h-groups .crow-chev').length === 2);
 
-  // WT-46/1: arama — nota göre
-  $('h-search').value = 'otopark';
-  fire($('h-search'), 'input');
-  await sleep(400);
-  check('WT-46/1: arama notta da eşleşiyor',
-    doc.querySelectorAll('#h-groups .crow').length === 1
-      && /Esarj/.test(doc.querySelector('#h-groups .crow').textContent),
+  // WT-71: WT-46/1'in serbest metin araması KULLANICI İSTEĞİYLE kaldırıldı
+  // (Geçmiş 1). Arama kontrolleri yerine, kutunun gerçekten gitmiş olduğu ve
+  // filtre panelinin sağlam kaldığı doğrulanıyor.
+  check('WT-71 KABUL: arama kutusu kaldırıldı',
+    !doc.getElementById('h-search'));
+  check('WT-71: filtre paneli ve özet şeridi yerinde duruyor',
+    !!doc.getElementById('h-filters') && !!doc.getElementById('h-summary')
+      && !!doc.getElementById('h-filter-btn'));
+  check('WT-71: filtresiz listede iki kayıt da görünüyor',
+    doc.querySelectorAll('#h-groups .crow').length === 2,
     'satır=' + doc.querySelectorAll('#h-groups .crow').length);
-  check('WT-46/2: özet arama sonucuna göre güncelleniyor',
-    /100/.test($('h-summary').textContent) && /1/.test($('h-summary').textContent),
-    $('h-summary').textContent);
-
-  // lokasyona göre
-  $('h-search').value = 'kadıköy';
-  fire($('h-search'), 'input');
-  await sleep(400);
-  check('WT-46/1: arama lokasyonda da eşleşiyor (büyük/küçük harf duyarsız)',
-    doc.querySelectorAll('#h-groups .crow').length === 1
-      && /ZES/.test(doc.querySelector('#h-groups .crow').textContent));
-  $('h-search').value = '';
-  fire($('h-search'), 'input');
-  await sleep(400);
 
   // WT-46/6: filtreler tek düğmenin arkasında
   check('WT-46/6: altı açılır liste varsayılan olarak gizli',
@@ -1255,7 +1243,6 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   // sonraki bloklara devrediyor — hepsi geri veriliyor.
   await A.db.vehicles.clear();
   await A.db.sessions.clear();
-  $('h-search').value = '';
   $('h-filters').style.display = 'none';
   $('h-filter-btn').setAttribute('aria-expanded', 'false');
   await A.renderHistory();

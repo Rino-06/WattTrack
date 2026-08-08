@@ -209,7 +209,7 @@ diğerinin ön koşulu olduğu yerlerde bağımlılık yazıldı.
 | # | Madde | Kaynak | Not |
 |---|---|---|---|
 | **WT-70** | "Detay istatistikler" ve "Kilometre sayacı" başlıklarının kaldırılması; "Araç sayacı" → "Araç km sayacı" | Anasayfa 4, 5 | ✅ **BİTTİ.** Detay istatistiklerdeki dönem rozeti KALDI (kutuların hangi dönemi gösterdiğini söyleyen tek şey oydu). Sayaç etiketi `odoNowUnit` ile birime bağlandı, altı dilde dolu; `applyI18n` içinde `1 km` etiketleriyle aynı yerde güncelleniyor. |
-| **WT-71** | Geçmiş'teki arama kutusunun kaldırılması | Geçmiş 1 | WT-46'da eklenmişti; filtreler kalıyor. |
+| **WT-71** | Geçmiş'teki arama kutusunun kaldırılması | Geçmiş 1 | ✅ **BİTTİ.** WT-46/1'de eklenmişti; kutu, ayrıştırma fonksiyonu ve dinleyicisi kaldırıldı. Filtre paneli (yıl, firma, tip, araç, banka, lokasyon), özet şeridi ve geri alma yerinde. WT-46/1'in iki testi silinmedi — arama kontrolleri, kutunun gerçekten gittiğini ve filtre panelinin sağlam kaldığını doğrulayan kontrollerle değiştirildi. |
 | **WT-72** | İstatistik: haftanın günleri grafiğinin **silinmesi** + firma dağılımının sayfa sonuna alınması | İstatistik 2, 4 | Kullanıcı 08.08.2026'da onayladı: "haftalık grafiği sil". Grafik `ui/stats.js:96-110` + `#d-weekdays`; `weekdayDist` çeviri anahtarı da altı dilden temizlenecek. |
 | **WT-73** | Kıyasla düzeltmeleri | Kıyasla 1, 3, 4, 5 | (1) yakıtlı araç sabit gideri **varsayılan kapalı**; (3) parantezli metinler alt satıra — taşma bitecek; (4) sabit gider girilmemişse "yakıt + sabit gider" kutuları gizlensin; (5) "gider dahil" → "**sabit gider dahil**" (altı dil). Kıyasla 6'nın doğrulaması da burada yapılacak. |
 | **WT-74** | Aracım kart yerleşimi: model/içerik metni **üstte tam genişlik**, km–ayar–resim altında | Aracım 2 | |
