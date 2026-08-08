@@ -75,10 +75,10 @@ const curOfForm = () => {
   return c ? c[3] : S.currency;
 };
 function recalcFromUnitPrice() {
-  const kwh = pf($('in-kwh').value);
+  const kwh = pf(parcaliOku('in-kwh'));
   const up = pf($('in-unitprice').value);
   if (isNaN(kwh) || isNaN(up)) return;
-  $('in-amount').value = fmtInput(Math.round(kwh * up * 100) / 100, 2);
+  parcaliYaz('in-amount', Math.round(kwh * up * 100) / 100);
   updateNetLine();
 }
 $('in-firm').addEventListener('change', () => syncHomePricing());
@@ -87,9 +87,9 @@ $('in-unitprice').addEventListener('input', () => {
   recalcFromUnitPrice();
   syncHomePricing();
 });
-$('in-kwh').addEventListener('input', () => {
+['in-kwh', 'in-kwh-dec'].forEach(id => $(id).addEventListener('input', () => {
   if (amountSrc === 'birimFiyat' && homeSelected()) recalcFromUnitPrice();
-});
+}));
 // Tutara ELLE dokunmak birim fiyat hesabını devre dışı bırakır
 $('in-amount').addEventListener('input', () => {
   if (homeSelected() && amountSrc === 'birimFiyat') { amountSrc = 'manuel'; syncHomePricing(); }
@@ -100,21 +100,71 @@ $('in-disc-type').addEventListener('click', e => {
   updateNetLine();
 });
 function updateNetLine() {
-  const g = pf($('in-amount').value);
+  const g = pf(parcaliOku('in-amount'));
   const code = $('in-country').value;
   const c = COUNTRIES.find(x => x[0] === code);
   if (isNaN(g) || g < 0) { $('calc-net').textContent = '—'; return; }
   const type = $('in-disc-type').querySelector('.sel').dataset.v;
-  const net = netFromGross(g, type, pf($('in-disc-val').value) || 0);
+  const net = netFromGross(g, type, pf(parcaliOku('in-disc-val')) || 0);
   $('calc-net').textContent = fm(symOf(c ? c[3] : S.currency),
     fmtNum(net, 2));
 }
-['in-amount', 'in-disc-val'].forEach(id => $(id).addEventListener('input', updateNetLine));
+['in-amount', 'in-disc-val', 'in-amount-dec', 'in-disc-val-dec']
+  .forEach(id => $(id).addEventListener('input', updateNetLine));
 // WT-02/C: ondalıklı alanlarda blur'da virgüllü geri yazma
-[['in-amount', 2], ['in-disc-val', 2], ['in-rate', 6], ['in-exp-amount', 2],
+[['in-rate', 6], ['in-exp-amount', 2],
  ['c-price', 2], ['c-cons', 2], ['c-icefix', 2]].forEach(([id, d]) => bindDecimalInput(id, d));
-// WT-03: kWh tek alan — çift kutu %1'lik sessiz hata üretiyordu (45,5 -> 45,05)
-bindDecimalInput('in-kwh', 2);
+// WT-65: enerji, tutar ve indirim TAM + ONDALIK iki kutuya ayrıldı —
+// kullanıcı virgülü elle yazmasın (Veri Girişi 2).
+//
+// DİKKAT — WT-03 bu çift kutuyu bilerek KALDIRMIŞTI: eski uygulama ondalık
+// kutusunu "yüzde bir" (kuruş) gibi okuyordu, kullanıcı 45,5 demek için "5"
+// yazınca 45,05 kaydediliyordu — %1'lik SESSİZ hata. Geri getirirken o tuzak
+// kapatıldı: ondalık kutusu virgülden SONRAKİ BASAMAKLAR olarak okunuyor
+// ("5" → ,5) ve odak çıkınca iki basamağa tamamlanıp EKRANDA gösteriliyor
+// ("5" → "50"). Yani değer artık sessizce değişmiyor, kullanıcı ne
+// kaydedileceğini kutuda görüyor.
+const PARCALI = ['in-kwh', 'in-amount', 'in-disc-val'];
+function parcaliOku(id) {
+  const tam = ($(id).value || '').trim();
+  const ond = ($(id + '-dec')?.value || '').trim();
+  if (!tam && !ond) return '';
+  // Tam kutuya AYRAÇLI değer girilmiş olabilir: yapıştırma, OCR ya da eski
+  // alışkanlık ("45,5"). pf'in kuralı gereği tek ayraç her zaman ondalıktır,
+  // o yüzden böyle bir değer TAM sayılır ve ondalık kutusu yok sayılır.
+  // Blur bunu iki kutuya bölüp kullanıcıya gösteriyor.
+  if (/[.,]/.test(tam)) return tam;
+  return (tam || '0') + ',' + (ond || '0');
+}
+function parcaliYaz(id, n) {
+  const dEl = $(id + '-dec');
+  if (n == null || n === '' || isNaN(n)) { $(id).value = ''; if (dEl) dEl.value = ''; return; }
+  const yuvarlak = Math.round(Math.abs(n) * 100) / 100;
+  const tam = Math.floor(yuvarlak);
+  const ond = Math.round((yuvarlak - tam) * 100);
+  // Binlik ayracı YOK: bu kutu tekrar pf'e girdiğinde "1.234" tek ayraçlı
+  // sayılıp 1,234 olarak okunurdu (pf'in kuralı). Sade rakam tek doğru biçim.
+  $(id).value = (n < 0 ? '-' : '') + String(tam);
+  if (dEl) dEl.value = ond ? String(ond).padStart(2, '0') : '';
+}
+PARCALI.forEach(id => {
+  // Tam kutuda blur: değeri her zaman iki kutuya böl. Ayraçlı girilen değer
+  // YUVARLANMAZ (WT-03'ün sessiz %1 hatası buradan doğuyordu).
+  $(id).addEventListener('blur', () => {
+    if (!($(id).value || '').trim()) return;
+    const n = pf(parcaliOku(id), 2);
+    if (!isNaN(n)) parcaliYaz(id, n);
+  });
+  const dEl = $(id + '-dec');
+  if (!dEl) return;
+  dEl.addEventListener('input', () => {
+    dEl.value = dEl.value.replace(/\D/g, '').slice(0, 2);
+  });
+  // Odak çıkınca sağa tamamla: "5" -> "50". Ne kaydedileceği kutuda görünür.
+  dEl.addEventListener('blur', () => {
+    if (dEl.value) dEl.value = dEl.value.padEnd(2, '0');
+  });
+});
 $('in-firm').addEventListener('change', () => {
   $('in-firm-other').style.display = $('in-firm').value === '__other' ? '' : 'none';
 });
@@ -320,7 +370,7 @@ async function openAdd(id) {
     b.classList.toggle('sel', b.dataset.v === (r?.tip || 'DC')));
 
   // kWh: tek alan (WT-03)
-  $('in-kwh').value = r?.kwh ? fmtInput(r.kwh, 2) : '';
+  parcaliYaz('in-kwh', r?.kwh ?? null);
   // WT-19: odo'su olan kayıtta mesafe TÜRETİLMİŞTİR — mesafe kutusu boş kalır
   $('in-dist').value = (r && r.odo == null && r.mesafeKm) ? Math.round(distDisp(r.mesafeKm)) : '';
   $('in-odo').value = r?.odo != null ? Math.round(distDisp(r.odo)) : '';
@@ -328,12 +378,11 @@ async function openAdd(id) {
   $('in-free').checked = !!r?.free;
   const grossVal = r && !r.free
     ? (r.tutar != null ? r.tutar : (r.odenen || 0) + savingsOf(r)) : null;
-  $('in-amount').value = grossVal != null && !isNaN(grossVal)
-    ? fmtInput(grossVal, 2) : '';
+  parcaliYaz('in-amount', grossVal != null && !isNaN(grossVal) ? grossVal : null);
   const dt = r?.indirimTip === 'percent' ? 'percent' : 'amount';
   $('in-disc-type').querySelectorAll('button').forEach(b =>
     b.classList.toggle('sel', b.dataset.v === dt));
-  $('in-disc-val').value = r?.indirimDeger ? fmtInput(r.indirimDeger, 2) : '';
+  parcaliYaz('in-disc-val', r?.indirimDeger ?? null);
   const durMin = r?.dur || 0;
   $('in-dur-h').value = durMin ? Math.floor(durMin / 60) : '';
   $('in-dur-m').value = durMin ? durMin % 60 : '';
@@ -382,7 +431,7 @@ async function openAdd(id) {
     b.addEventListener('click', () => {
       $('in-disc-type').querySelectorAll('button').forEach(x =>
         x.classList.toggle('sel', x.dataset.v === 'percent'));
-      $('in-disc-val').value = b.dataset.v;
+      parcaliYaz('in-disc-val', pf(b.dataset.v));
     }));
   $('soc-chips').innerHTML = ['20-80','10-80','10-90','20-100','10-100','0-100'].map(v =>
     `<button type="button" class="chip" data-v="${v}">${v}</button>`).join('');
@@ -494,7 +543,8 @@ $('btn-save').addEventListener('click', async () => {
   ];
   const v = {};
   for (const [kural, id, required] of alanlar) {
-    const r = checkNum(kural, free && id === 'in-amount' ? '' : $(id).value, {required});
+    const deger = PARCALI.includes(id) ? parcaliOku(id) : $(id).value;
+    const r = checkNum(kural, free && id === 'in-amount' ? '' : deger, {required});
     if (!r.ok) { showErr(r.msg, id); return; }
     v[id] = r.value;
   }
@@ -660,7 +710,9 @@ async function ocrFormaUygula(sonuc) {
   ocrSablonSon = sonuc.sablon;
   const koy = (id, deger, alan) => {
     if (deger == null || !$(id)) return;
-    $(id).value = deger;
+    // WT-65: parçalı alanda tek kutuya yazmak ondalığı düşürürdü
+    if (PARCALI.includes(id)) parcaliYaz(id, pf(deger));
+    else $(id).value = deger;
     ocrIsaretle(id, (g[alan] ?? 100) < OCR_GUVEN_ESIK);
   };
   if (a.tarih) koy('in-date', a.tarih.slice(0, 10), 'tarih');

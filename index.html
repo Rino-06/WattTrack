@@ -214,6 +214,12 @@ h1,h2{font-size:inherit;font-weight:inherit}
 [data-theme="dark"] .demo-bar button{color:#0f172a}
 
 .seg{display:flex;gap:8px}
+/* WT-65: tam + ondalık kutu çifti */
+.dec-pair{display:flex;align-items:center;gap:8px}
+.dec-pair input{min-width:0}
+.dec-pair .int{flex:3}
+.dec-pair .dec{flex:1;max-width:92px;text-align:center}
+.dec-pair .sep{font-size:20px;font-weight:800;color:var(--muted);line-height:1}
 .seg button{flex:1;text-align:center;padding:10px 6px;border-radius:10px;font-size:13px;font-weight:600;background:var(--card);color:var(--muted);border:1px solid var(--border)}
 .seg button.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
 .seg.mini button{padding:7px 4px;font-size:12px;border-radius:9px}
@@ -1095,7 +1101,13 @@ nav button{min-height:48px;justify-content:center}
     <div class="row2">
       <div>
         <label class="lbl" data-i18n="kwh" for="in-kwh">Enerji (kWh)</label>
-        <input type="text" inputmode="decimal" id="in-kwh" placeholder="45,27" aria-describedby="kwhHint">
+        <!-- WT-65: tam ve ondalık ayrı kutu — kullanıcı virgülü elle yazmasın -->
+        <div class="dec-pair">
+          <input type="text" class="int" inputmode="numeric" id="in-kwh" placeholder="45" aria-describedby="kwhHint">
+          <span class="sep" aria-hidden="true">,</span>
+          <input type="text" class="dec" inputmode="numeric" maxlength="2" id="in-kwh-dec"
+                 placeholder="00" data-i18n-aria="decPart">
+        </div>
         <div class="about" id="kwhHint" style="margin:5px 0 0;font-size:12px" data-i18n="kwhHint">Örn. 45,27</div>
       </div>
       <div>
@@ -1117,7 +1129,12 @@ nav button{min-height:48px;justify-content:center}
 
     <div id="wrap-paid">
       <label class="lbl" id="in-amount-lbl" for="in-amount">Ödenen Tutar</label>
-      <input type="text" inputmode="decimal" id="in-amount" placeholder="0,00">
+      <div class="dec-pair">
+        <input type="text" class="int" inputmode="numeric" id="in-amount" placeholder="0">
+        <span class="sep" aria-hidden="true">,</span>
+        <input type="text" class="dec" inputmode="numeric" maxlength="2" id="in-amount-dec"
+               placeholder="00" data-i18n-aria="decPart">
+      </div>
       <div class="about" id="amount-src-note" style="margin:5px 0 0;font-size:12px"></div>
     </div>
 
@@ -1127,7 +1144,12 @@ nav button{min-height:48px;justify-content:center}
         <button data-v="amount" class="sel" data-i18n="amountType">Tutar</button>
         <button data-v="percent" data-i18n="percentType">Yüzde (%)</button>
       </div>
-      <input type="text" inputmode="decimal" id="in-disc-val" placeholder="0">
+      <div class="dec-pair">
+        <input type="text" class="int" inputmode="numeric" id="in-disc-val" placeholder="0">
+        <span class="sep" aria-hidden="true">,</span>
+        <input type="text" class="dec" inputmode="numeric" maxlength="2" id="in-disc-val-dec"
+               placeholder="00" data-i18n-aria="decPart">
+      </div>
       <div class="chips" id="disc-chips"></div>
       <div class="calcline"><span data-i18n="netPaid">Ödenen (net)</span><b id="calc-net">—</b></div>
     </div>

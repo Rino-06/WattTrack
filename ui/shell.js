@@ -490,7 +490,10 @@ const overlayStack = [];          // en üstteki en sonda
 // hiçbir şey değiştirmeden × basan kullanıcıya her seferinde onay sorulur.
 // Bu yüzden açılıştaki değerler bir anlık görüntüye alınıp onunla kıyaslanır.
 const WATCHED = {
-  'page-add': ['in-date', 'in-kwh', 'in-amount', 'in-disc-val', 'in-dist', 'in-odo',
+  // WT-65: parçalı alanların ondalık kutuları da izlenmeli, yoksa yalnız
+  // ondalığı değiştiren kullanıcıya "kaydetmeden çıkıyorsun" sorulmazdı
+  'page-add': ['in-date', 'in-kwh', 'in-kwh-dec', 'in-amount', 'in-amount-dec',
+               'in-disc-val', 'in-disc-val-dec', 'in-dist', 'in-odo',
                'in-missed', 'in-unitprice',
                'in-loc', 'in-note', 'in-rate', 'in-socb', 'in-soca',
                'in-dur-h', 'in-dur-m'],

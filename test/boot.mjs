@@ -77,6 +77,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
        paylasilanGorseliAl, paylasimKutusunuBosalt, ocrDosyaIsle,
        reverseGeo, nearbyStations,
        openCsvImport, importFileText, importBackupText, overlayOpen,
+       parcaliOku, parcaliYaz,
        renderVehiclePage: renderVehiclePage};`;
 try {
   window.eval(bundle);
@@ -117,13 +118,31 @@ await sleep(200);
 // --- WT-02/C: blur biçimlendirmesi ---
 $('in-amount').value = '1234.5';
 fire($('in-amount'), 'blur');
-check('WT-02/C: tutar "1234.5" → "1.234,50"', $('in-amount').value === '1.234,50',
-  'görünen: ' + $('in-amount').value);
+// WT-65 alan çifti: değer artık TAM + ONDALIK iki kutuda gösteriliyor.
+// Kriterin özü değişmedi — ayraçlı girilen değer yuvarlanmamalı.
+check('WT-02/C + WT-65: tutar "1234.5" → 1234 | 50',
+  $('in-amount').value === '1234' && $('in-amount-dec').value === '50',
+  `görünen: ${$('in-amount').value} | ${$('in-amount-dec').value}`);
 
 $('in-kwh').value = '45,5';
 fire($('in-kwh'), 'blur');
-check('WT-03/02: kWh "45,5" → "45,50"', $('in-kwh').value === '45,50',
-  'görünen: ' + $('in-kwh').value);
+check('WT-03 + WT-65: kWh "45,5" → 45 | 50 (45 | 05 DEĞİL)',
+  $('in-kwh').value === '45' && $('in-kwh-dec').value === '50',
+  `görünen: ${$('in-kwh').value} | ${$('in-kwh-dec').value}`);
+
+// WT-65 KABUL: ondalık kutusuna tek basamak yazmak sessizce ,05 olmamalı
+$('in-kwh').value = '45'; $('in-kwh-dec').value = '5';
+fire($('in-kwh-dec'), 'blur');
+check('WT-65 KABUL: ondalık kutusundaki "5" görünür şekilde "50" oluyor',
+  $('in-kwh-dec').value === '50', 'görünen: ' + $('in-kwh-dec').value);
+
+// WT-65 KABUL: ondalık boş bırakılırsa 0 sayılır
+$('in-kwh').value = '30'; $('in-kwh-dec').value = '';
+check('WT-65 KABUL: ondalık boşken değer tam sayı olarak okunuyor',
+  app().pf(app().parcaliOku('in-kwh')) === 30,
+  'okunan: ' + app().parcaliOku('in-kwh'));
+// aşağıdaki kaydetme kontrolleri 45,5 bekliyor — alanı geri koy
+$('in-kwh').value = '45'; $('in-kwh-dec').value = '50';
 
 // --- WT-04: SoC 800 reddediliyor mu? ---
 $('in-socb').value = '10';

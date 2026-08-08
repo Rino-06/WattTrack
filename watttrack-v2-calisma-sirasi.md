@@ -185,7 +185,7 @@ diğerinin ön koşulu olduğu yerlerde bağımlılık yazıldı.
 
 | # | Madde | Kaynak | Not |
 |---|---|---|---|
-| **WT-65** | Enerji, tutar ve indirim alanlarında ondalık kısmın **ayrı** kutuda girilmesi | Veri Girişi 2 | Boş bırakılırsa 0. Önceki sürümde vardı, geri getirilecek. Virgül/nokta ayrımı olan altı dil ve OCR otomatik doldurma bu alanlara yazdığı için **WT-64'ten sonra** yapılmalı. |
+| **WT-65** | Enerji, tutar ve indirim alanlarında ondalık kısmın **ayrı** kutuda girilmesi | Veri Girişi 2 | ✅ **BİTTİ.** ⚠️ Bu, ilk turda **WT-03'ün bilerek KALDIRDIĞI** çift kutu: eski uygulama ondalık kutusunu kuruş gibi okuyordu, kullanıcı 45,5 demek için "5" yazınca 45,05 kaydediliyordu — %1'lik sessiz hata. Geri getirirken tuzak kapatıldı: ondalık kutusu virgülden sonraki basamaklar olarak okunuyor ("5" → ,5) ve odak çıkınca iki basamağa tamamlanıp **ekranda gösteriliyor** ("5" → "50"), yani değer sessizce değişmiyor. Tam kutuya ayraçlı değer yapıştırılırsa yuvarlanmıyor, iki kutuya bölünüyor. Tam kutuda binlik ayracı kullanılmıyor — "1.234" pf kuralınca 1,234 okunurdu. OCR doldurma yolu da parçalı yazıyor. |
 | **WT-66** | Tutarın zorunlu olmaması — tek zorunlu alan enerji | Veri Girişi 3 | Tutarsız kaydın toplamlara ve oran metriklerine nasıl gireceği de tanımlanacak (`isConv` mantığı). |
 
 ### Faz 4 — Açılış animasyonu

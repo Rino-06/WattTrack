@@ -148,8 +148,10 @@ check('WT-16/C5: Ev-İş kaydında indirim bloğu gizli',
 $('in-kwh').value = '40';
 $('in-kwh').dispatchEvent(new w.Event('input', { bubbles: true }));
 await sleep(150);
+// WT-65: tutar artık TAM + ONDALIK iki kutuda
 check('WT-16/C KABUL: 40 kWh × 2,80 → tutar 112,00 doldu',
-  $('in-amount').value === '112,00', 'tutar=' + $('in-amount').value);
+  $('in-amount').value === '112' && $('in-amount-dec').value === '',
+  `tutar=${$('in-amount').value} | ${$('in-amount-dec').value}`);
 
 // tutarın üzerine elle 100 yaz
 $('in-amount').value = '100';
