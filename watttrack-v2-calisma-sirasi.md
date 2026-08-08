@@ -243,7 +243,7 @@ diğerinin ön koşulu olduğu yerlerde bağımlılık yazıldı.
 
 | Ne | Hangi madde için | Neden kodla çözülemez |
 |---|---|---|
-| **Yedek dosyandan kırpılmış örnek** (5-10 satır, kişisel veri gerekmez) | WT-55 | Hangi alan adlarının kaybolduğunu görmeden düzeltme tahmin olur |
+| ~~Yedek dosyandan kırpılmış örnek~~ | ~~WT-55~~ | ✅ **GEREKMİYOR** — WT-55 çürütüldü, yedek yolu alan kaybetmiyor (`test/stats.mjs`) |
 | ~~Ayarlar 1 kararı~~ | ~~—~~ | ✅ 08.08.2026'da verildi → WT-78 |
 | **EV veri kaynağı onayı** | WT-76 | Hangi kaynağı "doğru" saydığın kural gereği sana ait |
 | **Elektrik tarifesi kaynak onayı** (EIA / Eurostat / EPDK) | WT-78 | Aynı gerekçe |
