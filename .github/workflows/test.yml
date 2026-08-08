@@ -1,0 +1,18 @@
+# WT-51/3: her push ve pull request'te testleri koştur.
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Uygulamanın kendisi derleme gerektirmiyor; bağımlılıklar yalnız test/'te.
+      - run: npm ci --prefix test
+      - run: npm test --prefix test
