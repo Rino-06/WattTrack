@@ -169,7 +169,9 @@ async function renderVehiclePage() {
     // WT-19/5: sayaç = kayıtlardaki en son odo ile elle girilen değerden büyüğü
     const od = odoInfo[v.id] || {km: null, src: null};
     const kmTxt = od.km != null ? fmtNum(distDisp(od.km), 0) + ' ' + S.unit : '';
-    const srcTxt = od.src ? t(od.src === 'records' ? 'odoFromRecords' : 'odoFromManual') : '';
+    // WT-58: üçüncü kaynak (girilen sürüş mesafeleri) eklendi
+    const srcTxt = od.src ? t({records: 'odoFromRecords', manual: 'odoFromManual',
+      dist: 'odoFromDist'}[od.src]) : '';
     const sub = [v.batt ? `${v.trim || ''} · ${v.batt} kWh` : '', kmTxt, srcTxt]
       .filter(Boolean).join(' · ');
     const isDef = v.id === S.defaultVehicleId || (!S.defaultVehicleId && vehicles[0].id === v.id);

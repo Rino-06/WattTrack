@@ -281,6 +281,45 @@ A.S.unit = 'km';
     'display=' + $('c-line-card').style.display);
 }
 
+// ============================================================
+// WT-58: veri giriş ekranından girilen MESAFE aracın sayacına eklenmiyordu.
+// odoNowOf() yalnız iki kaynağa bakıyordu: kayıtlardaki `odo` ve elle girilen
+// `kmNow`. Sürülen mesafeyi (mesafeKm) girip sayaç değeri hiç girmeyen
+// kullanıcının aracı, ilk günkü kilometrede donup kalıyordu.
+// ============================================================
+{
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  const vid = await A.db.vehicles.add({ad: 'Mesafe Test', batt: 75,
+    kmStart: 10000, kmNow: 10000});          // onboarding: kmStart === kmNow
+  await A.db.sessions.bulkAdd([
+    {tarih: '2026-05-01T12:00', firma: 'ZES', tip: 'DC', kwh: 40, odenen: 400,
+     tutar: 400, cur: 'TRY', aracId: vid, mesafeKm: 200},
+    {tarih: '2026-05-10T12:00', firma: 'ZES', tip: 'DC', kwh: 42, odenen: 420,
+     tutar: 420, cur: 'TRY', aracId: vid, mesafeKm: 250},
+    {tarih: '2026-05-20T12:00', firma: 'Ev', tip: 'AC', kwh: 30, odenen: 120,
+     tutar: 120, cur: 'TRY', aracId: vid, mesafeKm: 150}
+  ]);
+  const v = await A.db.vehicles.get(vid);
+  const od = await A.odoNowOf(v);
+  check('WT-58: girilen mesafeler aracın sayacına ekleniyor (10.000 + 600)',
+    od.km === 10600, `km=${od.km} src=${od.src}`);
+
+  await A.renderVehiclePage();
+  await sleep(300);
+  check('WT-58: Aracım listesinde güncel sayaç görünüyor',
+    /10\.600/.test($('set-vehicles').textContent),
+    ($('set-vehicles').textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80));
+
+  // Sayaç değeri GİRİLMİŞ kayıt varsa o kazanır — mesafeler odo zincirinden
+  // türetildiği için iki kez sayılmamalı.
+  await A.db.sessions.add({tarih: '2026-06-01T12:00', firma: 'ZES', tip: 'DC',
+    kwh: 50, odenen: 500, tutar: 500, cur: 'TRY', aracId: vid, odo: 12000});
+  const od2 = await A.odoNowOf(await A.db.vehicles.get(vid));
+  check('WT-58: odo kaydı varken mesafe toplamı ÜSTÜNE eklenmiyor (12.000)',
+    od2.km === 12000, `km=${od2.km} src=${od2.src}`);
+}
+
 const failed = results.filter(r => !r).length;
 console.log('\n' + (failed ? `${failed} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ') + ` (${results.length} kontrol)`);
 if (errors.length) { console.log('\nHatalar:'); errors.slice(0, 6).forEach(e => console.log('  - ' + e.slice(0, 250))); }

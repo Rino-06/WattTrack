@@ -284,20 +284,36 @@ async function looksLikeMissedCharge(aracId, mesafeKm, kwh, excludeId) {
   return buTuketim < ortTuketim / 2;
 }
 
-// Araç sayacı = kayıtlardaki en son tarihli odo ile elle girilen değerden
-// BÜYÜK olanı. Hangisinin kullanıldığı Aracım sayfasında not olarak yazılır.
+// Araç sayacı = ÜÇ kaynaktan en büyüğü. Hangisinin kullanıldığı Aracım
+// sayfasında not olarak yazılır.
+//   records — kayıtlardaki en son tarihli `odo`
+//   manual  — araca elle girilen `kmNow`
+//   dist    — WT-58: başlangıç sayacı + girilen sürüş mesafeleri
 async function odoNowOf(v) {
   if (!v) return {km: null, src: null};
-  const mine = (await allSessions())
-    .filter(r => vehEq(r.aracId, v.id) && r.odo != null)
+  const mine = (await allSessions()).filter(r => vehEq(r.aracId, v.id));
+  const odolu = mine.filter(r => r.odo != null)
     .sort((a, b) => a.tarih.localeCompare(b.tarih));
-  const fromRec = mine.length ? mine[mine.length - 1].odo : null;
+  const fromRec = odolu.length ? odolu[odolu.length - 1].odo : null;
   const manual = v.kmNow ?? null;
-  if (fromRec == null && manual == null) return {km: null, src: null};
-  if (fromRec == null) return {km: manual, src: 'manual'};
-  if (manual == null) return {km: fromRec, src: 'records'};
-  return fromRec >= manual
-    ? {km: fromRec, src: 'records'} : {km: manual, src: 'manual'};
+
+  // WT-58: sayaç değeri hiç girmeyip yalnız "sürülen mesafe" giren kullanıcının
+  // aracı ilk günkü kilometrede donuyordu. Toplama YALNIZ odo'suz kayıtlar
+  // girer: odo'lu kayıtların mesafesi zaten odo zincirinden türetiliyor
+  // (tureMesafe), ikisini birden saymak sayacı şişirirdi.
+  // Taban kmStart — kmNow olsaydı, kullanıcı sayacı elle güncellediğinde
+  // aynı sürüş iki kez sayılırdı.
+  const surulen = mine.filter(r => r.odo == null && r.mesafeKm > 0)
+    .reduce((s, r) => s + r.mesafeKm, 0);
+  const taban = v.kmStart ?? manual;
+  const fromDist = (taban != null && surulen > 0) ? taban + surulen : null;
+
+  // Sıra eşitlikte kazananı belirler: records > manual > dist
+  const aday = [[fromRec, 'records'], [manual, 'manual'], [fromDist, 'dist']]
+    .filter(([km]) => km != null);
+  if (!aday.length) return {km: null, src: null};
+  const [km, src] = aday.reduce((a, b) => b[0] > a[0] ? b : a);
+  return {km, src};
 }
 
 
