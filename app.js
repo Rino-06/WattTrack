@@ -29,7 +29,12 @@ function showScreen(name, {push = true} = {}) {
     }
   }
   screen = name;
-  document.querySelectorAll('.content .page').forEach(p => p.classList.remove('active'));
+  // WT-59: seçici '.content .page' idi. Sekmeler HTML'de .content'in içinde
+  // duruyor, ama bozuk bir kapanış etiketi yüzünden bazı tarayıcılar onları
+  // dışarı taşıyordu; o zaman bu seçici hiçbir şey bulmuyor, eski sekmeden
+  // 'active' HİÇ kaldırılmıyor ve sekmeler üst üste biniyordu. Yuvalanmaya
+  // bağımlı olmayan seçici: sayfada '.page' yalnız bu altı ekran.
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button[data-page]').forEach(b => {
     const on = b.dataset.page === name;
     b.classList.toggle('sel', on);

@@ -2339,6 +2339,67 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     `display="${$('d-odo-wrap').style.display}"`);
 }
 
+// ============================================================
+// WT-60: "Teknik değerleri düzenle" düğmesi (ui/shell.js:195) çiziliyordu ama
+// dinleyicisi HİÇ bağlanmamıştı — basınca hiçbir şey olmuyordu. Ayrıca araç
+// henüz kaydedilmemişken (seçim ekranı) düzenlenecek DB kaydı da yok.
+// ============================================================
+{
+  $('btn-add-vehicle').click();
+  await sleep(200);
+  $('car-search').value = 'Model Y';
+  fire($('car-search'), 'input');
+  await sleep(300);
+  const item = window.document.querySelector('#car-results .ev-item');
+  check('WT-60: araç arama sonuç veriyor (ön koşul)', !!item,
+    item ? item.textContent.replace(/\s+/g, ' ').trim().slice(0, 50) : 'sonuç yok');
+
+  // WT-61: "Ekle" düğmesi ve fotoğraf girişi #car-summary'nin İÇİNDE olmamalı.
+  // index.html'de div </main> ile kapatılmıştı; tarayıcı ikisini de kutunun
+  // içine koyuyor, araç seçilince innerHTML onları siliyordu.
+  check('WT-61: Ekle düğmesi kart kutusunun dışında (markup sağlam)',
+    !$('car-summary').contains($('car-save')) && !$('car-summary').contains($('car-photo')));
+
+  if (item) {
+    item.click();
+    await sleep(250);
+    const btn = window.document.querySelector('#car-summary [data-ev-edit]');
+    check('WT-60: seçilen araç kartında düzenle düğmesi var (ön koşul)', !!btn);
+
+    btn?.click();
+    await sleep(300);
+    check('WT-60 KABUL: düğmeye basınca düzenleme ekranı açılıyor',
+      $('page-evspecs').classList.contains('active'),
+      `class="${$('page-evspecs').className}"`);
+
+    // Kaydedilmemiş seçimde de değer düzeltilebilmeli (Giriş 1: EV_DB'de alt
+    // versiyon yoksa kullanıcı bataryayı kaydetmeden önce düzeltsin)
+    $('ev-batt').value = '69';
+    fire($('ev-batt'), 'change');
+    $('evspec-save').click();
+    await sleep(350);
+    check('WT-60 KABUL: taslakta düzeltilen batarya karta yansıyor',
+      /69/.test($('car-summary').textContent),
+      $('car-summary').textContent.replace(/\s+/g, ' ').trim().slice(0, 70));
+    check('WT-60: kaydetme sonrası düzenleme ekranı kapandı',
+      !$('page-evspecs').classList.contains('active'));
+
+    // WT-61 KABUL: araç gerçekten eklenebiliyor
+    const A = app();
+    const once = (await A.allVehicles()).length;
+    check('WT-61: Ekle düğmesi araç seçilince etkinleşiyor', !$('car-save').disabled);
+    $('car-save').click();
+    await sleep(500);
+    const sonra = (await A.allVehicles()).length;
+    check('WT-61 KABUL: ikinci araç eklendi', sonra === once + 1,
+      `önce=${once} sonra=${sonra}`);
+    check('WT-61: eklenen araçta elle düzeltilen batarya korundu',
+      (await A.allVehicles()).some(v => v.batt === 69),
+      (await A.allVehicles()).map(v => v.batt).join(','));
+  }
+  if ($('page-addcar').classList.contains('active')) { $('btn-close-addcar').click(); await sleep(200); }
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);

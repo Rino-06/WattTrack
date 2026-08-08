@@ -719,10 +719,20 @@ $('btn-save-exp').addEventListener('click', async () => {
 // aracının gerçek değerini girebilmesi. Girilen değer vehicles kaydına
 // yazılıyor ve EV_DB'den gelen değerin YERİNE geçiyor.
 let specVid = null;
-async function openEvSpecs(vid) {
-  const v = await db.vehicles.get(vid);
+// WT-60: kart araç HENÜZ KAYDEDİLMEDEN de çiziliyor (onboarding ve "araç ekle"
+// seçim ekranı). O durumda düzenlenecek bir DB kaydı yok; taslağın kendisi
+// düzenleniyor ve kart yeniden çiziliyor. Kullanıcı böylece aracını
+// kaydetmeden önce, EV_DB'de alt versiyonu yoksa bataryayı düzeltebiliyor.
+let specTaslak = null;
+const EV_TASLAK = {
+  'car-summary':   {al: () => carPick, foto: true},
+  'ob-ev-summary': {al: () => obEv,    foto: false}
+};
+async function openEvSpecs(vid, taslak, kutuId) {
+  const v = taslak || await db.vehicles.get(vid);
   if (!v) return;
-  specVid = vid;
+  specVid = taslak ? null : vid;
+  specTaslak = taslak ? {rec: v, kutu: kutuId} : null;
   $('ev-range-lbl').textContent = t('rangeWltp') + ' (' + S.unit + ')';
   $('ev-batt').value = v.batt != null ? fmtInput(v.batt, 2) : '';
   $('ev-range').value = v.range != null ? fmtNum(Math.round(distDisp(v.range)), 0) : '';
@@ -732,16 +742,36 @@ async function openEvSpecs(vid) {
   $('ev-spec-note').textContent = v.specElle
     ? t('evSpecManual')
     : t('evDataDate', {d: v.evVeriTarih || EV_DB_TARIH});
-  $('evspec-reset').style.display = (v.specElle && v.brand) ? '' : 'none';
+  $('evspec-reset').style.display = (v.specElle && v.brand && !taslak) ? '' : 'none';
   $('evspec-err').classList.remove('show');
   overlayOpen('page-evspecs');
 }
-$('btn-close-evspecs').addEventListener('click', () => overlayClose('page-evspecs'));
+// WT-60: bu düğme (ui/shell.js:195) çiziliyordu ama dinleyicisi HİÇ
+// bağlanmamıştı — basınca gerçekten hiçbir şey olmuyordu. Kart üç ayrı yerde
+// yeniden üretildiği için dinleyici, fotoğraf görüntüleyicide olduğu gibi,
+// belgede duruyor.
+document.addEventListener('click', e => {
+  const b = e.target.closest?.('[data-ev-edit]');
+  if (!b) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const vid = b.dataset.evEdit;
+  if (vid) { openEvSpecs(+vid); return; }
+  // Kaydedilmemiş seçim: taslağı düzenle
+  const kutu = b.closest('.ev-summary')?.parentElement?.id;
+  const kaynak = EV_TASLAK[kutu];
+  const rec = kaynak?.al();
+  if (rec) openEvSpecs(null, rec, kutu);
+});
+$('btn-close-evspecs').addEventListener('click', () => {
+  specTaslak = null;   // WT-60: vazgeçilen taslak sonraki açılışa sızmasın
+  overlayClose('page-evspecs');
+});
 ['ev-batt', 'ev-ac'].forEach(id => bindDecimalInput(id, 2));
 ['ev-range', 'ev-dc'].forEach(id => bindDecimalInput(id, 0));
 
 $('evspec-save').addEventListener('click', async () => {
-  if (specVid == null) return;
+  if (specVid == null && !specTaslak) return;
   const err = $('evspec-err');
   const alanlar = [['ev-batt', 'batt'], ['ev-range', 'range'], ['ev-dc', 'dc'], ['ev-ac', 'ac']];
   const upd = {};
@@ -757,6 +787,20 @@ $('evspec-save').addEventListener('click', async () => {
   }
   err.classList.remove('show');
   upd.specElle = true;   // artık üretici listesi değil kullanıcı değeri geçerli
+  // WT-60: taslak yolu — henüz DB'de kayıt yok, nesnenin kendisi güncellenip
+  // kart yeniden çiziliyor. Araç kaydedilince düzeltilmiş değerlerle yazılır.
+  if (specTaslak) {
+    Object.assign(specTaslak.rec, upd);
+    const kaynak = EV_TASLAK[specTaslak.kutu];
+    if (kaynak) {
+      $(specTaslak.kutu).innerHTML =
+        evSummaryHTML(specTaslak.rec) + (kaynak.foto ? photoBtnHTML(false) : '');
+      if (kaynak.foto) bindPhotoBtn();
+    }
+    specTaslak = null;
+    await overlayClose('page-evspecs', {force: true});
+    return;
+  }
   const w = await safeWrite(() => db.vehicles.update(specVid, upd));
   if (!w.ok) return;
   toast(t('savedLocal'));

@@ -1027,7 +1027,11 @@ nav button{min-height:48px;justify-content:center}
   <button class="setting-btn" id="btn-support"><span data-i18n="supportDev">GitHub Proje Sayfası</span></button>
 </section>
 
-</div>
+<!-- WT-59: burada </div></div> yazıyordu; ilki <main class="content">'i
+     kapatmalıydı. Tarayıcılar bunu farklı kurtarıyor — bazılarında sekmeler
+     .content'in DIŞINDA kalıyor ve showScreen'in '.content .page' seçicisi
+     hiçbir şeyle eşleşmiyordu (eski sekme 'active' kalıp üst üste biniyordu). -->
+</main>
 </div>
 
 <!-- ============ YENİ KAYIT / DÜZENLE ============ -->
@@ -1441,7 +1445,10 @@ nav button{min-height:48px;justify-content:center}
   <div class="ov-body">
     <input type="text" id="car-search" data-i18n-ph="phCarSearch" placeholder="ör. EV6, Torres…">
     <div class="rows" id="car-results"></div>
-    <div id="car-summary" style="display:none"></main>
+    <!-- WT-61: burada </main> yazıyordu. div kapanmadığı için tarayıcı
+         #car-photo ve #car-save'i bu kutunun İÇİNE koyuyordu; araç seçilince
+         kart innerHTML ile yazılıp "Ekle" düğmesi DOM'dan siliniyordu. -->
+    <div id="car-summary" style="display:none"></div>
     <input type="file" id="car-photo" accept="image/*" style="display:none">
     <button class="save-btn" id="car-save" disabled data-i18n="add">Ekle</button>
   </div>
