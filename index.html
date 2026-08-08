@@ -62,8 +62,14 @@ body{background:var(--bg);color:var(--text);
 /* WT-37: açılış animasyonu video. Video oynayamazsa (dosya yok, otomatik
    oynatma engellendi, prefers-reduced-motion) statik logo devreye girer —
    keyframe animasyonları kaldırıldı, logo artık hareketsiz duruyor. */
-.splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+.splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none}
 .splash.video-on .splash-video{display:block}
+/* WT-67: animasyon 16:9 yatay ve zemini BEYAZ. object-fit:cover dik ekranda
+   kenarlardan ağır kırpar (logo kesilir), bu yüzden contain. Contain letterbox
+   bırakır — video oynarken zemin videonun beyazına eşitleniyor ki bant
+   görünmesin. Koyu temada da beyaz: zemin videonun kendi rengi. */
+.splash.video-on{background:#FFFFFF}
+[data-theme="dark"] .splash.video-on{background:#FFFFFF}
 .splash-static{display:flex;flex-direction:column;align-items:center;gap:20px}
 .splash.video-on .splash-static{display:none}
 .splash-logo{width:auto;height:132px}

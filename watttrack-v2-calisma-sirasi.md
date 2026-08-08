@@ -192,7 +192,7 @@ diğerinin ön koşulu olduğu yerlerde bağımlılık yazıldı.
 
 | # | Madde | Kaynak | Not |
 |---|---|---|---|
-| **WT-67** | Açılış animasyonu | Açılış 1 | Mekanizma **zaten var** (WT-37), yalnız dosyalar eksikti. Depoya koyduğun `animasyon.mp4` (112 KB) kullanılacak, `animasyon.gif` (392 KB) değil — dört kat küçük ve ilk boyamayı geciktirmez. Poster karesi üretilecek. Dosya **`sw.js` ön-belleğine konmayacak** ki ilk açılışı yavaşlatmasın; video yüklenmezse mevcut statik logo yedeği devreye girer. |
+| **WT-67** | Açılış animasyonu | Açılış 1 | ✅ **BİTTİ.** Mekanizma zaten vardı (WT-37), yalnız dosya eksikti. `animasyon.mp4` → `splash.mp4` (112 KB, 1,8 sn, H.264 640×360); `animasyon.gif` KULLANILMADI (392 KB, dört kat büyük). İlk kareden `splash-poster.png` üretildi. **CSS düzeltmesi gerekti:** animasyon 16:9 yatay ve zemini beyaz; `object-fit:cover` dik telefon ekranında kenarlardan ağır kırpıp logoyu kesiyordu → `contain` yapıldı ve video oynarken splash zemini videonun beyazına eşitlendi (letterbox bandı görünmesin). Video oturumda yalnız bir kez oynuyor, 2500 ms güvenlik ağı zaten vardı. |
 
 ### Faz 5 — Filtre mimarisi (tek gövde, iki sayfa)
 
