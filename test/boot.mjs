@@ -2299,6 +2299,46 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   window.fetch = orjFetch;
 }
 
+// ============================================================
+// WT-62: veri girildikten sonra ana sayfada, "bu yıl toplam" kutuları ile
+// kilometre sayacı arasında içinde "—" olan boş bir kutu beliriyordu.
+// butceCiz() bütçe girilmemişken kutuyu GİZLİYOR, ama syncEmptyStates()
+// #page-dashboard içindeki HER .d-data kutusunu koşulsuz görünür yapıyordu.
+// İki asenkron çizim yarıştığı için sayfa değişip dönünce kayboluyordu.
+// ============================================================
+{
+  const A = app();
+  // Semptom "veri alanları dolduktan sonra" çıkıyor: syncEmptyStates kutuları
+  // yalnız kayıt VARKEN görünür yapıyor. Önceki bloklar tabloyu boşaltmış.
+  await A.db.sessions.add({tarih: A.localISO() + 'T12:00', firma: 'ZES', tip: 'DC',
+    mekan: 'firma', kwh: 30, odenen: 300, tutar: 300, cur: 'TRY', aracId: null});
+  A.S.budgetM = 0; A.S.budgetY = 0;
+  await A.renderDashboard();
+  await A.syncEmptyStates();
+  await sleep(250);
+  check('WT-62: bütçe girilmemişken bütçe kutusu gizli kalıyor',
+    $('d-budget').style.display === 'none',
+    `display="${$('d-budget').style.display}" içerik="${$('d-budget').textContent.trim().slice(0, 16)}"`);
+
+  // Gizleme fazla agresif olmasın: bütçe girilince kutu geri gelmeli
+  A.S.budgetM = 5000; A.S.period = 'month';
+  await A.renderDashboard();
+  await A.syncEmptyStates();
+  await sleep(250);
+  check('WT-62: bütçe girilince kutu geri geliyor',
+    $('d-budget').style.display !== 'none' && /%/.test($('d-budget').textContent),
+    `display="${$('d-budget').style.display}" içerik="${$('d-budget').textContent.trim().slice(0, 40)}"`);
+  A.S.budgetM = 0;
+
+  // Sayaç kutusunun kendi mantığı da korunmalı (eski istisna kaybolmasın)
+  await A.renderDashboard();
+  await A.syncEmptyStates();
+  await sleep(200);
+  check('WT-62: sayaç kutusunun kendi görünürlük mantığı bozulmadı',
+    ['', 'none'].includes($('d-odo-wrap').style.display),
+    `display="${$('d-odo-wrap').style.display}"`);
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);

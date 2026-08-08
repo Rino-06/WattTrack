@@ -722,8 +722,16 @@ async function syncEmptyStates() {
   $('d-empty').innerHTML = sess.length ? ''
     : emptyStateHTML('⚡', 'emptyDash', 'addCharge');
   document.querySelectorAll('#page-dashboard .d-data').forEach(el => {
-    // d-odo-wrap'ın kendi görünürlük mantığı var, onu ezme
-    if (el.id === 'd-odo-wrap') { if (!sess.length) el.style.display = 'none'; return; }
+    // WT-62: kendi görünürlük mantığı olan kutuyu EZME. Eskiden burada yalnız
+    // d-odo-wrap için elle yazılmış bir istisna vardı; bütçe kutusu eklenince
+    // (WT-45) o istisnaya girmediği için, bütçe girilmemiş kullanıcıda
+    // butceCiz()'in gizlediği kutu burada geri açılıyor ve içinde "—" olan boş
+    // bir kutu olarak görünüyordu. İstisna listesi büyütmek yerine kutular
+    // kendilerini işaretliyor: data-own-visibility.
+    if (el.hasAttribute('data-own-visibility')) {
+      if (!sess.length) el.style.display = 'none';
+      return;
+    }
     el.style.display = sess.length ? '' : 'none';
   });
 
