@@ -570,10 +570,11 @@ nav button{min-height:48px;justify-content:center}
     <div class="sub" id="d-budget-note" style="margin-top:6px;font-size:12px;color:var(--muted2)"></div>
   </div>
 
+  <!-- WT-70: "Kilometre sayacı" başlığı kaldırıldı — kutuların kendi
+       etiketleri zaten ne olduklarını söylüyor. -->
   <div id="d-odo-wrap" class="d-data" data-own-visibility style="display:none">
-    <h2 class="h2" data-i18n="odometer">Kilometre sayacı</h2>
     <div class="dstat">
-      <div class="tile"><div class="k" data-i18n="odoNow">Araç sayacı</div><div class="v" id="d-odo">—</div></div>
+      <div class="tile"><div class="k" id="d-odo-lbl">Araç km sayacı</div><div class="v" id="d-odo">—</div></div>
       <div class="tile"><div class="k" data-i18n="odoTracked">Alımdan beri yapılan</div><div class="v" id="d-odo-total">—</div></div>
     </div>
   </div>
@@ -608,7 +609,9 @@ nav button{min-height:48px;justify-content:center}
   <!-- WT-33: başlık, filtre ve değerleri tek hücrede tutan sarmalayıcı -->
   <div id="d-dstat-wrap" class="d-data">
     <div class="h2row" style="margin-top:0">
-      <h2 class="h2"><span data-i18n="detailStats">Detay istatistikler</span> <span class="scope-badge" id="d-dstat-scope"></span></h2>
+      <!-- WT-70: "Detay istatistikler" ibaresi kaldırıldı; dönem rozeti
+           kaldı çünkü kutuların hangi dönemi gösterdiğini söylüyor. -->
+      <h2 class="h2"><span class="scope-badge" id="d-dstat-scope"></span></h2>
       <div class="seg mini" id="d-dstat-type" data-i18n-aria="ariaTypeFilter" style="width:170px">
         <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
         <button data-v="DC">DC</button>

@@ -186,7 +186,7 @@ diğerinin ön koşulu olduğu yerlerde bağımlılık yazıldı.
 | # | Madde | Kaynak | Not |
 |---|---|---|---|
 | **WT-65** | Enerji, tutar ve indirim alanlarında ondalık kısmın **ayrı** kutuda girilmesi | Veri Girişi 2 | ✅ **BİTTİ.** ⚠️ Bu, ilk turda **WT-03'ün bilerek KALDIRDIĞI** çift kutu: eski uygulama ondalık kutusunu kuruş gibi okuyordu, kullanıcı 45,5 demek için "5" yazınca 45,05 kaydediliyordu — %1'lik sessiz hata. Geri getirirken tuzak kapatıldı: ondalık kutusu virgülden sonraki basamaklar olarak okunuyor ("5" → ,5) ve odak çıkınca iki basamağa tamamlanıp **ekranda gösteriliyor** ("5" → "50"), yani değer sessizce değişmiyor. Tam kutuya ayraçlı değer yapıştırılırsa yuvarlanmıyor, iki kutuya bölünüyor. Tam kutuda binlik ayracı kullanılmıyor — "1.234" pf kuralınca 1,234 okunurdu. OCR doldurma yolu da parçalı yazıyor. |
-| **WT-66** | Tutarın zorunlu olmaması — tek zorunlu alan enerji | Veri Girişi 3 | Tutarsız kaydın toplamlara ve oran metriklerine nasıl gireceği de tanımlanacak (`isConv` mantığı). |
+| ~~**WT-66**~~ | ~~Tutarın zorunlu olmaması~~ | Veri Girişi 3 | ❌ **İPTAL — kod değişmedi.** Cümleyi "tutar zorunlu OLMASIN" diye okumuştum; kullanıcı 08.08.2026'da "tutar zorunlu kalsın" dedi. Bugünkü davranış zaten bu: enerji ve tutar zorunlu, yalnız "ücretsiz şarj" işaretliyken tutar istenmiyor. |
 
 ### Faz 4 — Açılış animasyonu
 
@@ -208,7 +208,7 @@ diğerinin ön koşulu olduğu yerlerde bağımlılık yazıldı.
 
 | # | Madde | Kaynak | Not |
 |---|---|---|---|
-| **WT-70** | "Detay istatistikler" ve "Kilometre sayacı" başlıklarının kaldırılması; "Araç sayacı" → "Araç km sayacı" (mil seçiliyse "Araç mil sayacı") | Anasayfa 4, 5 | Birim etiketi altı dilde dinamik olmalı. |
+| **WT-70** | "Detay istatistikler" ve "Kilometre sayacı" başlıklarının kaldırılması; "Araç sayacı" → "Araç km sayacı" | Anasayfa 4, 5 | ✅ **BİTTİ.** Detay istatistiklerdeki dönem rozeti KALDI (kutuların hangi dönemi gösterdiğini söyleyen tek şey oydu). Sayaç etiketi `odoNowUnit` ile birime bağlandı, altı dilde dolu; `applyI18n` içinde `1 km` etiketleriyle aynı yerde güncelleniyor. |
 | **WT-71** | Geçmiş'teki arama kutusunun kaldırılması | Geçmiş 1 | WT-46'da eklenmişti; filtreler kalıyor. |
 | **WT-72** | İstatistik: haftanın günleri grafiğinin **silinmesi** + firma dağılımının sayfa sonuna alınması | İstatistik 2, 4 | Kullanıcı 08.08.2026'da onayladı: "haftalık grafiği sil". Grafik `ui/stats.js:96-110` + `#d-weekdays`; `weekdayDist` çeviri anahtarı da altı dilden temizlenecek. |
 | **WT-73** | Kıyasla düzeltmeleri | Kıyasla 1, 3, 4, 5 | (1) yakıtlı araç sabit gideri **varsayılan kapalı**; (3) parantezli metinler alt satıra — taşma bitecek; (4) sabit gider girilmemişse "yakıt + sabit gider" kutuları gizlensin; (5) "gider dahil" → "**sabit gider dahil**" (altı dil). Kıyasla 6'nın doğrulaması da burada yapılacak. |
