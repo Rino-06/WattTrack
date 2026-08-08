@@ -49,10 +49,6 @@ async function renderHistory() {
   // WT-04/6: uyarı şeridindeki "Göster" yalnız bozuk kayıtları listeler
   const badOnly = S.histBadOnly;
   S.histBadOnly = null;
-  // WT-46/1: serbest metin araması — firma, lokasyon, not, banka
-  const q = ($('h-search').value || '').toLocaleLowerCase('tr').trim();
-  const arar = r => !q || [r.firma, r.loc, r.not, r.banka]
-    .some(x => (x || '').toLocaleLowerCase('tr').includes(q));
   const rows = badOnly
     ? sorted.filter(r => badOnly.includes(r.id))   // diğer filtreleri atla
     : sorted.filter(r =>
@@ -61,7 +57,7 @@ async function renderHistory() {
         (!vt || (vt === 'free' ? r.free : r.tip === vt)) &&
         (!vv || String(r.aracId) === vv) &&
         (!vb || r.banka === vb) &&
-        (!vl || r.loc === vl) && arar(r));
+        (!vl || r.loc === vl));
 
   // WT-46/2: filtrelenmiş sonucun TOPLAMI — maddeye göre asıl istenen bu
   const cv = rows.filter(isConv);
@@ -129,12 +125,7 @@ async function renderHistory() {
 let histYear = null;
 
 
-/* ---- WT-46: arama ve filtre paneli ---- */
-let _araTimer = null;
-$('h-search').addEventListener('input', () => {
-  clearTimeout(_araTimer);
-  _araTimer = setTimeout(() => renderHistory(), 200);
-});
+/* ---- WT-46: filtre paneli (WT-71: arama kutusu kaldırıldı) ---- */
 $('h-filter-btn').addEventListener('click', () => {
   const box = $('h-filters'), acik = box.style.display === 'none';
   box.style.display = acik ? '' : 'none';
