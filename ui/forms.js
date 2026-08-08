@@ -428,12 +428,18 @@ async function openAdd(id) {
       $('in-loc').value = oneri.loc;
   }
 
-  // WT-47: öneri gelişmiş alanlara (banka/lokasyon) düştüyse panel açılmalı —
-  // kapalı panelde sessizce doldurulan alan kullanıcıyı yanıltır.
-  const advOpen = S.advOpen || !!(r && (r.dur || r.loc || r.not || r.banka))
-    || !!($('in-bank').value || $('in-loc').value);
+  // WT-63: eskiden WT-47'nin otomatik doldurması ($('in-bank')/$('in-loc'))
+  // paneli AÇIYORDU. Otomatik doldurma neredeyse her kayıtta çalıştığı için
+  // "Gelişmiş alanlar hep açık" ayarı kapalıyken bile panel sürekli açık
+  // geliyordu — ayar pratikte ölüydü. Artık ayar kesin: kapalıysa panel açılmaz.
+  // WT-47'nin asıl derdi (kapalı panelde sessizce doldurulan alan) kaybolmasın
+  // diye düğme kaç alanın dolu olduğunu söylüyor.
+  const advDolu = [...$('adv-fields').querySelectorAll('input, select, textarea')]
+    .filter(el => (el.value || '').trim() !== '').length;
+  const advOpen = !!S.advOpen;
   $('adv-fields').classList.toggle('open', advOpen);
-  $('btn-adv').textContent = advOpen ? t('advancedHide') : t('advanced');
+  $('btn-adv').textContent = advOpen ? t('advancedHide')
+    : (advDolu ? t('advancedFilled', {n: advDolu}) : t('advanced'));
 
   // WT-16/C: firma seçimi yukarıdaki await bloklarında yapılıyor; birim fiyat
   // alanının görünürlüğü ancak ondan SONRA doğru hesaplanabilir.

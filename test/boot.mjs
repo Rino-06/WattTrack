@@ -1843,8 +1843,15 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     $('in-bank').value === 'Visa', 'banka=' + $('in-bank').value);
   check('WT-47: aynı gün içinde lokasyon da öneriliyor',
     $('in-loc').value === 'Kadıköy', 'loc=' + $('in-loc').value);
-  check('WT-47: öneri gelişmiş alanlara düştüğü için panel açık',
-    $('adv-fields').classList.contains('open'));
+  // WT-63 bu kriteri DEĞİŞTİRDİ. WT-47 "öneri gelişmiş alana düştüyse panel
+  // açılsın" diyordu; ama otomatik doldurma neredeyse her kayıtta çalıştığı
+  // için "Gelişmiş alanlar hep açık" ayarı kapalıyken bile panel sürekli açık
+  // geliyordu (kullanıcı bildirimi, Veri Girişi 1). Yeni kural: ayar kesin,
+  // panel açılmaz — ama düğme dolu alan sayısını yazarak sessiz saklamayı
+  // önlüyor. WT-47'nin asıl derdi böyle karşılanıyor.
+  check('WT-47/WT-63: öneri gelişmiş alana düştüyse düğme bunu söylüyor',
+    !$('adv-fields').classList.contains('open') && /\d/.test($('btn-adv').textContent),
+    `btn="${$('btn-adv').textContent}"`);
   check('WT-47: araç zaten varsayılandan geliyordu (bozulmadı)',
     $('in-vehicle').value === String(v1), 'araç=' + $('in-vehicle').value);
   await A.overlayClose('page-add', {force: true});
@@ -2398,6 +2405,39 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       (await A.allVehicles()).map(v => v.batt).join(','));
   }
   if ($('page-addcar').classList.contains('active')) { $('btn-close-addcar').click(); await sleep(200); }
+}
+
+// ============================================================
+// WT-63: "Gelişmiş alanlar hep açık" ayarı KAPALIYKEN de panel sürekli açık
+// geliyordu — WT-47'nin otomatik doldurması banka/lokasyon alanlarını
+// doldurduğu için açma koşulu neredeyse her kayıtta sağlanıyordu.
+// ============================================================
+{
+  const A = app();
+  A.S.advOpen = false;
+  await A.openAdd();
+  await sleep(400);
+  check('WT-63 KABUL: ayar kapalıyken gelişmiş panel kapalı açılıyor',
+    !$('adv-fields').classList.contains('open'),
+    `class="${$('adv-fields').className}" btn="${$('btn-adv').textContent}"`);
+  // Sessizce saklama yok: dolu alan varsa düğme bunu söylüyor
+  const dolu = [...$('adv-fields').querySelectorAll('input, select, textarea')]
+    .filter(el => (el.value || '').trim() !== '').length;
+  check('WT-63: dolu gelişmiş alan varsa düğme sayıyı yazıyor',
+    dolu === 0 || /\d/.test($('btn-adv').textContent),
+    `dolu=${dolu} btn="${$('btn-adv').textContent}"`);
+
+  $('btn-close-add').click();
+  await sleep(200);
+  A.S.advOpen = true;
+  await A.openAdd();
+  await sleep(400);
+  check('WT-63: ayar açıkken panel yine açık geliyor',
+    $('adv-fields').classList.contains('open'),
+    `class="${$('adv-fields').className}"`);
+  $('btn-close-add').click();
+  await sleep(200);
+  A.S.advOpen = false;
 }
 
 const failed = results.filter(r => !r.pass);
