@@ -2459,6 +2459,22 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   A.S.advOpen = false;
 }
 
+// ---- WT-70: başlık ibareleri kaldırıldı, sayaç etiketi birime bağlandı ----
+{
+  const A = app();
+  const dash = $('page-dashboard').textContent;
+  check('WT-70: "Detay istatistikler" ibaresi kaldırıldı',
+    !/Detay istatistikler|Detail statistics/.test(dash));
+  check('WT-70: "Kilometre sayacı" başlığı kaldırıldı',
+    !/Kilometre sayacı/.test(dash), dash.match(/Kilometre sayacı/) ? 'hâlâ var' : '');
+  check('WT-70 KABUL: sayaç etiketi birimi söylüyor (km)',
+    $('d-odo-lbl').textContent === 'Araç km sayacı', $('d-odo-lbl').textContent);
+  A.S.unit = 'mi'; A.applyI18n();
+  check('WT-70 KABUL: mil seçilince etiket "mi" oluyor',
+    /mi/.test($('d-odo-lbl').textContent), $('d-odo-lbl').textContent);
+  A.S.unit = 'km'; A.applyI18n();
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
