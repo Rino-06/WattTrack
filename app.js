@@ -70,11 +70,18 @@ const SETTING_KEYS = ['country','currency','unit','lang','advOpen','defaultVehic
   'onboarded','cmp','bankCountries','customBanks','gran','theme','homeKwhPrice',
   'ocrOn','budgetM','budgetY','kwhRegion'];   // WT-39, WT-45, WT-78
 
-(async function init() {
+// WT-81/3: ayarların S'e okunması init() ve yedek geri yükleme
+// (ui/settings.js) içinde iki kez yazılmıştı — SETTING_KEYS'e yeni anahtar
+// eklendiğinde birinin unutulması sessiz bir kusur olurdu.
+async function loadSettings() {
   for (const key of SETTING_KEYS) {
     const row = await db.settings.get(key);
     if (row) S[key] = row.value;
   }
+}
+
+(async function init() {
+  await loadSettings();
   // WT-78: ev elektrik fiyatı hiç girilmemişse gömülü tablodan doldur.
   // Girilmiş bir değerin üstüne YAZMAZ; kaynak Ayarlar'da yazılı.
   await kwhPriceAutofill();
