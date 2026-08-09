@@ -489,8 +489,14 @@ async function openAdd(id) {
   // geliyordu — ayar pratikte ölüydü. Artık ayar kesin: kapalıysa panel açılmaz.
   // WT-47'nin asıl derdi (kapalı panelde sessizce doldurulan alan) kaybolmasın
   // diye düğme kaç alanın dolu olduğunu söylüyor.
+  // WT-81/9 KUSURU: onay kutusu değer alanıyla sayılamaz. Nitelik yazılmamış
+  // bir <input type="checkbox"> işaretli OLMASA da `value === "on"` döner —
+  // panelde #in-missed var, dolayısıyla sayaç hiç 0 olmuyordu. Bomboş bir
+  // formda bile "Gelişmiş alanlar (1 dolu)" yazıyordu; banka+konum otomatik
+  // dolduğunda 2 yerine 3 diyordu. WT-63'ün ipucu böylece güvenilmezdi.
   const advDolu = [...$('adv-fields').querySelectorAll('input, select, textarea')]
-    .filter(el => (el.value || '').trim() !== '').length;
+    .filter(el => el.type === 'checkbox' ? el.checked : (el.value || '').trim() !== '')
+    .length;
   const advOpen = !!S.advOpen;
   $('adv-fields').classList.toggle('open', advOpen);
   $('btn-adv').textContent = advOpen ? t('advancedHide')

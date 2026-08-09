@@ -2438,12 +2438,49 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-63 KABUL: ayar kapalıyken gelişmiş panel kapalı açılıyor',
     !$('adv-fields').classList.contains('open'),
     `class="${$('adv-fields').className}" btn="${$('btn-adv').textContent}"`);
-  // Sessizce saklama yok: dolu alan varsa düğme bunu söylüyor
-  const dolu = [...$('adv-fields').querySelectorAll('input, select, textarea')]
-    .filter(el => (el.value || '').trim() !== '').length;
+  // Sessizce saklama yok: dolu alan varsa düğme bunu söylüyor.
+  // WT-81/9: "dolu" ölçütü onay kutusunda `checked`, diğerlerinde `value`.
+  // Eski hâlinde bu test de kusurla AYNI ifadeyi kullandığı için kusuru
+  // göremiyordu — onay kutusu işaretsizken bile value="on" döner.
+  const doluAlanlar = [...$('adv-fields').querySelectorAll('input, select, textarea')]
+    .filter(el => el.type === 'checkbox' ? el.checked : (el.value || '').trim() !== '');
+  const dolu = doluAlanlar.length;
+  const btnSayi = ($('btn-adv').textContent.match(/\d+/) || [])[0];
   check('WT-63: dolu gelişmiş alan varsa düğme sayıyı yazıyor',
     dolu === 0 || /\d/.test($('btn-adv').textContent),
     `dolu=${dolu} btn="${$('btn-adv').textContent}"`);
+  check('WT-81/9 KABUL: düğmedeki sayı gerçekten dolu alan sayısına eşit',
+    dolu === 0 ? btnSayi === undefined : Number(btnSayi) === dolu,
+    `dolu=${dolu} (${doluAlanlar.map(e => e.id).join(',') || 'yok'}) btn="${$('btn-adv').textContent}"`);
+  // Kusurun imzası: bomboş formda bile "1 dolu" yazıyordu (#in-missed).
+  const kutu = $('in-missed');
+  check('WT-81/9: işaretsiz onay kutusu value="on" döndürüyor (kusurun kaynağı)',
+    kutu.type === 'checkbox' && kutu.checked === false && kutu.value === 'on',
+    `checked=${kutu.checked} value="${kutu.value}"`);
+  // İşaretlenince sayaç GERÇEKTEN artmalı — düzeltme kutuyu yok saymamalı.
+  // openAdd() alanları kayıttan doldurduğu için işaretli durumu ancak
+  // `atlanan: true` bir kaydı DÜZENLEMEYE açarak üretebiliyoruz (WT-20 yolu).
+  $('btn-close-add').click();
+  await sleep(200);
+  const atlananId = await A.db.sessions.add({
+    tarih: A.localISO() + 'T12:00', firma: 'ZES', tip: 'DC', mekan: 'firma',
+    kwh: 10, tutar: 100, odenen: 100, cur: 'TRY', atlanan: true
+  });
+  await A.invalidateCache('sessions');
+  await A.openAdd(atlananId);
+  await sleep(400);
+  const dolu2 = [...$('adv-fields').querySelectorAll('input, select, textarea')]
+    .filter(el => el.type === 'checkbox' ? el.checked : (el.value || '').trim() !== '').length;
+  const btnSayi2 = ($('btn-adv').textContent.match(/\d+/) || [])[0];
+  check('WT-81/9 KABUL: İŞARETLİ onay kutusu sayaca giriyor',
+    $('in-missed').checked === true && dolu2 >= 1 && Number(btnSayi2) === dolu2,
+    `checked=${$('in-missed').checked} dolu=${dolu2} btn="${$('btn-adv').textContent}"`);
+  $('btn-close-add').click();
+  await sleep(200);
+  await A.db.sessions.delete(atlananId);
+  await A.invalidateCache('sessions');
+  await A.openAdd();
+  await sleep(300);
 
   $('btn-close-add').click();
   await sleep(200);
