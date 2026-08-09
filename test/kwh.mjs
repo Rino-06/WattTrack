@@ -64,7 +64,8 @@ async function boot() {
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
     + `\n;window.__app = {db, S, t, finishOnboarding, kwhPriceAutofill,
          defaultKwhPrice, renderSettings, saveSetting, backupPayload,
-         importBackupText, loadSettings, kwhFiyatOnar, kwhRegions};`;
+         importBackupText, loadSettings, kwhFiyatOnar, kwhRegions,
+         renderDashboard};`;
   window.eval(bundle);
   await new Promise(r => setTimeout(r, 1200));
   return window;
@@ -204,6 +205,18 @@ check('WT-83 KABUL: kullanıcıya ESKİ ve YENİ değer birlikte gösteriliyor',
     const m = el && el.textContent || '';
     return /2,81/.test(m) && new RegExp(A.defaultKwhPrice('DE').p.toFixed(2).replace('.', ',')).test(m);
   })(), ($(w, 'd-warnings').textContent || '').replace(/\s+/g, ' ').trim().slice(0, 110));
+
+// Şerit, ana sayfa ÇİZİLDİKTEN sonra da durmalı. Üretimdeki sıra
+// init(): kwhFiyatOnar() → … → renderDashboard(). renderWarnings() bütün
+// `.warn-host` kutularını boşaltıp yeniden yazdığı için sıra önemli; şerit
+// bir kez gösteriliyor (kapatılabilir, `warnings` bellekte, onarım sonraki
+// açılışlarda false dönüyor), yani o tek boyamada kaybolursa kullanıcı
+// verisinin değiştiğini HİÇ öğrenemez.
+await A.renderDashboard();
+await sleep(300);
+check('WT-83 KABUL: uyarı şeridi ana sayfa çizildikten sonra da duruyor',
+  /2,81/.test($(w, 'd-warnings').textContent || ''),
+  ($(w, 'd-warnings').textContent || '').replace(/\s+/g, ' ').trim().slice(0, 90) || 'BOŞ');
 
 // Tekrar koşarsa bir daha yazmamalı (init her açılışta çağırıyor)
 const ikinci = await A.kwhFiyatOnar();
