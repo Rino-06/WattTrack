@@ -1,21 +1,97 @@
-MIT License
+WattTrack — Proprietary License
+Copyright (c) 2026 Fatih Hasdemir. All rights reserved.
 
-Copyright (c) 2026 Fatih Hasdemir
+(English text is authoritative. Türkçe özet aşağıdadır / Turkish summary below.)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. GRANT
+
+No license is granted. Except as expressly stated in Section 3, no permission
+is given to use, copy, modify, merge, publish, distribute, sublicense, sell,
+or create derivative works of this software or its source code, in whole or
+in part, by any means.
+
+Viewing the source code — whether in a public repository or through a web
+browser's developer tools while using the application — does not grant any
+of the rights withheld above.
+
+Permission for any use not covered here must be obtained in writing from the
+copyright holder.
+
+
+2. RELATIONSHIP TO PREVIOUS RELEASES
+
+Versions of this software published before this notice took effect were
+released under the MIT License. Those releases remain under the MIT License;
+this notice is not retroactive and does not revoke rights already granted
+under it. This notice governs this version and all later versions.
+
+
+3. THIRD-PARTY COMPONENTS
+
+This repository bundles third-party software that is NOT covered by the terms
+above. Each component remains governed by its own license, and nothing in
+Section 1 limits the rights those licenses grant you in respect of it:
+
+  dexie.min.js
+    Dexie.js 3.2.4 — Copyright (c) David Fahlander and contributors
+    Licensed under the Apache License, Version 2.0
+    https://github.com/dexie/dexie.js
+    Full license: https://www.apache.org/licenses/LICENSE-2.0
+    (The distributed file is minified and carries no header of its own;
+    this notice is provided to satisfy Apache-2.0 sections 4(a) and 4(b).)
+
+  vendor/ocr/*  — when present
+    Tesseract.js and tesseract-core — Apache License, Version 2.0
+    Language data (tessdata_fast) — Apache License, Version 2.0
+    https://github.com/naptha/tesseract.js
+    These files are not committed to this repository; they are supplied
+    separately by the operator. This entry is retained so the attribution
+    obligation is not overlooked when they are added.
+
+
+4. EMBEDDED REFERENCE DATA
+
+The electricity and fuel price tables (evprices.js, FUEL_HIST in i18n-adjacent
+data files) are derived from published statistics of public bodies. Each entry
+carries its issuing source and year in the code itself — see the KWH_SRC and
+FUEL_HIST_SRC tables — and those sources retain whatever rights apply to their
+own publications. The selection, arrangement, and verification of these tables
+are the copyright holder's work and fall under Section 1.
+
+
+5. NO WARRANTY
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+--------------------------------------------------------------------------
+TÜRKÇE ÖZET (bilgilendirme amaçlıdır; bağlayıcı metin yukarıdaki İngilizce
+sürümdür)
+
+Telif hakkı (c) 2026 Fatih Hasdemir. Tüm hakları saklıdır.
+
+1. Hiçbir kullanım izni verilmemiştir. 3. bölümdeki üçüncü taraf bileşenler
+   dışında; bu yazılımı veya kaynak kodunu kullanmaya, kopyalamaya,
+   değiştirmeye, yayımlamaya, dağıtmaya, satmaya ya da ondan türev eser
+   üretmeye izin yoktur. Kodun görülebilir olması (açık depo ya da tarayıcının
+   geliştirici araçları) bu hakları vermez. Diğer kullanımlar için telif
+   hakkı sahibinden yazılı izin alınmalıdır.
+
+2. Bu bildirimden ÖNCE MIT lisansıyla yayımlanmış sürümler MIT olarak kalır;
+   bildirim geriye yürümez. Bu ve sonraki sürümler için geçerlidir.
+
+3. Depodaki `dexie.min.js` (Dexie.js 3.2.4) ve — eklendiğinde — `vendor/ocr/`
+   altındaki Tesseract dosyaları Apache-2.0 lisanslıdır ve yukarıdaki
+   kısıtlamalara TABİ DEĞİLDİR.
+
+4. Gömülü elektrik ve yakıt fiyatı tabloları kamu kurumlarının yayımlanmış
+   istatistiklerinden türetilmiştir; her kaydın kaynağı ve yılı kodda yazılıdır.
+   Tabloların seçimi, düzenlenmesi ve doğrulanması telif sahibinin eseridir.
+
+5. Yazılım "olduğu gibi" sunulur, hiçbir garanti verilmez.
