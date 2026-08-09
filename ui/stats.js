@@ -106,13 +106,10 @@ async function renderStats() {
       });
     }
   }
-  const maxM = Math.max(1, ...bars.map(b => b.sum));
-  $('d-months').innerHTML = bars.map(b =>
-    `<div class="mb" data-y="${b.year}" style="cursor:pointer">
-      <div class="amt">${b.sum ? money(b.sum) : ''}</div>
-      <div class="bar" style="height:${6 + Math.round(b.sum / maxM * 66)}px"></div>
-      <div class="m">${b.label}</div>
-    </div>`).join('');
+  // WT-81: çizim barChartHTML()'e taşındı (oran bozulması düzeltmesi)
+  $('d-months').innerHTML = barChartHTML(bars.map(b => ({
+    label: b.label, year: b.year, value: b.sum, text: b.sum ? money(b.sum) : ''
+  })), {yearAttr: true});
   $('d-months').querySelectorAll('.mb').forEach(el =>
     el.addEventListener('click', () => { histYear = el.dataset.y; showScreen('history'); }));
   labelBarChart('d-months', t('spendChart'),
@@ -235,13 +232,16 @@ async function renderStats() {
     consAy.push({label: MONTHS[S.lang][d.getMonth()].slice(0, 3),
       v: km >= 20 ? kw / km * 100 : null});
   }
-  const maxC = Math.max(1, ...consAy.map(x => x.v || 0));
-  $('s-cons').innerHTML = consAy.map(x =>
-    `<div class="mb">
-      <div class="amt">${x.v != null ? fmtNum(x.v, 1) : ''}</div>
-      <div class="bar" style="height:${x.v != null ? Math.max(4, x.v / maxC * 100) : 2}%"></div>
-      <div class="m">${esc(x.label)}</div>
-    </div>`).join('');
+  $('s-cons').innerHTML = barChartHTML(consAy.map(x => ({
+    label: x.label, value: x.v, text: x.v != null ? fmtNum(x.v, 1) : ''
+  })));
+  // WT-81/hata avı: bu grafiğin metin alternatifi HİÇ YOKTU. WT-30 üç
+  // grafiği kapsamıştı, tüketim trendi ondan sonra (WT-41/3) eklendi ve
+  // ekran okuyucuya görünmez kaldı.
+  labelBarChart('s-cons', t('consTrend'), consAy.map(x => ({
+    label: x.label,
+    text: x.v != null ? fmtNum(x.v, 1) + ' kWh/100 km' : t('noData')
+  })));
   // WLTP ile karşılaştırma KASITLI olarak yok (WT-41/2): araçlar o değere
   // ulaşmıyor, yanıltıcı olurdu. Ölçek kullanıcının kendi geçmişi.
   const dolu = consAy.filter(x => x.v != null);

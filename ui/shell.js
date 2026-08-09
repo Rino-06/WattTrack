@@ -391,6 +391,43 @@ async function fetchRate(from, to, date) {
 
 /* ---- WT-30 grafik metin alternatifi · WT-28 segmentler · WT-24 overlay ---- */
 // ============================================================
+// BAR GRAFİĞİ ÇİZİMİ (WT-81)
+// ============================================================
+// Üç bar grafiği (#d-months, #s-cons, #v-exp-chart) ayrı ayrı, farklı
+// birimlerle çiziliyordu: ikisi piksel (`6 + oran*66px`), biri yüzde
+// (`max(4, oran*100)%`).
+//
+// KUSUR — taşma değil, ORAN BOZULMASI: `.mb` bir sütun flex kutusu ve
+// `.bar`ın `flex-shrink`i kısıtlanmamış. Etiketler + boşluklar + çubuk
+// kapsayıcıya sığmayınca çubuk KÜÇÜLTÜLÜYOR. 130px'lik kutuda iç yükseklik
+// 98px; %100 isteyen çubuk ~68px'e sıkışırken %50 isteyen 49px'te dokunulmadan
+// kalıyordu — istenen 2:1 oran ekranda ~1.39:1 çiziliyordu. Yani grafik
+// veriyi YANLIŞ gösteriyordu. Piksel tabanlı ikisinde genlik daha düşüktü
+// (72px tavan, ~9px sıkışma) ama kusur aynıydı.
+//
+// ÇÖZÜM: çubuk artık kendi `.track`ı içinde. Track `flex:1` — etiketlerden
+// ARTAN yüksekliği alır, çubuk da o track'in yüzdesidir. Etiketler çubuğu
+// asla sıkıştıramaz, oran her kapsayıcı yüksekliğinde birebir korunur.
+// WT-80'in yatay/alçak ekran kuralı (.monthbars 110px) ancak bununla
+// doğru çalışıyor — 78px'lik iç yükseklikte eski hesap ~29px sıkıştırırdı.
+//
+// bars: [{label, value, text, year}] · value null ise "veri yok" (taban çubuk)
+// opt.yearAttr: yalnız #d-months için — sütuna data-y + tıklanabilirlik verir
+function barChartHTML(bars, opt = {}) {
+  const max = Math.max(1, ...bars.map(b => b.value || 0));
+  return bars.map(b => {
+    const oran = b.value ? Math.max(2, Math.round(b.value / max * 100)) : 2;
+    const attr = opt.yearAttr && b.year != null
+      ? ` data-y="${esc(String(b.year))}" style="cursor:pointer"` : '';
+    return `<div class="mb"${attr}>
+      <div class="amt">${esc(b.text || '')}</div>
+      <div class="track"><div class="bar" style="height:${oran}%"></div></div>
+      <div class="m">${esc(b.label)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
 // GRAFİKLERİN METİN ALTERNATİFİ (WT-30)
 // ============================================================
 // Donut, bar grafikleri ve drawLineChart çıktısı ekran okuyucuya görünmezdi.
