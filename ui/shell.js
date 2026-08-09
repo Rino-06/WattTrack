@@ -161,7 +161,7 @@ function evIssueURL(v) {
       + `${v.dc || '?'} kW DC · ${v.ac || '?'} kW AC`,
     '', 'Doğru değerler:', 'Kaynak (üretici sayfası / veri tabanı bağlantısı):'
   ].join('\n');
-  return 'https://github.com/rino-06/WattTrack/issues/new?title='
+  return 'https://github.com/Rino-06/WattTrack/issues/new?title='
     + encodeURIComponent(`EV verisi düzeltme: ${v.brand || ''} ${v.model || ''}`)
     + '&body=' + encodeURIComponent(govde);
 }
