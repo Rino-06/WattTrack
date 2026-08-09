@@ -176,15 +176,19 @@ async function renderVehiclePage() {
       .filter(Boolean).join(' · ');
     const isDef = v.id === S.defaultVehicleId || (!S.defaultVehicleId && vehicles[0].id === v.id);
     const thumb = v.photo ? `<img class="vthumb" src="${photoSrc(v.photo)}" alt="">` : '';
-    return `<li data-vid="${v.id}">
-      <button class="star ${isDef ? 'on' : ''}" data-star="${v.id}" title="varsayılan">★</button>
-      ${thumb}
+    // WT-74: tek satırda ad + 5 düğme sıkışıyordu, model adı kırpılıyordu.
+    // Ad ve alt bilgi ÜSTTE tam genişlik; yıldız, resim ve düğmeler ALTTA.
+    return `<li data-vid="${v.id}" class="vrow2">
       <div class="vn">${esc(vehName(v))}<div class="vd">${esc(sub)}</div></div>
-      <button class="cam" data-odo="${v.id}" title="kilometre güncelle" style="font-size:12px;font-weight:800;width:36px">km✎</button>
-      <button class="cam" data-spec="${v.id}" title="${esc(t('evEditSpecs'))}">⚙</button>
-      <button class="cam" data-cam="${v.id}" title="fotoğraf">📷</button>
-      <button class="cam" data-move="${v.id}" title="${esc(t('moveRecords'))}">⇄</button>
-      <button class="rm" data-rm="${v.id}" title="arşivle">×</button>
+      <div class="vact">
+        <button class="star ${isDef ? 'on' : ''}" data-star="${v.id}" title="varsayılan">★</button>
+        ${thumb}
+        <button class="cam" data-odo="${v.id}" title="kilometre güncelle" style="font-size:12px;font-weight:800;width:36px">km✎</button>
+        <button class="cam" data-spec="${v.id}" title="${esc(t('evEditSpecs'))}">⚙</button>
+        <button class="cam" data-cam="${v.id}" title="fotoğraf">📷</button>
+        <button class="cam" data-move="${v.id}" title="${esc(t('moveRecords'))}">⇄</button>
+        <button class="rm" data-rm="${v.id}" title="arşivle">×</button>
+      </div>
     </li>`;
   }).join('') : `<li style="color:var(--faint);font-weight:400">${t('noData')}</li>`;
 

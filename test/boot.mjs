@@ -2606,6 +2606,42 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     /#page-compare[^{]*\.paren[^{]*\{[^}]*display:block/.test(cssAll));
 }
 
+// ---- WT-74: Aracım kart yerleşimi (metin üstte, düğmeler altta) ----
+{
+  const A = app();
+  const doc = window.document;
+  const arsivId = await A.db.vehicles.add(
+    {marka: 'Arşiv', model: 'Test', archived: true});
+  await A.renderVehiclePage();
+  await sleep(400);
+  const li = doc.querySelector('#set-vehicles li[data-vid]');
+  check('WT-74: etkin araç kartı bulundu (ön koşul)', !!li,
+    'li=' + doc.querySelectorAll('#set-vehicles li').length);
+  if (li) {
+    check('WT-74 KABUL: kartın İLK çocuğu ad/alt bilgi bloğu',
+      li.firstElementChild.classList.contains('vn'),
+      'ilk=' + li.firstElementChild.className);
+    check('WT-74 KABUL: km, ayar ve resim düğmeleri alt satırda',
+      ['[data-odo]', '[data-spec]', '[data-cam]', '[data-move]', '[data-star]', '[data-rm]']
+        .every(s => !!li.querySelector('.vact ' + s)),
+      ['[data-odo]', '[data-spec]', '[data-cam]', '[data-move]', '[data-star]', '[data-rm]']
+        .filter(s => !li.querySelector('.vact ' + s)).join(', ') || 'hepsi altta');
+    check('WT-74: ad bloğu düğme satırının DIŞINDA (tam genişlik)',
+      !li.querySelector('.vact .vn') && li.querySelectorAll('.vn').length === 1);
+    check('WT-74: kart iki satır düzenine geçti',
+      li.classList.contains('vrow2'));
+    const css = [...doc.querySelectorAll('style')].map(x => x.textContent).join('\n');
+    check('WT-74: iki satır düzeni CSS ile kuruluyor',
+      /\.vlist li\.vrow2\{[^}]*flex-direction:column/.test(css));
+  }
+  const ark = doc.querySelector('#set-archived li');
+  check('WT-74: arşiv listesi eski tek satır düzeninde kaldı',
+    !!ark && !ark.classList.contains('vrow2'), 'arşiv li=' + (ark ? ark.className : 'yok'));
+  await A.db.vehicles.delete(arsivId);
+  await A.renderVehiclePage();
+  await sleep(300);
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
