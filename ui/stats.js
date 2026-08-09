@@ -119,22 +119,7 @@ async function renderStats() {
     bars.map(b => ({label: b.label, text: money(b.sum)})));
   makeBarsFocusable('d-months', el => el.dataset.y + ' — ' + t('viewAll'));
 
-  // haftanın günlerine göre dağılım (dönem filtreli, Pzt→Paz)
-  const wdSum = [0, 0, 0, 0, 0, 0, 0];
-  cur.forEach(r => {
-    const [ry, rm, rd] = r.tarih.slice(0, 10).split('-').map(Number);
-    const day = (new Date(ry, rm - 1, rd).getDay() + 6) % 7;
-    wdSum[day] += amtB(r);
-  });
-  const maxW = Math.max(1, ...wdSum);
-  $('d-weekdays').innerHTML = wdSum.map((v, i) =>
-    `<div class="mb">
-      <div class="amt">${v ? money(v) : ''}</div>
-      <div class="bar" style="height:${6 + Math.round(v / maxW * 66)}px"></div>
-      <div class="m">${DAYS[S.lang][i]}</div>
-    </div>`).join('');
-  labelBarChart('d-weekdays', t('weekdayDist'),
-    wdSum.map((v, i) => ({label: DAYS[S.lang][i], text: money(v)})));
+  // WT-72: haftanın günlerine göre dağılım grafiği kaldırıldı (kullanıcı isteği)
 
   // firma dağılımı (dönem filtreli)
   const by = {};
