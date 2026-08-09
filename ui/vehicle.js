@@ -361,13 +361,10 @@ async function renderVehiclePage() {
           sum: ex.filter(e => e.tarih.slice(0, 7) === key).reduce((s, e) => s + expB(e), 0)});
       }
     }
-    const maxE = Math.max(1, ...ebars.map(b => b.sum));
-    $('v-exp-chart').innerHTML = ebars.map(b =>
-      `<div class="mb">
-        <div class="amt">${b.sum ? money(b.sum) : ''}</div>
-        <div class="bar" style="height:${6 + Math.round(b.sum / maxE * 66)}px"></div>
-        <div class="m">${b.label}</div>
-      </div>`).join('');
+    // WT-81: çizim barChartHTML()'e taşındı (oran bozulması düzeltmesi)
+    $('v-exp-chart').innerHTML = barChartHTML(ebars.map(b => ({
+      label: b.label, value: b.sum, text: b.sum ? money(b.sum) : ''
+    })));
     labelBarChart('v-exp-chart', t('expChart'),
       ebars.map(b => ({label: b.label, text: money(b.sum)})));
   }

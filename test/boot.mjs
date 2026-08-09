@@ -80,8 +80,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
        parcaliOku, parcaliYaz,
        KWH_PRICES, KWH_SRC, defaultKwhPrice, kwhRegions, kwhPriceAutofill,
        FUEL_HIST, FUEL_HIST_SRC, fuelHistMerge,
-       renderSettings,
-       renderVehiclePage: renderVehiclePage};`;
+       renderSettings, barChartHTML};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -3099,6 +3098,73 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 }
 
 const failed = results.filter(r => !r.pass);
+// ---- WT-81/1: bar grafiklerinin ORANI (tek çizim yolu) ----
+{
+  const A = app();
+  const doc = window.document;
+
+  // --- Oran birebir mi? Etiketler çubuğu sıkıştıramamalı.
+  // Eski hesapta 130px'lik kutuda %100 isteyen çubuk ~%68'e iniyordu;
+  // istenen 2:1 oran ~1.39:1 çiziliyordu.
+  const kutu = doc.createElement('div');
+  kutu.innerHTML = A.barChartHTML([
+    {label: 'A', value: 100, text: '100'},
+    {label: 'B', value: 50,  text: '50'},
+    {label: 'C', value: 0,   text: ''},
+    {label: 'D', value: null, text: ''}
+  ]);
+  const yuzde = [...kutu.querySelectorAll('.bar')]
+    .map(b => parseFloat(b.style.height));
+  check('WT-81/1 KABUL: çubuk oranları birebir (100/50 -> %100/%50)',
+    yuzde[0] === 100 && yuzde[1] === 50, yuzde.join(' / '));
+  check('WT-81/1: sıfır ve veri yok, görünür bir taban çubuk alıyor',
+    yuzde[2] === 2 && yuzde[3] === 2, yuzde.join(' / '));
+  check('WT-81/1: her çubuk kendi .track\'i içinde (etiketler sıkıştıramaz)',
+    [...kutu.querySelectorAll('.mb')].every(mb =>
+      mb.querySelector(':scope > .track > .bar')));
+  check('WT-81/1: yıl özniteliği yalnız istendiğinde veriliyor',
+    kutu.querySelector('.mb[data-y]') === null
+      && /data-y="2026"/.test(A.barChartHTML([{label: 'A', value: 1, year: '2026'}],
+        {yearAttr: true})));
+
+  // --- Üç grafik de aynı yoldan mı çiziliyor?
+  await A.db.sessions.clear();
+  const yil = new Date().getFullYear();
+  await A.db.sessions.bulkAdd([
+    {tarih: `${yil}-01-10T10:00`, firma: 'ZES', tip: 'DC', kwh: 40, tutar: 400,
+      odenen: 400, cur: 'TRY', mesafeKm: 200, aracId: null},
+    {tarih: `${yil}-02-10T10:00`, firma: 'ZES', tip: 'DC', kwh: 20, tutar: 200,
+      odenen: 200, cur: 'TRY', mesafeKm: 100, aracId: null},
+    {tarih: `${yil}-03-10T10:00`, firma: 'Trugo', tip: 'AC', kwh: 10, tutar: 100,
+      odenen: 100, cur: 'TRY', mesafeKm: 60, aracId: null}
+  ]);
+  A.S.gran = 'year'; A.S.dashVeh = '';
+  A.invalidateCache();
+  await A.renderStats();
+  await A.renderVehiclePage();
+  await sleep(400);
+  for (const id of ['d-months', 's-cons', 'v-exp-chart']) {
+    const barlar = [...doc.querySelectorAll('#' + id + ' .bar')];
+    if (!barlar.length) { check('WT-81/1: ' + id + ' çizildi', false, 'çubuk yok'); continue; }
+    check('WT-81/1: ' + id + ' ortak yardımcıdan geçiyor (.track var)',
+      barlar.every(b => b.parentElement.classList.contains('track')));
+    check('WT-81/1: ' + id + ' yüksekliği yüzde — piksel kalmadı',
+      barlar.every(b => /%$/.test(b.style.height)),
+      barlar.map(b => b.style.height).join(','));
+  }
+
+  // --- Hata avı: tüketim grafiğinin metin alternatifi HİÇ YOKTU (WT-30
+  // üç grafiği kapsamıştı, #s-cons ondan sonra WT-41/3 ile eklendi).
+  const cons = doc.getElementById('s-cons');
+  check('WT-81/1 KABUL: tüketim grafiği artık ekran okuyucuya görünür',
+    cons.getAttribute('role') === 'img'
+      && (cons.getAttribute('aria-label') || '').length > 10,
+    (cons.getAttribute('aria-label') || '(yok)').slice(0, 70));
+  check('WT-81/1: tüketim grafiğinin de özet tablosu var',
+    cons.nextElementSibling && cons.nextElementSibling.matches('table.sr-only'),
+    cons.nextElementSibling?.tagName + '.' + cons.nextElementSibling?.className);
+}
+
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
 if (errors.length) {
