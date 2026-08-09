@@ -345,22 +345,12 @@ async function renderVehiclePage() {
     b.classList.toggle('sel', b.dataset.v === gran));
   $('v-exp-chart-wrap').style.display = ex.length ? '' : 'none';
   if (ex.length) {
-    const now = new Date();
-    const ebars = [];
-    if (gran === 'year') {
-      for (let i = 4; i >= 0; i--) {
-        const y = String(now.getFullYear() - i);
-        ebars.push({label: y,
-          sum: ex.filter(e => e.tarih.slice(0, 4) === y).reduce((s, e) => s + expB(e), 0)});
-      }
-    } else {
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-        ebars.push({label: MONTHS[S.lang][d.getMonth()].slice(0, 3),
-          sum: ex.filter(e => e.tarih.slice(0, 7) === key).reduce((s, e) => s + expB(e), 0)});
-      }
-    }
+    // WT-81/2: dönem listesi calc.js'teki ortak yardımcılardan geliyor.
+    // `key` uzunluğu kadar kırpıp eşleştir: yılda '2026', ayda '2026-08'.
+    const donem = gran === 'year' ? sonYillar(5) : sonAylar(6);
+    const ebars = donem.map(p => ({label: p.label,
+      sum: ex.filter(e => e.tarih.slice(0, p.key.length) === p.key)
+        .reduce((s, e) => s + expB(e), 0)}));
     // WT-81: çizim barChartHTML()'e taşındı (oran bozulması düzeltmesi)
     $('v-exp-chart').innerHTML = barChartHTML(ebars.map(b => ({
       label: b.label, value: b.sum, text: b.sum ? money(b.sum) : ''

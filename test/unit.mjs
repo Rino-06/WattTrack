@@ -38,6 +38,10 @@ const sandbox = {
   db: {},
   CURRENCY_SYMBOLS: {TRY: '₺', EUR: '€', USD: '$'},
   MI: 1.60934,
+  // WT-81/2: sonAylar() ay adını i18n.js'ten okuyor; burada yalnız kırpma
+  // davranışı sınandığı için üç harften uzun sahte adlar yeterli.
+  MONTHS: {tr: ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']},
   setTimeout, clearTimeout
 };
 vm.createContext(sandbox);
@@ -47,14 +51,15 @@ const KOPRU = ['pf', 'fmtNum', 'fmtInput', 'savingsOf', 'netFromGross', 'convOf'
   'amtB', 'savB', 'expB', 'isConv', 'periodFilter', 'prevPeriodFilter', 'inPeriod',
   'odoDistOf', 'S', 'localISO', 'localMonth', 'monthKey', 'esc', 'checkNum',
   'kayipHesapla', 'KAYIP_UYARI', 'fiyatBul', 'fiyatGoster', 'fiyatMetrik',
-  'tuketimGoster', 'tuketimMetrik'];
+  'tuketimGoster', 'tuketimMetrik', 'sonAylar', 'sonYillar'];
 const kaynak = ['calc.js', 'ui/dashboard.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
   + `\n;Object.assign(globalThis, {${KOPRU.join(', ')}});`;
 vm.runInContext(kaynak, sandbox, {filename: 'calc+dashboard'});
 
 const {pf, fmtNum, savingsOf, netFromGross, convOf, amtB, savB, expB,
-       periodFilter, prevPeriodFilter, odoDistOf, S, localISO, monthKey} = sandbox;
+       periodFilter, prevPeriodFilter, odoDistOf, S, localISO, monthKey,
+       sonAylar, sonYillar} = sandbox;
 
 const iso = d => localISO(d);
 const gunOnce = n => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
@@ -494,4 +499,43 @@ test('WT-39/4: bulunamayan alan BOŞ bırakılır (tahmin yok)', () => {
   const {alanlar, sablon} = ocrAlanlar([]);
   assert.equal(Object.keys(alanlar).length, 0, JSON.stringify(alanlar));
   assert.equal(sablon, null);
+});
+
+// ============================================================
+// WT-81/2 · sonAylar / sonYillar — üç yerdeki elle Date aritmetiğinin yerine
+// ============================================================
+test('sonAylar: yıl sınırını doğru atlıyor', () => {
+  S.lang = 'tr';
+  const a = sonAylar(6, new Date(2026, 1, 15));   // Şubat 2026
+  assert.equal(a.map(x => x.key).join(),
+    '2025-09,2025-10,2025-11,2025-12,2026-01,2026-02');
+  assert.equal(a.map(x => x.year).join(), '2025,2025,2025,2025,2026,2026');
+  assert.equal(a[a.length - 1].label, 'Şub', 'etiket üç harfe kırpılıyor');
+});
+
+test('sonAylar: en yeni ay SONDA (grafik soldan sağa eskiden yeniye)', () => {
+  S.lang = 'tr';
+  const a = sonAylar(3, new Date(2026, 7, 9));
+  assert.equal(a.map(x => x.key).join(), '2026-06,2026-07,2026-08');
+});
+
+test('sonAylar: 31 Mart\'ta bir önceki ay Şubat kalır (gün taşması yok)', () => {
+  S.lang = 'tr';
+  // new Date(y, m-1, 31) kurulsaydı 3 Mart'a taşardı; yardımcı ayın 1'ini alıyor
+  const a = sonAylar(2, new Date(2026, 2, 31));
+  assert.equal(a.map(x => x.key).join(), '2026-02,2026-03');
+});
+
+test('sonYillar: ardışık ve en yeni sonda', () => {
+  const y = sonYillar(5, new Date(2026, 0, 1));
+  assert.equal(y.map(x => x.key).join(), '2022,2023,2024,2025,2026');
+  assert.ok(y.every(x => x.key === x.label && x.key === x.year),
+    'yılda key, label ve year aynı');
+});
+
+test('sonAylar/sonYillar: n kadar kayıt döner', () => {
+  S.lang = 'tr';
+  assert.equal(sonAylar(1, new Date(2026, 0, 1)).length, 1);
+  assert.equal(sonAylar(12, new Date(2026, 0, 1)).length, 12);
+  assert.equal(sonYillar(1, new Date(2026, 0, 1)).length, 1);
 });
