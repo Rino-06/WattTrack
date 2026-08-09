@@ -2953,6 +2953,39 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       ['fuelHistEmbedded', 'fuelHistSrcTag'].every(k => (A.T[l][k] || '').length > 2)));
 }
 
+// ---- WT-76: EV alt versiyonları — TESPİT ÇÜRÜTÜLDÜ, bulgu kilitleniyor ----
+// Madde "alt versiyonlar eklensin, menzil farkı açıkça belirtilsin" diyordu.
+// Ölçüm bunun zaten yapılmış olduğunu gösterdi (bkz. çalışma sırası dosyası).
+// Bu kontroller bulgunun sessizce geri gitmesini engelliyor.
+{
+  const A = app();
+  const DB = A.EV_DB;
+  check('WT-76: EV_DB kayıtlarının HEPSİNDE batarya ve menzil dolu',
+    DB.every(r => r[5] > 0 && r[9] > 0),
+    DB.filter(r => !(r[5] > 0 && r[9] > 0)).map(r => r.slice(0, 3).join(' ')).join(', ') || 'tamam');
+  check('WT-76: her kaydın donanım adı var (alt versiyon ayırt edilebiliyor)',
+    DB.every(r => String(r[2] || '').trim().length > 0));
+  const grup = {};
+  DB.forEach(r => (grup[r[0] + ' ' + r[1]] ??= []).push(r));
+  const cok = Object.values(grup).filter(v => v.length > 1);
+  check('WT-76: çok donanımlı model grupları var (tek satıra indirgenmemiş)',
+    cok.length >= 20, 'çok donanımlı=' + cok.length + '/' + Object.keys(grup).length);
+  // Kullanıcının verdiği somut örnek: 2025 Model Y'nin Standard Range'i
+  const my = grup['Tesla Model Y'] || [];
+  check('WT-76 KABUL: Tesla Model Y birden çok donanımla listeleniyor',
+    my.length >= 2, 'donanım=' + my.map(r => r[2]).join(' | '));
+  check('WT-76 KABUL: kullanıcının verdiği 69 kWh Standard Range kayıtta var',
+    my.some(r => r[5] === 69), 'bataryalar=' + my.map(r => r[5]).join(','));
+  check('WT-76: aynı modelin donanımları arasında menzil farkı görünüyor',
+    cok.every(v => new Set(v.map(r => r[9])).size > 1
+      || new Set(v.map(r => r[5])).size > 1),
+    cok.filter(v => new Set(v.map(r => r[9])).size === 1
+      && new Set(v.map(r => r[5])).size === 1)
+      .map(v => v[0][0] + ' ' + v[0][1]).join(', ') || 'tamam');
+  check('WT-76: EV_DB verisinin tarih damgası var',
+    /^\d{4}-\d{2}$/.test(A.EV_DB_TARIH), A.EV_DB_TARIH);
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
