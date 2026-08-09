@@ -3425,6 +3425,24 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   window.fetch = () => Promise.reject(new Error('offline'));   // taban duruma dön
 }
 
+// ---- Uygulamadaki GitHub bağlantıları tek hesabı göstermeli ----
+// Depo hasdemirfatih → Rino-06'ya taşındı. Bağlantılar üç ayrı dosyaya
+// dağılmış (ui/shell.js issue bağlantısı, ui/settings.js proje sayfası,
+// index.html ve privacy.html profil bağlantıları) ve biri küçük harfle
+// yazılmıştı. GitHub büyük/küçük harfe duyarsız olduğu için sessizce
+// çalışıyordu; ayrışma ancak elle fark edilebiliyordu.
+{
+  const kaynaklar = ['ui/shell.js', 'ui/settings.js', 'index.html', 'privacy.html',
+    '.github/FUNDING.yml']
+    .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  const sahipler = new Set(
+    [...kaynaklar.matchAll(/github\.com\/([A-Za-z0-9-]+)/g)].map(m => m[1]));
+  check('GitHub bağlantılarının hepsi AYNI hesabı gösteriyor (harf birebir)',
+    sahipler.size === 1 && sahipler.has('Rino-06'), [...sahipler].join(', '));
+  check('depo taşındıktan sonra eski hesap adı hiçbir yerde kalmadı',
+    !/hasdemirfatih/i.test(kaynaklar), 'tarandı');
+}
+
 // WT-81/11 KUSURU: bu satır dosyanın ORTASINDA (WT-76 bloğundan hemen sonra)
 // duruyordu. `results` sonradan büyümeye devam ettiği için ondan SONRAKİ
 // blokların — WT-81/1 grafik oranı, WT-81/4 sözlük bütünlüğü, WT-81/5 ölü
