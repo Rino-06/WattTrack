@@ -2731,6 +2731,22 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       ['expFltPeriod', 'expFltNone'].every(k => (A.T[l][k] || '').length > 2)));
 }
 
+// ---- WT-79: tablette dikey moda zorlama kaldırıldı ----
+{
+  const mf = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+  check('WT-79 KABUL: manifest artık dikey moda kilitlemiyor',
+    mf.orientation === 'any', 'orientation=' + mf.orientation);
+  // WT-53 alan listesi orientation'ın VARLIĞINI şart koşuyor; o yüzden alan
+  // silinmedi, "any" yapıldı.
+  check('WT-79: alan silinmedi (WT-53 alan listesi bozulmasın)',
+    'orientation' in mf);
+  const css = [...window.document.querySelectorAll('style')]
+    .map(x => x.textContent).join('\n');
+  check('WT-79: yatay yerleşim için kırılma noktası duruyor',
+    /@media\(min-width:760px\)/.test(css)
+      && /orientation:landscape/.test(css));
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
