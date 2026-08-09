@@ -88,6 +88,44 @@ async function kwhPriceAutofill() {
   return true;
 }
 
+// WT-83: WT-81/8'in kuyruğu. Kusur düzeltildi ama ONDAN ÖNCE kurulmuş TR dışı
+// cihazlarda yanlış fiyat duruyor: yükseltmede işaretsiz değer tedbiren "elle
+// girilmiş" sayıldığı için autofill ona dokunmuyor. Bu tek seferlik onarım
+// yalnız kusurun ÜRETEBİLECEĞİ imzayı hedefliyor; üç koşul BİRDEN gerekiyor:
+//
+//   1. ülke TR değil          → TR kullanıcısında zaten doğru değer
+//   2. para birimi TRY değil  → TRY kullanan TR dışı kullanıcı kendi bilir
+//   3. fiyat, TR varsayılanına BİT BİT eşit (epsilon YOK — aranan şey
+//      "kusurun yazdığı değerin ta kendisi", yaklaşık olanı değil)
+//
+// Üçü bir arada yalnız kusurun ürettiği durumda oluşur; elle 2,8076 yazmış
+// birini vurma olasılığı yok denecek kadar düşük. Yine de geri alınamaz bir
+// yazma olduğu için kullanıcıya ESKİ ve YENİ değer birlikte gösteriliyor
+// (isteyen eskisini geri yazabilsin).
+//
+// KABUL EDİLEN SINIR: evprices.js'te TR fiyatı ileride güncellenirse, eski
+// kurulumlar ESKİ TR değerini taşıdığı için artık eşleşmez ve onarılmazlar.
+// Onlar için Ayarlar'daki "önerilen fiyatı kullan" düğmesi duruyor.
+async function kwhFiyatOnar() {
+  if (S.country === 'TR' || S.currency === 'TRY') return false;
+  const tr = defaultKwhPrice('TR', '');
+  if (!tr || S.homeKwhPrice !== tr.p) return false;
+  const d = defaultKwhPrice(S.country, S.kwhRegion);
+  if (!d) return false;                    // tabloda yoksa (MC/AD/SM) DOKUNMA
+  const eski = S.homeKwhPrice;
+  S.homeKwhPrice = d.p;
+  S.homeKwhAuto = true;                    // artık tablo değeri
+  await saveSetting('homeKwhPrice', d.p);
+  await saveSetting('homeKwhAuto', true);
+  setWarning('kwhFix', {
+    msg: t('kwhFixed', {
+      o: fm(symOf('TRY'), fmtNum(eski, 2)),
+      y: fm(symOf(d.cur), fmtNum(d.p, 2))
+    })
+  });
+  return true;
+}
+
 $('set-kwhregion').addEventListener('change', async () => {
   S.kwhRegion = $('set-kwhregion').value;
   await saveSetting('kwhRegion', S.kwhRegion);
