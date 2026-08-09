@@ -32,7 +32,7 @@ Listedeki **41** maddenin hepsi kod işi değil. Üçe ayrıldı:
 |---|---|---|
 | **A — Soru** | 8 | Aşağıda cevaplandı; ikisi (Kıyasla 2, Kod 2) ayrıca iş kalemi doğurdu (WT-77, WT-82) |
 | **B — Karar bekleyen** | 0 | Ayarlar 1 08.08.2026'da karara bağlandı → **WT-78** |
-| **C — İş kalemi** | 33 | **WT-55…WT-82** (28 commit) — aynı bloğa dokunanlar birleştirildi |
+| **C — İş kalemi** | 34 | **WT-55…WT-83** — aynı bloğa dokunanlar birleştirildi; WT-83 sonradan (WT-81/8'in kuyruğu olarak) açıldı |
 
 Bölüm bölüm kapsama (hiçbir madde düşmesin diye):
 Açılış 1/1 · Giriş 3/3 · Anasayfa 5/5 · İstatistik 7/7 · Geçmiş 1/1 ·
@@ -135,7 +135,7 @@ ve **ticari olarak satmaya** açıkça izin veriyorsun. Gerçekçi seçenekler:
 
 Asıl değerin kodda değil: küratörlüğünü yaptığın **EV veri tabanı**, altı dil
 çevirisi, marka ve kullanıcı verisi. Önerim: **lisansı değiştir** (5 dakika),
-kodu açık bırak. Karar verirsen WT-82 olarak açılacak.
+kodu açık bırak. **Karar verildi (09.08.2026): "tüm hakları saklı" — WT-82'de uygulandı.**
 
 ---
 
@@ -249,7 +249,47 @@ diğerinin ön koşulu olduğu yerlerde bağımlılık yazıldı.
 | # | Madde | Kaynak | Not |
 |---|---|---|---|
 | **WT-81** | Kodun sadeleştirilmesi, hata avı | Kod 1 | ✅ **BİTTİ (09.08.2026, v36 — Faz 9 kapandı).** Bilerek en sona konulmuştu. **Beş alt commit:** **/1** üç bar grafiği tek `barChartHTML()`'e alındı ve bir KUSUR düzeldi — `.mb` sütun flex kutusu, `.bar`ın `flex-shrink`i kısıtlı değildi, etiketler sığmayınca çubuk küçültülüyordu: 130px'lik kutuda %100 isteyen çubuk ~%68'e sıkışırken %50 isteyen dokunulmadan kalıyordu, yani **grafik veriyi 2:1 yerine ~1.39:1 gösteriyordu**. Çubuk artık `flex:1` bir `.track` içinde, oran her yükseklikte birebir. Bu aynı zamanda WT-80'in alçak yatay ekran kuralını doğru kılıyor. Yan bulgu: `#s-cons` grafiğinin metin alternatifi HİÇ YOKTU (WT-30 üç grafiği kapsamıştı, tüketim trendi sonra WT-41/3 ile eklenmişti). **/2** "son N ay / son N yıl" Date aritmetiği üç yerden `sonAylar()`/`sonYillar()`'a alındı; 5 birim testi (yıl sınırı, sıralama, 31 Mart gün taşması). **/3** kur alanları ve ayar okuma tek yere alındı — kopyalar AYNI DEĞİLDİ: `openAdd()` `NO_AUTO_FX` denetimini atlıyordu, yani ECB tablosunda olmayan bir para biriminde (RSD/BAM/MKD/ALL/MDL) **kendi kuru kayıtlı bir şarjı düzenlerken "otomatik kur yok" uyarısı görünmüyordu**. **/4** 14 ölü çeviri anahtarı silindi (altı dilde 84 satır; çoğu WT-70/71/72'de kaldırılan ekranlardan artmış) + sözlük bütünlüğü testleri — **çalışma kuralı 3 ("altı dili de doldur") bugüne kadar hiç sınanmıyordu.** **/5** beş ölü CSS sınıfı (22 kural) silindi + kalıcı tarama testi. **Ara durum: testler 388 → 482 jsdom + 46 → 51 birim.** **HATA AVI YARISI (altı alt commit daha, `/code-review high` + "yinelenen mantığın kopyalarını diff'le" yöntemi):** **/6** `mesafeKm` hep KM saklanıyor ve uygulamanın geri kalanı gösterimde `distDisp()`/`distFactor()` ile çeviriyor; TÜKETİM beş yerde ayrı hesaplanıyordu ve İKİSİ (ana sayfa `d-cons`, Geçmiş satırları) çeviriyi atlayıp km tabanlı sayıya `S.unit` etiketi basıyordu — **'mi' seçen kullanıcı tüketimini %38 DÜŞÜK görüyordu** (18 kWh/100 km aslında 29 kWh/100 mi). `cons100()`/`consUnit()`/`tuketimOrt()` tek yere alındı, `consTrend`/`consTrendNote` `{u}` aldı. **/7** `fetchTable()`/`fetchRate()` yeniden deneme sarmalayıcısı tek gövdeye (`fxDene`); kopyalar zaman aşımında ayrışmıştı (4500/4000) ve bu yolun HİÇ testi yoktu — sekiz kontrol eklendi. **/8 (EN AĞIR):** `init()` `kwhPriceAutofill()`i onboarding'den ÖNCE çağırıyor; taze kurulumda `S.country` hâlâ varsayılan 'TR' olduğu için **kullanıcı ülkesini seçmeden Türkiye fiyatı (2,8076) yazılıyordu** ve bir daha düzelmiyordu (ülke seçicisinin çağrısı `homeKwhPrice != null` ile ölüydü). Almanya kurulumunda €/kWh gerçeğin ~7 katı kalıyor ve her ev/iş şarjının tutarını hesaplıyordu. Köken işareti `homeKwhAuto` eklendi (uygulamanın `specElle`/`tutarKaynak` kalıbı); yeni koşum `test/kwh.mjs` — **onboarding'i atlamayan tek dosya**, kusur diğerlerinde bu yüzden görünmüyordu. **/9** gelişmiş alan sayacı onay kutusunu `value` ile sayıyordu; `<input type=checkbox>` işaretsizken de `value==='on'` döner, bu yüzden **bomboş formda bile '1 dolu'** yazıyordu (testteki kopya da aynı hatalı ifadeyi kullandığı için kusuru görmüyordu). **/10** tutar iki kutu (tam+kuruş) ama yalnız tam kısım dinleniyordu — kuruşu düzelten kullanıcının değeri sonraki kWh dokunuşunda **sessizce eziliyordu** (112,35 → 114,80, üstelik `tutarKaynak:'birimFiyat'` ile). **/11** `t('delete')` hiçbir sözlükte yoktu (tooltip her dilde ham 'delete'); WT-81/4'ün değişmezi TEK YÖNLÜYDÜ, ters tarama eklendi; ve **koşumun kendisinde kusur:** `boot.mjs`'te `failed` sayımı dosyanın ORTASINDA yapılıyordu, ondan sonraki blokların (WT-81/1, /4, /5, /7) düşüşleri çıkış koduna girmiyordu — 'kalıcı değişmezler' kırmızıyken bile `npm test` yeşil kalırdı. **Toplam testler: 482 → 496 jsdom + 51 → 59 birim + yeni kwh.mjs (10) ve stats.mjs 8 → 13, homework.mjs 28 → 33.** **SAPMA:** plan `/simplify` de diyordu ama o araç DEĞİŞEN kodu inceliyor; çalışma ağacı temizken üzerinde çalışacağı bir fark yok — yerine `/code-review high` geniş kapsamla (ui/ + calc.js, db.js, app.js, index.html, sw.js) koşuldu. |
-| **WT-82** | (isteğe bağlı) Lisans değişikliği | Kod 2 | §2'deki tabloya göre karar verirsen açılacak. |
+| **WT-82** | Lisans değişikliği | Kod 2 | ✅ **BİTTİ (09.08.2026, v37).** Kullanıcı §2'deki üç seçenekten **"tüm hakları saklı"yı** seçti. MIT kopyalamaya, değiştirmeye ve TİCARİ OLARAK SATMAYA açıkça izin veriyordu; yeni bildirim hiçbir kullanım izni vermiyor. Üç ayrıntı bilerek yazıldı: **(1) geriye yürümüyor** — bildirimden önce MIT ile yayımlanmış sürümler MIT kalır, verilmiş hak geri alınamaz, metin bunu açıkça söylüyor. **(2) Dexie ayrı tutuldu** — `dexie.min.js` (3.2.4) Apache-2.0 ve depoya gömülü; her şeyi "tüm hakları saklı" ilan etmek onun lisansını YANLIŞ BEYAN ederdi. Küçültülmüş dosyanın kendi başlığı yok, dolayısıyla Apache-2.0'ın 4(a)/4(b) atıf yükümlülüğü ancak LICENSE dosyasından karşılanabiliyor; `vendor/ocr/` (Tesseract) için de satır ayrıldı ki dosyalar sonradan konduğunda atıf unutulmasın. **(3) Gömülü fiyat tabloları** — kaynak veriler kamu istatistikleri, her kaydın kaynağı/yılı zaten kodda (KWH_SRC, FUEL_HIST_SRC); tabloların seçimi ve doğrulanması telif sahibinin eseri. Metin İngilizce (bağlayıcı) + Türkçe özet. Depoda MIT'e başka atıf yok, README/KURULUM.md tamamen teknik ve "açık kaynak/fork/katkı çağrısı" gibi çelişecek ifade taşımıyor (tarandı). **Kapsam dışı kalan:** kod açık depoda kaldığı sürece herkes GÖREBİLİR, yalnız kullanamaz — gizlemek ayrı bir karar (§2'deki özel depo satırı). |
+
+### Faz 10 — Kararların uygulanması — ✅ BİTTİ (09.08.2026, v37)
+
+| # | Madde | Kaynak | Not |
+|---|---|---|---|
+| **WT-83** | WT-81/8 öncesi kurulumlardaki yanlış elektrik fiyatının onarılması | WT-81/8 kuyruğu | ✅ **BİTTİ (09.08.2026, v37).** WT-81/8 kusuru düzeldi ama ONDAN ÖNCE kurulmuş TR dışı cihazlarda yanlış fiyat duruyordu (yükseltmede işaretsiz değer tedbiren "elle girilmiş" sayıldığı için autofill dokunmuyordu). Kullanıcı tek seferlik onarımı onayladı. Onarım YALNIZ kusurun üretebileceği imzayı hedefliyor, **üç koşul BİRDEN**: ülke TR değil + para birimi TRY değil + fiyat TR varsayılanına **BİT BİT** eşit (epsilon YOK; aranan şey kusurun yazdığı değerin ta kendisi). Tablosu olmayan ülkede (MC/AD/SM) temiz çıkıyor, fiyatı null YAPMIYOR. Geri alınamaz bir yazma olduğu için uyarı şeridi ESKİ ve YENİ değeri birlikte gösteriyor. `init()` sırası: loadSettings → kwhFiyatOnar → kwhPriceAutofill; onarım değeri kendi yazıp `homeKwhAuto`'yu işaretlediği için autofill'in kısa devresi onu no-op yapıyor — tekrar koşma koruması da bu. **Testin ağırlığı pozitif durumda değil, DOKUNMAMASI gereken dört durumda**; iki koruma tek tek zayıflatılıp ilgili kontrolün düştüğü doğrulandı. Kabul edilen sınır: evprices.js'te TR fiyatı güncellenirse eski kurulumlar artık eşleşmez, onlar için "önerilen fiyatı kullan" düğmesi duruyor. Şema değişikliği YOK. Testler: kwh.mjs 13 → 22. |
+
+### Kapatılan soru — GB'de galon/MPG belirsizliği (09.08.2026)
+
+WT-81'in hata avında çıktı, **kusur DEĞİL** diye kapatıldı; bir daha hata
+sanılıp açılmasın diye aritmetiğiyle birlikte buraya yazıldı.
+
+`calc.js` `GALON_LT = 3.78541` ve `MPG_SABIT = 235.215` ikisi de **ABD**
+ölçüsü, ama `S.unit === 'mi'` olan tek ülke ABD değil — **GB de mil
+kullanıyor** ve İngiliz galonu 4,546 lt (%20 büyük). İlk bakışta kusur
+görünüyor, **ama sapmalar birbirini tam götürüyor**:
+
+| | Gerçek (GB) | Uygulamanın sakladığı | Sapma |
+|---|---|---|---|
+| Yakıt fiyatı | 1,50 £/lt | 1,80 £/lt | +%20 |
+| Tüketim | 5,65 lt/100km | 4,70 lt/100km | −%17 |
+| **km başına maliyet** | **0,084744 £** | **0,084744 £** | **%0** |
+
+Sebep aritmetik: `4,54609 / 3,78541 = 235,215 / 282,481 = 1,20095`. Maliyet
+bu ikisinin ÇARPIMI (`iceKmAt = fiyat × cons / 100`) olduğu için oran
+sadeleşiyor; ölçülen kalıntı %0,0002. Ekrana geri yazarken de aynı sabitler
+kullanılıyor (`fiyatGoster`/`tuketimGoster`), yani kullanıcı hep kendi girdiği
+sayıyı görüyor ve saklanan "metrik" değer hiçbir yerde tek başına
+gösterilmiyor (tek tüketici satır `ui/compare.js:190`).
+
+**Geriye kalan gerçek risk belirsizlik:** etiket yalnız "gal"/"MPG" diyor,
+hangi galon olduğunu söylemiyor. Kullanıcı fiyatı ABD galonuyla ama tüketimi
+İngiliz MPG'siyle girerse sadeleşme bozulur ve **~%17 sapma** çıkar. Ayrıca
+GB'de yakıt zaten litreyle satılıyor, sürücü elle çevirmek zorunda.
+
+**Kullanıcı kararı: DOKUNMA.** Etkilenen kitle dar (GB + yakıtlı araç
+kıyaslaması yapanlar), kendi içinde tutarlı giren doğru sonuç alıyor.
+İleride açılırsa iki seçenek vardı: (a) etiketi netleştir (ucuz, altı dile
+iki anahtar), (b) GB'de litre + L/100km kipine geç (doğrusu, ama birim
+mantığını ülke bazında ikiye ayırır).
 
 ---
 
@@ -264,7 +304,7 @@ diğerinin ön koşulu olduğu yerlerde bağımlılık yazıldı.
 | **`vendor/ocr/` altındaki beş tesseract dosyası** | WT-64 | İlk turdan devreden eksik; depoda yoksa OCR hiç çalışmaz |
 | **Tesla ekran görüntüsü** (sekmelerin üst üste bindiği hâli) | WT-59 | Cihazda yeniden üretemiyorum |
 | **OpenChargeMap anahtarı** (gerekliyse) | WT-54 borcu | İlk turdan devreden eksik |
-| **Lisans kararı** | WT-82 | Hukuki tercih |
+| ~~Lisans kararı~~ | WT-82 | ✅ verildi: "tüm hakları saklı" (09.08.2026) |
 
 ---
 
