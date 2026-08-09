@@ -159,6 +159,47 @@ async function scanOrphans() {
   });
 }
 
+/* ---- WT-75/Aracım 5: gider listesi filtresi ----
+   Durum ayarlara YAZILMIYOR (SETTING_KEYS'e girmiyor, yedeğe de) — sayfa
+   filtresi, oturum boyunca duruyor. Seçenekler mevcut veriden üretiliyor:
+   boşalan bir tür ya da ay listede hiç görünmüyor. */
+let expFltTur = '';        // '' = tümü, yoksa e.tur
+let expFltDon = '';        // '' = tümü, 'YYYY' ya da 'YYYY-MM'
+
+function expFltFill(ex) {
+  $('exp-flt-wrap').style.display = ex.length > 1 ? '' : 'none';
+  // gider türü
+  const turler = [...new Set(ex.map(e => e.tur))]
+    .sort((a, b) => t('exp_' + a).localeCompare(t('exp_' + b), S.lang));
+  if (!turler.includes(expFltTur)) expFltTur = '';
+  $('exp-flt-type').innerHTML = `<option value="">${esc(t('viewAll'))}</option>`
+    + turler.map(x => `<option value="${esc(x)}">${esc(t('exp_' + x))}</option>`).join('');
+  $('exp-flt-type').value = expFltTur;
+  // dönem: yıl başlığı altında "Tümü" + o yılın dolu ayları
+  const aylar = [...new Set(ex.map(e => e.tarih.slice(0, 7)))].sort().reverse();
+  const yillar = [...new Set(aylar.map(a => a.slice(0, 4)))];
+  if (expFltDon && !yillar.includes(expFltDon) && !aylar.includes(expFltDon)) expFltDon = '';
+  $('exp-flt-period').innerHTML = `<option value="">${esc(t('viewAll'))}</option>`
+    + yillar.map(y => `<optgroup label="${y}">`
+      + `<option value="${y}">${y} · ${esc(t('viewAll'))}</option>`
+      + aylar.filter(a => a.slice(0, 4) === y).map(a =>
+        `<option value="${a}">${esc(MONTHS[S.lang][+a.slice(5, 7) - 1])} ${y}</option>`).join('')
+      + '</optgroup>').join('');
+  $('exp-flt-period').value = expFltDon;
+}
+
+function expFltApply(ex) {
+  return ex.filter(e => (!expFltTur || e.tur === expFltTur)
+    && (!expFltDon || e.tarih.startsWith(expFltDon)));
+}
+
+$('exp-flt-type').addEventListener('change', () => {
+  expFltTur = $('exp-flt-type').value; renderVehiclePage();
+});
+$('exp-flt-period').addEventListener('change', () => {
+  expFltDon = $('exp-flt-period').value; renderVehiclePage();
+});
+
 async function renderVehiclePage() {
   const allV = await allVehicles();
   const vehicles = allV.filter(v => !v.archived);
@@ -337,9 +378,23 @@ async function renderVehiclePage() {
   if (!ex.length) {
     expList.innerHTML = `<div class="about" style="margin:0">${t('noExpenses')}</div>`;
     $('c-exp-cats-wrap').style.display = 'none';
+    $('exp-flt-wrap').style.display = 'none';
+    $('exp-flt-count').style.display = 'none';
   } else {
-    const sortedExp = [...ex].sort((a, b) => b.tarih.localeCompare(a.tarih));
-    expList.innerHTML = sortedExp.map(e => `
+    // WT-75/Aracım 5: gider türü + ay/yıl filtresi. Filtre YALNIZ listeyi
+    // daraltır (kutular, grafik ve dağılım tüm giderleri gösterir); durum
+    // ayarlara YAZILMIYOR, sayfa filtresi olarak oturumda kalıyor.
+    expFltFill(ex);
+    const flt = expFltApply(ex);
+    // WT-75/Aracım 6: tespit doğrulandı — liste zaten tarihe göre tersten
+    // sıralıydı. Aynı güne iki kalem girilirse SON GİRİLEN üste gelsin diye
+    // id kırılma ölçütü eklendi (Dexie id'si artan).
+    const sortedExp = [...flt].sort((a, b) =>
+      b.tarih.localeCompare(a.tarih) || (b.id || 0) - (a.id || 0));
+    $('exp-flt-count').style.display = flt.length === ex.length ? 'none' : '';
+    $('exp-flt-count').textContent = flt.length + ' / ' + ex.length;
+    expList.innerHTML = sortedExp.length
+      ? sortedExp.map(e => `
       <div class="crow" data-exp="${e.id}" style="cursor:pointer">
         <div class="avatar" style="background:var(--chip);color:var(--accent-text)">${EXP_ICON[e.tur] || '📦'}</div>
         <div class="mid">
@@ -347,7 +402,8 @@ async function renderVehiclePage() {
           <div class="sub">${shortDate(e.tarih + 'T00:00')}${e.not ? ' · ' + esc(e.not) : ''}</div>
         </div>
         <div class="right"><div class="amt">${fm(symOf(e.cur || S.currency), fmtNum(e.tutar, 0))}</div></div>
-      </div>`).join('');
+      </div>`).join('')
+      : `<div class="about" style="margin:0">${t('expFltNone')}</div>`;
     expList.querySelectorAll('[data-exp]').forEach(el =>
       el.addEventListener('click', async () =>
         openExpense(await db.expenses.get(+el.dataset.exp))));

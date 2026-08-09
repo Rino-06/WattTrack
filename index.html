@@ -968,11 +968,27 @@ nav button{min-height:48px;justify-content:center}
       </div>
       <div class="monthbars" id="v-exp-chart"></div>
     </div>
-    <div class="rows" id="c-exp-list"></div>
+    <!-- WT-75/Aracım 7: gider dağılımı tablosu GRAFİĞİN ALTINA alındı; liste
+         en sona indi. Sıra: kutular -> grafik -> dağılım -> filtre -> liste. -->
     <div id="c-exp-cats-wrap" style="display:none">
       <h2 class="h2" data-i18n="expByCat">Gider dağılımı</h2>
-      <div class="toplist" id="c-exp-cats"></div>
+      <div class="toplist" id="c-exp-cats" style="margin-bottom:14px"></div>
     </div>
+    <!-- WT-75/Aracım 5: listenin ÜSTÜNDE gider türü + ay/yıl filtresi.
+         Filtre YALNIZ listeyi daraltır; üstteki toplamlar, grafik ve dağılım
+         tüm giderleri göstermeye devam eder — sağdaki "n / m" bunu söyler. -->
+    <div class="row2" id="exp-flt-wrap" style="display:none;margin-bottom:10px">
+      <div>
+        <label class="lbl" data-i18n="expType" for="exp-flt-type">Gider türü</label>
+        <select id="exp-flt-type"></select>
+      </div>
+      <div>
+        <label class="lbl" id="exp-flt-period-lbl" data-i18n="expFltPeriod" for="exp-flt-period">Dönem</label>
+        <select id="exp-flt-period"></select>
+      </div>
+    </div>
+    <div class="about" id="exp-flt-count" style="display:none;margin:-4px 0 8px;font-size:12px"></div>
+    <div class="rows" id="c-exp-list"></div>
   </div>
 </section>
 

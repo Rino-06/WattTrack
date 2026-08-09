@@ -2642,6 +2642,95 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await sleep(300);
 }
 
+// ---- WT-75: Aracım sabit giderler (filtre, sıralama, dağılım yeri) ----
+{
+  const A = app();
+  const doc = window.document;
+  A.S.vehExpVeh = '';
+  await A.db.expenses.clear();
+  const vid = (await A.allVehicles()).filter(v => !v.archived)[0]?.id;
+  const idIlk = await A.db.expenses.add(
+    {tarih: '2026-05-10', tur: 'insurance', tutar: 9000, cur: 'TRY', aracId: vid});
+  const idSon = await A.db.expenses.add(
+    {tarih: '2026-05-10', tur: 'tire', tutar: 8000, cur: 'TRY', aracId: vid});
+  await A.db.expenses.add(
+    {tarih: '2025-11-02', tur: 'insurance', tutar: 7000, cur: 'TRY', aracId: vid});
+  await A.db.expenses.add(
+    {tarih: '2026-02-20', tur: 'tax', tutar: 3000, cur: 'TRY', aracId: vid});
+  await A.renderVehiclePage();
+  await sleep(450);
+
+  // --- Aracım 7: dağılım grafiğin ALTINDA, listenin ÜSTÜNDE ---
+  const grafik = doc.getElementById('v-exp-chart-wrap');
+  const dagilim = doc.getElementById('c-exp-cats-wrap');
+  const filtre = doc.getElementById('exp-flt-wrap');
+  const liste = doc.getElementById('c-exp-list');
+  const once = (a, b) => (a.compareDocumentPosition(b) & 4) === 4;   // a, b'den önce
+  check('WT-75/7 KABUL: gider dağılımı grafiğin altında',
+    once(grafik, dagilim) && dagilim.style.display !== 'none');
+  check('WT-75/7 KABUL: dağılım listeden de önce geliyor',
+    once(dagilim, filtre) && once(filtre, liste));
+
+  // --- Aracım 6: son girilen en üstte (aynı tarihte id kırılma ölçütü) ---
+  const sira = [...liste.querySelectorAll('[data-exp]')].map(el => +el.dataset.exp);
+  check('WT-75/6 KABUL: liste tarihe göre yeniden eskiye',
+    sira.length === 4 && sira[0] === idSon && sira[1] === idIlk,
+    'sıra=' + sira.join(','));
+  check('WT-75/6: aynı gün girilen iki kalemde SON girilen üstte',
+    sira.indexOf(idSon) < sira.indexOf(idIlk));
+
+  // --- Aracım 5: tür filtresi ---
+  const turSel = doc.getElementById('exp-flt-type');
+  check('WT-75/5: tür filtresi yalnız var olan türleri listeliyor',
+    [...turSel.options].map(o => o.value).sort().join(',') === ',insurance,tax,tire',
+    [...turSel.options].map(o => o.value).join(','));
+  const toplamOnce = $('v-exp-total').textContent;
+  turSel.value = 'insurance';
+  turSel.dispatchEvent(new window.Event('change', {bubbles: true}));
+  await sleep(400);
+  check('WT-75/5 KABUL: tür seçilince liste daralıyor',
+    doc.querySelectorAll('#c-exp-list [data-exp]').length === 2,
+    'satır=' + doc.querySelectorAll('#c-exp-list [data-exp]').length);
+  check('WT-75/5: filtre üstteki toplamı DEĞİŞTİRMİYOR',
+    $('v-exp-total').textContent === toplamOnce,
+    toplamOnce + ' -> ' + $('v-exp-total').textContent);
+  check('WT-75/5: kaç kalemin gösterildiği yazılı',
+    $('exp-flt-count').style.display !== 'none'
+      && /2 \/ 4/.test($('exp-flt-count').textContent),
+    $('exp-flt-count').textContent);
+
+  // --- Aracım 5: ay/yıl filtresi tür filtresiyle birlikte çalışıyor ---
+  const donSel = doc.getElementById('exp-flt-period');
+  check('WT-75/5: dönem filtresi yılları grup başlığı yapıyor',
+    [...donSel.querySelectorAll('optgroup')].map(g => g.label).join(',') === '2026,2025',
+    [...donSel.querySelectorAll('optgroup')].map(g => g.label).join(','));
+  donSel.value = '2025';
+  donSel.dispatchEvent(new window.Event('change', {bubbles: true}));
+  await sleep(400);
+  check('WT-75/5 KABUL: yıl + tür birlikte daraltıyor (2025 sigorta = 1)',
+    doc.querySelectorAll('#c-exp-list [data-exp]').length === 1,
+    'satır=' + doc.querySelectorAll('#c-exp-list [data-exp]').length);
+  donSel.value = '2026-02';
+  donSel.dispatchEvent(new window.Event('change', {bubbles: true}));
+  await sleep(400);
+  check('WT-75/5: eşleşme kalmayınca açıklayıcı metin çıkıyor',
+    doc.querySelectorAll('#c-exp-list [data-exp]').length === 0
+      && /filtre/i.test(liste.textContent), liste.textContent.trim().slice(0, 50));
+
+  // filtre temizlenince her şey geri geliyor
+  turSel.value = ''; turSel.dispatchEvent(new window.Event('change', {bubbles: true}));
+  await sleep(200);
+  donSel.value = ''; donSel.dispatchEvent(new window.Event('change', {bubbles: true}));
+  await sleep(400);
+  check('WT-75/5: filtre temizlenince dört kalem de geri geliyor',
+    doc.querySelectorAll('#c-exp-list [data-exp]').length === 4
+      && $('exp-flt-count').style.display === 'none',
+    'satır=' + doc.querySelectorAll('#c-exp-list [data-exp]').length);
+  check('WT-75: iki yeni anahtar altı dilde de dolu',
+    ['tr', 'en', 'de', 'fr', 'es', 'it'].every(l =>
+      ['expFltPeriod', 'expFltNone'].every(k => (A.T[l][k] || '').length > 2)));
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
