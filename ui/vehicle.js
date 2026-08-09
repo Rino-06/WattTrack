@@ -160,44 +160,42 @@ async function scanOrphans() {
 }
 
 /* ---- WT-75/Aracım 5: gider listesi filtresi ----
-   Durum ayarlara YAZILMIYOR (SETTING_KEYS'e girmiyor, yedeğe de) — sayfa
-   filtresi, oturum boyunca duruyor. Seçenekler mevcut veriden üretiliyor:
+   Durum S üzerinde (S.vehExpGran ile aynı yerde) ama SETTING_KEYS DIŞINDA —
+   diske ve yedeğe yazılmıyor, oturum boyunca duruyor. Filtre YALNIZ listeyi
+   daraltır. Seçenekler mevcut veriden üretiliyor:
    boşalan bir tür ya da ay listede hiç görünmüyor. */
-let expFltTur = '';        // '' = tümü, yoksa e.tur
-let expFltDon = '';        // '' = tümü, 'YYYY' ya da 'YYYY-MM'
-
 function expFltFill(ex) {
   $('exp-flt-wrap').style.display = ex.length > 1 ? '' : 'none';
   // gider türü
   const turler = [...new Set(ex.map(e => e.tur))]
     .sort((a, b) => t('exp_' + a).localeCompare(t('exp_' + b), S.lang));
-  if (!turler.includes(expFltTur)) expFltTur = '';
+  if (!turler.includes(S.vehExpFltTur)) S.vehExpFltTur = '';
   $('exp-flt-type').innerHTML = `<option value="">${esc(t('viewAll'))}</option>`
     + turler.map(x => `<option value="${esc(x)}">${esc(t('exp_' + x))}</option>`).join('');
-  $('exp-flt-type').value = expFltTur;
+  $('exp-flt-type').value = S.vehExpFltTur;
   // dönem: yıl başlığı altında "Tümü" + o yılın dolu ayları
   const aylar = [...new Set(ex.map(e => e.tarih.slice(0, 7)))].sort().reverse();
   const yillar = [...new Set(aylar.map(a => a.slice(0, 4)))];
-  if (expFltDon && !yillar.includes(expFltDon) && !aylar.includes(expFltDon)) expFltDon = '';
+  if (S.vehExpFltDon && !yillar.includes(S.vehExpFltDon) && !aylar.includes(S.vehExpFltDon)) S.vehExpFltDon = '';
   $('exp-flt-period').innerHTML = `<option value="">${esc(t('viewAll'))}</option>`
     + yillar.map(y => `<optgroup label="${y}">`
       + `<option value="${y}">${y} · ${esc(t('viewAll'))}</option>`
       + aylar.filter(a => a.slice(0, 4) === y).map(a =>
         `<option value="${a}">${esc(MONTHS[S.lang][+a.slice(5, 7) - 1])} ${y}</option>`).join('')
       + '</optgroup>').join('');
-  $('exp-flt-period').value = expFltDon;
+  $('exp-flt-period').value = S.vehExpFltDon;
 }
 
 function expFltApply(ex) {
-  return ex.filter(e => (!expFltTur || e.tur === expFltTur)
-    && (!expFltDon || e.tarih.startsWith(expFltDon)));
+  return ex.filter(e => (!S.vehExpFltTur || e.tur === S.vehExpFltTur)
+    && (!S.vehExpFltDon || e.tarih.startsWith(S.vehExpFltDon)));
 }
 
 $('exp-flt-type').addEventListener('change', () => {
-  expFltTur = $('exp-flt-type').value; renderVehiclePage();
+  S.vehExpFltTur = $('exp-flt-type').value; renderVehiclePage();
 });
 $('exp-flt-period').addEventListener('change', () => {
-  expFltDon = $('exp-flt-period').value; renderVehiclePage();
+  S.vehExpFltDon = $('exp-flt-period').value; renderVehiclePage();
 });
 
 async function renderVehiclePage() {
