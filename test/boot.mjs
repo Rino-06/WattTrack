@@ -365,7 +365,6 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const donutYear = $('d-donut-legend').textContent;
   const banksYear = $('d-banks').textContent;
   const locsYear = $('d-locs').textContent;
-  const wdYear = $('d-weekdays').textContent;
 
   app().S.gran = 'week';
   await app().renderStats();
@@ -383,7 +382,10 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     banksYear.includes('BankaY') && !$('d-banks').textContent.includes('BankaY'));
   check('WT-15: lokasyonlar da daraldı',
     locsYear.includes('İzmir') && !$('d-locs').textContent.includes('İzmir'));
-  check('WT-15: gün dağılımı da daraldı', wdYear !== $('d-weekdays').textContent);
+  // WT-72: gün dağılımı grafiği kullanıcı isteğiyle KALDIRILDI. WT-15'in
+  // "seçici tüm sayfayı daraltıyor" kriteri kalan bloklarla doğrulanıyor.
+  check('WT-72 KABUL: gün dağılımı grafiği kaldırıldı',
+    !window.document.getElementById('d-weekdays'));
   check('WT-15: seçici kapsamı etiketle söylüyor',
     /Dönem/.test($('s-gran-lbl').textContent),
     'etiket=' + JSON.stringify($('s-gran-lbl').textContent));
@@ -699,7 +701,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await sleep(400);
   const doc = window.document;
 
-  for (const [id, ad] of [['d-months', 'harcama grafiği'], ['d-weekdays', 'gün dağılımı'],
+  for (const [id, ad] of [['d-months', 'harcama grafiği'],
                           ['d-donut', 'şarj tipi donutu'], ['d-donut2', 'şarj yeri donutu']]) {
     const el = doc.getElementById(id);
     check(`WT-30: ${ad} role=img + veriyi özetleyen aria-label taşıyor`,
@@ -713,8 +715,9 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 
   // görsel gizli özet tablolar
   const tables = doc.querySelectorAll('table.sr-only');
+  // WT-72: gün dağılımı grafiği kaldırıldı, geriye üç grafik kaldı (eşik 4 -> 3).
   check('WT-30: grafiklerin altında görsel gizli özet tablo var',
-    tables.length >= 4, 'tablo=' + tables.length);
+    tables.length >= 3, 'tablo=' + tables.length);
   check('WT-30: özet tablolar caption ve satır başlığı içeriyor',
     [...tables].every(tb => tb.querySelector('caption') && tb.querySelector('th[scope="row"]')));
 
@@ -2460,6 +2463,24 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-70 KABUL: mil seçilince etiket "mi" oluyor',
     /mi/.test($('d-odo-lbl').textContent), $('d-odo-lbl').textContent);
   A.S.unit = 'km'; A.applyI18n();
+}
+
+// ---- WT-72: gün dağılımı grafiği silindi, firma dağılımı sayfa sonunda ----
+{
+  const doc = window.document;
+  check('WT-72 KABUL: haftanın günleri grafiği hiç yok',
+    !doc.getElementById('d-weekdays'));
+  check('WT-72: weekdayDist çeviri anahtarı altı dilden de silindi',
+    ['tr', 'en', 'de', 'fr', 'es', 'it'].every(l => !(app().T[l] || {}).weekdayDist));
+  const firms = doc.getElementById('d-firms');
+  const locs = doc.getElementById('d-locs');
+  check('WT-72 KABUL: firma dağılımı lokasyon listesinden SONRA geliyor',
+    !!(firms && locs)
+      && (locs.compareDocumentPosition(firms) & 4) === 4);
+  const detay = doc.getElementById('s-data');
+  const bloklar = [...detay.querySelectorAll('h2.h2')].map(h => h.id || h.textContent.trim());
+  check('WT-72: firma dağılımı detay bölümünün son başlığı',
+    /Firma/.test(String(bloklar[bloklar.length - 1])), bloklar.slice(-3).join(' | '));
 }
 
 const failed = results.filter(r => !r.pass);
