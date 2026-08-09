@@ -1,5 +1,6 @@
 /* ============================================================
-   WattTrack — gömülü mesken elektrik fiyatları (WT-78)
+   WattTrack — gömülü fiyat tabloları
+   WT-78: mesken elektrik fiyatı · WT-77: TR yakıt fiyatı geçmişi
    Modül DEĞİL, klasik script. Yükleme sırası index.html'de.
 
    AMAÇ: kullanıcı ülkesini seçtiğinde "ev/iş elektrik birim fiyatı"
@@ -117,3 +118,90 @@ function kwhRegions(country) {
     return [k, typeof v === 'object' ? v.ad : k];
   });
 }
+
+/* ============================================================
+   WT-77 — Türkiye yakıt fiyatı geçmişi (son 36 ay)
+   Kaynak: EPDK Petrol ve LPG Piyasası AYLIK FİYATLANDIRMA RAPORU
+   (her ayın raporundaki Tablo-1 benzin, Tablo-2 motorin "Nihai Satış
+   Fiyatı" ve Tablo-5 otogaz "Toplam Fiyat" satırları).
+   https://www.epdk.gov.tr/Detay/Icerik/3-0-143/fiyatlandirma-raporu
+   Çekim tarihi: 2026-08-09 · Kapsam: 2023-08 … 2026-07 (36 ay, boşluksuz)
+
+   DİKKAT (EPDK'nın kendi kaydı): bu rakamlar "gösterge niteliğinde"dir ve
+   İSTANBUL AVRUPA YAKASI vergiler dahil ortalamalarıdır — Türkiye geneli
+   ortalaması değildir. Bölgeler arasında birkaç kuruş fark olur.
+
+   Değerler TL/lt, vergiler dahil. Ay anahtarı o ayın ORTALAMASIDIR;
+   ayın 1'ine yazılıyor, yani o ay boyunca geçerli sayılıyor.
+   Sıra: [benzin (petrol), motorin (diesel), otogaz (lpg)]
+   ============================================================ */
+const FUEL_HIST = {
+  TR: {src: 'epdk', tur: ['petrol', 'diesel', 'lpg'], m: {
+    '2023-08': [36.934, 37.37, 16.453],
+    '2023-09': [37.533, 39.181, 17.738],
+    '2023-10': [34.541, 38.906, 18.664],
+    '2023-11': [34.517, 37.679, 18.746],
+    '2023-12': [33.977, 36.423, 18.782],
+    '2024-01': [37.083, 39.455, 20.055],
+    '2024-02': [40.108, 42.53, 20.675],
+    '2024-03': [41.831, 41.421, 22.091],
+    '2024-04': [43.543, 41.854, 22.69],
+    '2024-05': [42.649, 40.429, 21.351],
+    '2024-06': [40.903, 40.67, 20.649],
+    '2024-07': [44.752, 44.352, 23.292],
+    '2024-08': [43.992, 43.599, 23.642],
+    '2024-09': [42.109, 42.356, 25.415],
+    '2024-10': [43.481, 42.957, 25.672],
+    '2024-11': [42.719, 43.2, 26.514],
+    '2024-12': [42.827, 43.687, 26.578],
+    '2025-01': [45.492, 46.294, 26.785],
+    '2025-02': [46.381, 46.774, 27.733],
+    '2025-03': [45.271, 45.921, 28.003],
+    '2025-04': [45.376, 45.261, 27.96],
+    '2025-05': [46.149, 45.456, 26.912],
+    '2025-06': [48.495, 48.809, 25.799],
+    '2025-07': [51.093, 53.141, 26.654],
+    '2025-08': [51.711, 52.397, 27.15],
+    '2025-09': [53.001, 54.133, 27.175],
+    '2025-10': [52.464, 53.904, 28.395],
+    '2025-11': [54.221, 57.072, 28.496],
+    '2025-12': [53.021, 53.875, 29.213],
+    '2026-01': [53.809, 55.395, 29.969],
+    '2026-02': [56.458, 58.17, 30.818],
+    '2026-03': [61.044, 67.597, 31.098],
+    '2026-04': [62.79, 74.172, 35.644],
+    '2026-05': [64.424, 68.336, 34.897],
+    '2026-06': [62.769, 65.417, 32.777],
+    '2026-07': [64.706, 71.408, 32.139]
+  }}
+};
+
+const FUEL_HIST_SRC = {
+  epdk: {ad: 'EPDK Fiyatlandırma Raporu',
+    url: 'https://www.epdk.gov.tr/Detay/Icerik/3-0-143/fiyatlandirma-raporu',
+    guncel: '2026-08-09'}
+};
+
+/* Gömülü geçmişi allFuelPrices() biçiminde döndürür. Kullanıcının kendi
+   girdiği fiyatlar HER ZAMAN üstün: aynı tarih + tür varsa gömülü satır
+   elenir. Gömülü satırlarda id YOKTUR ve gomulu:true taşırlar — silme
+   düğmesi bu yüzden çizilmiyor. Veri tabanına HİÇBİR ŞEY yazılmaz. */
+function fuelHistMerge(kullanici, country) {
+  const g = FUEL_HIST[country];
+  if (!g) return kullanici || [];
+  const varOlan = new Set((kullanici || [])
+    .filter(x => !x.ulke || x.ulke === country)
+    .map(x => x.tarih.slice(0, 10) + '|' + x.tur));
+  const gomulu = [];
+  for (const [ay, degerler] of Object.entries(g.m)) {
+    const tarih = ay + '-01';
+    g.tur.forEach((tur, i) => {
+      if (degerler[i] == null) return;
+      if (varOlan.has(tarih + '|' + tur)) return;
+      gomulu.push({tarih, tur, fiyat: degerler[i], ulke: country,
+        gomulu: true, src: g.src});
+    });
+  }
+  return (kullanici || []).concat(gomulu);
+}
+

@@ -79,6 +79,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
        openCsvImport, importFileText, importBackupText, overlayOpen,
        parcaliOku, parcaliYaz,
        KWH_PRICES, KWH_SRC, defaultKwhPrice, kwhRegions, kwhPriceAutofill,
+       FUEL_HIST, FUEL_HIST_SRC, fuelHistMerge,
        renderSettings,
        renderVehiclePage: renderVehiclePage};`;
 try {
@@ -1392,9 +1393,13 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 }
 
 // --- WT-43: yakıt fiyatı geçmişi (uçtan uca) ---
+// WT-77 NOTU: TR'de artık 36 aylık EPDK geçmişi GÖMÜLÜ geliyor, o yüzden bu
+// blok kasten gömülü verisi OLMAYAN bir ülkede (DE) koşuyor — WT-43'ün kendi
+// kabul kriteri (her kayıt kendi tarihinin fiyatıyla) böyle yalıtılmış olarak
+// sınanıyor. Gömülü verinin devreye girdiği hâli WT-77 bloğu doğruluyor.
 {
   const A = app();
-  A.S.unit = 'km'; A.S.country = 'TR'; A.S.cmpVeh = '';
+  A.S.unit = 'km'; A.S.country = 'DE'; A.S.cmpVeh = '';
   await A.db.sessions.clear();
   await A.db.fuelPrices.clear();
   await A.db.sessions.bulkAdd([
@@ -1404,8 +1409,8 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       odenen: 500, cur: 'TRY', mesafeKm: 300, aracId: null}
   ]);
   await A.db.fuelPrices.bulkAdd([
-    {tarih: '2024-01-01', tur: 'diesel', fiyat: 20, ulke: 'TR'},
-    {tarih: '2026-01-01', tur: 'diesel', fiyat: 60, ulke: 'TR'}
+    {tarih: '2024-01-01', tur: 'diesel', fiyat: 20, ulke: 'DE'},
+    {tarih: '2026-01-01', tur: 'diesel', fiyat: 60, ulke: 'DE'}
   ]);
   A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 0, prorate: true};
   await A.renderCompare();
@@ -1421,7 +1426,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 
   // tek fiyat kalınca uyarı
   await A.db.fuelPrices.clear();
-  await A.db.fuelPrices.add({tarih: '2026-01-01', tur: 'diesel', fiyat: 60, ulke: 'TR'});
+  await A.db.fuelPrices.add({tarih: '2026-01-01', tur: 'diesel', fiyat: 60, ulke: 'DE'});
   await A.renderCompare();
   await sleep(300);
   check('WT-43/6: tek fiyat varken uyarı çıkıyor',
@@ -1462,6 +1467,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     /MPG/.test($('c-cons-lbl').textContent) && /gal/i.test($('c-price-lbl').textContent),
     `${$('c-cons-lbl').textContent} | ${$('c-price-lbl').textContent}`);
   A.S.unit = 'km';
+  A.S.country = 'TR';        // WT-77: blok DE'de koştu, ülkeyi geri al
   A.applyI18n();
   // Sonraki bloklar paylaşılan DOM'u devralıyor: formu ve fiyat geçmişini
   // bıraktığımız gibi değil, bulduğumuz gibi geri ver.
@@ -2843,6 +2849,108 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     /'kwhRegion'/.test(dosya('app.js')));
   check('WT-78: yeni dosya sw.js ve index.html ile birlikte eklendi',
     /evprices\.js/.test(dosya('sw.js')) && /evprices\.js/.test(html));
+}
+
+// ---- WT-77: Türkiye yakıt fiyatı geçmişi gömülü geliyor ----
+{
+  const A = app();
+  const doc = window.document;
+  const H = A.FUEL_HIST.TR;
+
+  // --- veri bütünlüğü ---
+  const aylar = Object.keys(H.m).sort();
+  check('WT-77 KABUL: 36 aylık geçmiş var', aylar.length === 36, 'ay=' + aylar.length);
+  check('WT-77: aylar boşluksuz ve sıralı', (() => {
+    for (let i = 1; i < aylar.length; i++) {
+      const [y, m] = aylar[i - 1].split('-').map(Number);
+      const bek = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+      if (aylar[i] !== bek) return false;
+    }
+    return true;
+  })(), aylar[0] + ' … ' + aylar[aylar.length - 1]);
+  check('WT-77: üç yakıt türü de her ayda dolu ve makul (10–200 TL/lt)',
+    aylar.every(a => H.m[a].length === 3
+      && H.m[a].every(v => typeof v === 'number' && v > 10 && v < 200)),
+    aylar.filter(a => H.m[a].some(v => !(v > 10 && v < 200))).join(',') || 'tamam');
+  check('WT-77 KABUL: kaynak künyesi var (uydurma veri değil)',
+    !!A.FUEL_HIST_SRC[H.src] && /epdk\.gov\.tr/.test(A.FUEL_HIST_SRC[H.src].url)
+      && /^\d{4}-\d{2}-\d{2}$/.test(A.FUEL_HIST_SRC[H.src].guncel));
+  check('WT-77: motorin benzinden pahalı olmuş aylar var (veri kopyala-yapıştır değil)',
+    aylar.some(a => H.m[a][1] > H.m[a][0]) && aylar.some(a => H.m[a][2] < H.m[a][0]));
+
+  // --- birleştirme: kullanıcı verisi üstün, veri tabanına yazılmıyor ---
+  await A.db.fuelPrices.clear();
+  const bos = A.fuelHistMerge([], 'TR');
+  check('WT-77: gömülü satır sayısı 36 ay × 3 tür', bos.length === 108,
+    'satır=' + bos.length);
+  check('WT-77: gömülü satırlarda id yok, gomulu işareti var',
+    bos.every(x => x.id === undefined && x.gomulu === true && x.ulke === 'TR'));
+  const kul = [{tarih: '2024-01-01', tur: 'diesel', fiyat: 999, ulke: 'TR', id: 1}];
+  const kar = A.fuelHistMerge(kul, 'TR');
+  const ocak24 = kar.filter(x => x.tarih === '2024-01-01' && x.tur === 'diesel');
+  check('WT-77 KABUL: aynı tarih+türde KULLANICININ fiyatı kazanıyor',
+    ocak24.length === 1 && ocak24[0].fiyat === 999, JSON.stringify(ocak24));
+  check('WT-77: gömülü geçmişi olmayan ülkede hiçbir şey eklenmiyor',
+    A.fuelHistMerge([], 'DE').length === 0 && A.fuelHistMerge(kul, 'DE').length === 1);
+
+  // --- hesapta gerçekten kullanılıyor mu ---
+  A.S.unit = 'km'; A.S.country = 'TR'; A.S.currency = 'TRY'; A.S.cmpVeh = '';
+  await A.db.sessions.clear();
+  await A.db.fuelPrices.clear();
+  await A.db.sessions.bulkAdd([
+    {tarih: '2023-09-15T12:00', firma: 'ZES', tip: 'DC', kwh: 50, tutar: 500,
+      odenen: 500, cur: 'TRY', mesafeKm: 1000, aracId: null},
+    {tarih: '2026-06-15T12:00', firma: 'ZES', tip: 'DC', kwh: 50, tutar: 500,
+      odenen: 500, cur: 'TRY', mesafeKm: 1000, aracId: null}
+  ]);
+  A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 0, prorate: true};
+  await A.renderCompare();
+  await sleep(400);
+  // 2023-09 motorin 39,181 · 2026-06 motorin: gömülü tablodan
+  const bek = Math.round(1000 * 0.10 * H.m['2023-09'][1] + 1000 * 0.10 * H.m['2026-06'][1]);
+  // money() ondalıksız yazıyor; binlik ayıracı "." olduğu için pf() değil
+  // doğrudan rakamlar okunuyor
+  const okunan = Number($('c-icetot').textContent.replace(/[^\d]/g, ''));
+  check('WT-77 KABUL: kullanıcı hiç fiyat girmeden geçmiş fiyatlar kullanıldı',
+    Math.abs(okunan - bek) <= 2, 'beklenen≈' + bek + ' okunan=' + okunan);
+  check('WT-77: tek fiyat uyarısı artık çıkmıyor (36 aylık geçmiş var)',
+    !/tek fiyat/i.test($('c-veh-note').textContent)
+      && /fiyat kaydı/i.test($('c-veh-note').textContent),
+    $('c-veh-note').textContent.slice(-70));
+  check('WT-77 KABUL: veri tabanına HİÇBİR ŞEY yazılmadı',
+    (await A.allFuelPrices()).length === 0);
+
+  // --- fiyat geçmişi ekranı ---
+  await A.openFuelHist();
+  await sleep(300);
+  const satir = doc.querySelectorAll('#fp-list li');
+  check('WT-77: geçmiş ekranı gömülü fiyatları da listeliyor', satir.length === 108,
+    'satır=' + satir.length);
+  check('WT-77 KABUL: gömülü satırlarda silme düğmesi YOK',
+    doc.querySelectorAll('#fp-list [data-fdel]').length === 0);
+  check('WT-77: satırlar "gömülü" olarak işaretli',
+    /gömülü/.test(doc.querySelector('#fp-list li').textContent));
+  check('WT-77 KABUL: nereden geldiği ekranda yazılı (EPDK)',
+    doc.getElementById('fp-embed').style.display !== 'none'
+      && /EPDK/.test(doc.getElementById('fp-embed').textContent),
+    doc.getElementById('fp-embed').textContent.slice(0, 70));
+  // kullanıcı kendi fiyatını girince o satır silinebilir olmalı
+  $('fp-date').value = '2025-05-01';
+  $('fp-price').value = '50';
+  $('fp-type').value = 'diesel';
+  $('fp-save').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(400);
+  check('WT-77: kullanıcı kendi fiyatını girince o satır silinebilir oluyor',
+    doc.querySelectorAll('#fp-list [data-fdel]').length === 1
+      && doc.querySelectorAll('#fp-list li').length === 108,
+    'silinebilir=' + doc.querySelectorAll('#fp-list [data-fdel]').length
+      + ' satır=' + doc.querySelectorAll('#fp-list li').length);
+  await A.overlayClose('page-fuelprice', {force: true});
+  await A.db.fuelPrices.clear();
+
+  check('WT-77: iki yeni anahtar altı dilde de dolu',
+    ['tr', 'en', 'de', 'fr', 'es', 'it'].every(l =>
+      ['fuelHistEmbedded', 'fuelHistSrcTag'].every(k => (A.T[l][k] || '').length > 2)));
 }
 
 const failed = results.filter(r => !r.pass);
