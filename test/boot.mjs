@@ -80,7 +80,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
        parcaliOku, parcaliYaz,
        KWH_PRICES, KWH_SRC, defaultKwhPrice, kwhRegions, kwhPriceAutofill,
        FUEL_HIST, FUEL_HIST_SRC, fuelHistMerge,
-       renderSettings, barChartHTML};`;
+       renderSettings, barChartHTML, fetchRate, fetchTable, FX_TIMEOUT};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -3285,6 +3285,74 @@ const failed = results.filter(r => !r.pass);
     !new RegExp('\\b' + c.replace(/[-]/g, '\\-') + '\\b').test(kullanim)).sort();
   check('WT-81/5 KABUL: hiçbir ekranda kullanılmayan CSS sınıfı kalmadı',
     olu.length === 0, olu.join(', ') || ('tarandı=' + siniflar.size));
+}
+
+// ---- WT-81/7: kur çekmenin yedek kaynağa düşmesi ----
+// fetchTable ve fetchRate aynı yeniden deneme sarmalayıcısını kopyalıyordu
+// (zaman aşımları bile ayrışmıştı: 4500/4000). Tek gövdeye alındı; bu yolun
+// HİÇ testi yoktu, o yüzden davranış burada çivileniyor.
+{
+  const A = app();
+  const cagrilan = [];
+  const stub = cevaplar => (u) => {
+    cagrilan.push(u);
+    const c = cevaplar.shift();
+    if (!c) return Promise.reject(new Error('kaynak yok'));
+    if (c === 'ag') return Promise.reject(new Error('ağ hatası'));
+    if (c === '500') return Promise.resolve({ok: false, status: 500, json: () => ({})});
+    return Promise.resolve({ok: true, json: () => Promise.resolve(c)});
+  };
+
+  cagrilan.length = 0;
+  window.fetch = stub(['ag', {rates: {TRY: 40}, date: '2026-08-09'}]);
+  const r1 = await A.fetchRate('EUR', 'TRY', '2026-08-09');
+  check('WT-81/7: ilk kaynak ağ hatası verince ikinciye düşülüyor',
+    r1 && r1.rate === 40 && cagrilan.length === 2, JSON.stringify(r1));
+
+  cagrilan.length = 0;
+  window.fetch = stub(['500', {rates: {TRY: 41}, date: '2026-08-09'}]);
+  const r2 = await A.fetchRate('EUR', 'TRY', '2026-08-09');
+  check('WT-81/7: HTTP 500 de "sıradaki kaynak" sayılıyor',
+    r2 && r2.rate === 41, JSON.stringify(r2));
+
+  // Aranan para birimi cevapta YOKSA o kaynak işe yaramaz — sıradakine geç.
+  cagrilan.length = 0;
+  window.fetch = stub([{rates: {USD: 1.1}}, {rates: {TRY: 42}, date: '2026-08-09'}]);
+  const r3 = await A.fetchRate('EUR', 'TRY', '2026-08-09');
+  check('WT-81/7: istenen kur cevapta yoksa yedek kaynak deneniyor',
+    r3 && r3.rate === 42 && cagrilan.length === 2, JSON.stringify(r3));
+
+  cagrilan.length = 0;
+  window.fetch = stub(['ag', 'ag']);
+  const r4 = await A.fetchRate('EUR', 'TRY', '2026-08-09');
+  check('WT-81/7: iki kaynak da düşerse null döner (uygulama çökmez)',
+    r4 === null && cagrilan.length === 2, String(r4));
+
+  // fetchTable aynı gövdeyi kullanıyor ama kendi sonucunu üretiyor:
+  // kaynağın kendi kuru 1 olarak ekleniyor.
+  cagrilan.length = 0;
+  window.fetch = stub([{rates: {TRY: 40, USD: 1.1}, date: '2026-08-09'}]);
+  const tb = await A.fetchTable('EUR', '2026-08-09');
+  check('WT-81/7: fetchTable kaynağın kendi kurunu 1 olarak ekliyor',
+    tb && tb.rates.EUR === 1 && tb.rates.TRY === 40, JSON.stringify(tb && tb.rates));
+
+  check('WT-81/7: zaman aşımı politikası tek yerde (iki kopya ayrışmıştı)',
+    A.FX_TIMEOUT === 4500, 'FX_TIMEOUT=' + A.FX_TIMEOUT);
+
+  // Geçmiş tarih 'latest' yerine o günü ister; bugün/gelecek 'latest'.
+  cagrilan.length = 0;
+  window.fetch = stub([{rates: {TRY: 40}}]);
+  await A.fetchRate('EUR', 'TRY', '2020-01-02');
+  check('WT-81/7: geçmiş tarihli kayıt o günün kurunu istiyor',
+    /2020-01-02/.test(cagrilan[0]), cagrilan[0]);
+
+  cagrilan.length = 0;
+  window.fetch = stub([{rates: {TRY: 40}}]);
+  await A.fetchRate('EUR', 'TRY', '2099-12-31');
+  check('WT-81/7: gelecek tarihli kayıt "latest" istiyor',
+    /latest/.test(cagrilan[0]), cagrilan[0]);
+
+  window.fetch = () => Promise.reject(new Error('offline'));   // taban duruma dön
 }
 
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')

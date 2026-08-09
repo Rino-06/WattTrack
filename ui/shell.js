@@ -331,25 +331,39 @@ function photoSrc(p) {
 }
 
 // ---------- döviz kuru (frankfurter — ECB) ----------
-// Bir para biriminin o günkü TÜM kur tablosunu çek (çift yönlü dönüşüm için)
-async function fetchTable(from, date) {
-  const day = date && date < localISO() ? date : 'latest';
-  const urls = [
-    `https://api.frankfurter.dev/v1/${day}?base=${from}`,
-    `https://api.frankfurter.app/${day}?from=${from}`
-  ];
+// WT-81/7: iki çağrının (tablo / tek kur) yeniden deneme sarmalayıcısı birebir
+// kopyaydı — aynı iki kaynak, aynı AbortController kalıbı, aynı sessiz
+// yutma. Kopyalar zaman aşımında AYRIŞMIŞTI (4500 ms / 4000 ms) ki bunun bir
+// gerekçesi yok. Politika artık tek yerde.
+const FX_TIMEOUT = 4500;
+// urls sırayla denenir; `al(json)` bir cevabı sonuca çevirir, null derse
+// sıradaki kaynağa geçilir. Ağ hatası ve bozuk JSON da "sıradaki" demektir.
+async function fxDene(urls, al) {
   for (const u of urls) {
     try {
       const ctrl = new AbortController();
-      const tm = setTimeout(() => ctrl.abort(), 4500);
+      const tm = setTimeout(() => ctrl.abort(), FX_TIMEOUT);
       const res = await fetch(u, {signal: ctrl.signal});
       clearTimeout(tm);
       if (!res.ok) continue;
-      const j = await res.json();
-      if (j && j.rates) { j.rates[from] = 1; return {rates: j.rates, date: j.date || day}; }
-    } catch (e) { /* sıradaki */ }
+      const sonuc = al(await res.json());
+      if (sonuc) return sonuc;
+    } catch (e) { /* sıradaki kaynak */ }
   }
   return null;
+}
+const fxGun = date => date && date < localISO() ? date : 'latest';
+// Bir para biriminin o günkü TÜM kur tablosunu çek (çift yönlü dönüşüm için)
+async function fetchTable(from, date) {
+  const day = fxGun(date);
+  return fxDene([
+    `https://api.frankfurter.dev/v1/${day}?base=${from}`,
+    `https://api.frankfurter.app/${day}?from=${from}`
+  ], j => {
+    if (!j || !j.rates) return null;
+    j.rates[from] = 1;              // kaynağın kendisi 1'e eşit
+    return {rates: j.rates, date: j.date || day};
+  });
 }
 // Kur tablosu eksik kayıtları sessizce tamamla (oturum başına sınırlı)
 async function backfillRates() {
@@ -368,24 +382,14 @@ async function backfillRates() {
   }
 }
 async function fetchRate(from, to, date) {
-  const day = date && date < localISO() ? date : 'latest';
-  const urls = [
+  const day = fxGun(date);
+  return fxDene([
     `https://api.frankfurter.dev/v1/${day}?base=${from}&symbols=${to}`,
     `https://api.frankfurter.app/${day}?from=${from}&to=${to}`
-  ];
-  for (const u of urls) {
-    try {
-      const ctrl = new AbortController();
-      const tm = setTimeout(() => ctrl.abort(), 4000);
-      const res = await fetch(u, {signal: ctrl.signal});
-      clearTimeout(tm);
-      if (!res.ok) continue;
-      const j = await res.json();
-      const v = j && j.rates && j.rates[to];
-      if (v) return {rate: v, date: j.date || day};
-    } catch (e) { /* sıradaki kaynak */ }
-  }
-  return null;
+  ], j => {
+    const v = j && j.rates && j.rates[to];
+    return v ? {rate: v, date: j.date || day} : null;
+  });
 }
 
 
