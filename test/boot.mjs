@@ -2483,6 +2483,129 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     /Firma/.test(String(bloklar[bloklar.length - 1])), bloklar.slice(-3).join(' | '));
 }
 
+// ---- WT-73: Kıyasla düzeltmeleri (1, 3, 4, 5) ----
+{
+  const A = app();
+  const doc = window.document;
+  A.S.unit = 'km'; A.S.country = 'TR'; A.S.cmpVeh = '';
+  await A.db.sessions.clear();
+  await A.db.expenses.clear();
+  await A.db.fuelPrices.clear();
+  const araclar = await A.allVehicles();
+  const vid = araclar[0]?.id;
+  await A.db.sessions.bulkAdd([
+    {tarih: '2026-01-10T12:00', firma: 'ZES', tip: 'DC', kwh: 50, tutar: 500,
+      odenen: 500, cur: 'TRY', mesafeKm: 300, aracId: vid || null},
+    {tarih: '2026-04-10T12:00', firma: 'ZES', tip: 'DC', kwh: 50, tutar: 500,
+      odenen: 500, cur: 'TRY', mesafeKm: 300, aracId: vid || null}
+  ]);
+
+  // --- Kıyasla 1: sabit gider paneli varsayılan KAPALI ---
+  A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 0, prorate: true};
+  $('c-icefix-wrap').style.display = 'none';        // taze açılış durumu
+  await A.renderCompare();
+  await sleep(300);
+  check('WT-73/1 KABUL: yakıtlı sabit gider paneli varsayılan kapalı',
+    $('c-icefix-wrap').style.display === 'none'
+      && $('c-icefix-toggle').getAttribute('aria-expanded') === 'false',
+    'düğme="' + $('c-icefix-toggle').textContent + '"');
+  check('WT-73/1: düğme metni ne olduğunu söylüyor',
+    /sabit gider/i.test($('c-icefix-toggle').textContent),
+    $('c-icefix-toggle').textContent);
+  $('c-icefix-toggle').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(60);
+  check('WT-73/1: düğmeye basınca panel açılıyor',
+    $('c-icefix-wrap').style.display !== 'none'
+      && $('c-icefix-toggle').getAttribute('aria-expanded') === 'true');
+  $('c-icefix-toggle').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(60);
+  check('WT-73/1: tekrar basınca kapanıyor',
+    $('c-icefix-wrap').style.display === 'none');
+
+  // --- Kıyasla 4: tek taraf boşken TCO ve yakıt dışı bloklar gizli ---
+  check('WT-73/4 KABUL: iki taraf da boşken TCO bloğu gizli',
+    $('c-tco-wrap').style.display === 'none'
+      && $('c-nf-wrap').style.display === 'none');
+  check('WT-73/4: gizlenince nedenini söyleyen satır çıkıyor',
+    $('c-tco-need').style.display !== 'none'
+      && $('c-tco-need').textContent.length > 20,
+    $('c-tco-need').textContent.slice(0, 60));
+
+  // yalnız yakıtlı taraf dolu -> hâlâ gizli (sıfıra karşı kıyas)
+  A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 30000, prorate: true};
+  await A.renderCompare();
+  await sleep(300);
+  check('WT-73/4: yalnız yakıtlı sabit gider varken blok yine gizli',
+    $('c-tco-wrap').style.display === 'none'
+      && $('c-nf-wrap').style.display === 'none');
+  check('WT-73/1: kayıtlı değer varsa panel açık geliyor',
+    $('c-icefix-wrap').style.display !== 'none'
+      && $('c-icefix').value !== '',
+    'değer=' + $('c-icefix').value);
+
+  // yalnız EV tarafı dolu -> yine gizli
+  await A.db.expenses.add({tarih: '2026-02-01', tur: 'insurance', tutar: 12000,
+    cur: 'TRY', aracId: vid});
+  A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 0, prorate: true};
+  await A.renderCompare();
+  await sleep(300);
+  check('WT-73/4: yalnız EV gideri varken blok yine gizli',
+    $('c-tco-wrap').style.display === 'none');
+
+  // iki taraf da dolu -> blok geri geliyor
+  A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 30000, prorate: true};
+  await A.renderCompare();
+  await sleep(300);
+  check('WT-73/4 KABUL: iki taraf da doluyken TCO bloğu görünüyor',
+    $('c-tco-wrap').style.display !== 'none'
+      && $('c-tco-need').style.display === 'none'
+      && $('c-nf-wrap').style.display !== 'none',
+    'tco=' + $('c-tco-wrap').style.display + ' nf=' + $('c-nf-wrap').style.display);
+  check('WT-73/4: blok görünürken sayılar dolu (— değil)',
+    $('c-tcoev').textContent !== '—' && $('c-tcoice').textContent !== '—',
+    $('c-tcoev').textContent + ' / ' + $('c-tcoice').textContent);
+
+  // --- Kıyasla 5: "gider dahil" -> "sabit gider dahil", altı dilde ---
+  const T = A.T;
+  check('WT-73/5 KABUL: TR metinleri "sabit gider" diyor',
+    ['tcoIce', 'tco1km', 'tco1kmIce', 'tcoSaved']
+      .every(k => /sabit gider/i.test(T.tr[k])),
+    ['tcoIce', 'tco1km', 'tco1kmIce', 'tcoSaved']
+      .map(k => T.tr[k]).join(' | '));
+  check('WT-73/5: yalın "gider dahil" ifadesi kalmadı',
+    !['tcoIce', 'tco1km', 'tco1kmIce', 'tcoSaved', 'tcoEv', 'tcoTitle']
+      .some(k => /(^|[^t] )gider(ler)? dahil/i.test(T.tr[k])
+        && !/sabit gider/i.test(T.tr[k])));
+  const sabitSoz = {en: /fixed expense/i, de: /Fixkosten/, fr: /frais fixes/i,
+    es: /gastos fijos/i, it: /costi fissi/i};
+  for (const [l, re] of Object.entries(sabitSoz)) {
+    check(`WT-73/5: ${l} tarafında da "sabit" nitelemesi var`,
+      ['tcoIce', 'tco1km', 'tco1kmIce', 'tcoSaved'].every(k => re.test(T[l][k])),
+      ['tcoIce', 'tco1km', 'tco1kmIce', 'tcoSaved'].map(k => T[l][k]).join(' | '));
+  }
+  check('WT-73/5: üç yeni anahtar altı dilde de dolu',
+    ['tr', 'en', 'de', 'fr', 'es', 'it'].every(l =>
+      ['iceFixOpen', 'iceFixClose', 'tcoNeedFix'].every(k => (T[l][k] || '').length > 5)));
+
+  // --- Kıyasla 3: parantezli kısım kendi satırında ---
+  const parenli = [...doc.querySelectorAll('#page-compare .tile .k, #page-compare .hero .k')]
+    .filter(el => /\(/.test(el.textContent));
+  check('WT-73/3 KABUL: parantezli etiketlerin hepsi ayrı satıra bölündü',
+    parenli.length > 0 && parenli.every(el => !!el.querySelector('.paren')),
+    'parantezli=' + parenli.length + ' bölünmemiş='
+      + parenli.filter(el => !el.querySelector('.paren')).length);
+  check('WT-73/3: bölünen etiket metni bozulmadı',
+    /^EV toplam$/.test(doc.querySelector('[data-i18n="tcoEv"]').firstChild.textContent)
+      && /^ \(şarj \+ sabit gider\)$/.test(
+        doc.querySelector('[data-i18n="tcoEv"] .paren').textContent),
+    doc.querySelector('[data-i18n="tcoEv"]').textContent);
+  const cssAll = [...doc.querySelectorAll('style')].map(x => x.textContent).join('\n');
+  check('WT-73/3: Kıyasla kutu etiketlerinde nowrap kesmesi kalktı',
+    /#page-compare \.tile \.k\{[^}]*white-space:normal/.test(cssAll));
+  check('WT-73/3: parantez satırı blok olarak çiziliyor',
+    /#page-compare[^{]*\.paren[^{]*\{[^}]*display:block/.test(cssAll));
+}
+
 const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);

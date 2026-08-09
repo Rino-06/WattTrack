@@ -15,6 +15,36 @@ $('c-fuel').addEventListener('click', e => {
   $('c-fuel').querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b));
   $('c-hybrid-note').style.display = b.dataset.v === 'hybrid' ? '' : 'none';
 });
+// WT-73/Kıyasla 1: yakıtlı aracın yıllık sabit gideri İSTEĞE BAĞLI bir alan;
+// formda hep açık durması girilmesi gerekiyormuş izlenimi veriyordu. Panel
+// varsayılan kapalı, dolu bir değer varsa renderCompare açık getiriyor.
+function iceFixPanel(acik) {
+  $('c-icefix-wrap').style.display = acik ? '' : 'none';
+  $('c-icefix-toggle').setAttribute('aria-expanded', String(acik));
+  $('c-icefix-toggle').textContent = t(acik ? 'iceFixClose' : 'iceFixOpen');
+}
+$('c-icefix-toggle').addEventListener('click', () =>
+  iceFixPanel($('c-icefix-wrap').style.display === 'none'));
+
+// WT-73/Kıyasla 3: "EV toplam (şarj + sabit gider)" gibi etiketlerde parantezli
+// kısım kendi satırına insin — tek satıra sığmayıp kesiliyordu. Metin i18n'den
+// geldiği için ayırma burada, çizimden sonra yapılıyor; tekrar çağrılabilir.
+function splitParenLabels() {
+  document.querySelectorAll('#page-compare .tile .k, #page-compare .hero .k')
+    .forEach(el => {
+      const s = el.textContent;
+      const i = s.indexOf(' (');
+      if (i < 0 || !s.trimEnd().endsWith(')')) return;
+      el.textContent = s.slice(0, i);
+      const sp = document.createElement('span');
+      sp.className = 'paren';
+      // baştaki boşluk blok başında zaten yutuluyor; metin kopyalanınca
+      // "EV toplam (şarj...)" olarak okunsun diye korunuyor
+      sp.textContent = s.slice(i);
+      el.appendChild(sp);
+    });
+}
+
 $('c-vehsel').addEventListener('change', () => { S.cmpVeh = $('c-vehsel').value; renderCompare(); });
 $('c-inclarch').addEventListener('change', () => renderCompare());   // WT-18/4
 $('c-calc').addEventListener('click', async () => {
@@ -57,6 +87,9 @@ async function renderCompare() {
       x.classList.toggle('sel', x.dataset.v === S.cmp.fuel));
     $('c-hybrid-note').style.display = S.cmp.fuel === 'hybrid' ? '' : 'none';
   }
+  // WT-73/Kıyasla 1: panel yalnız daha önce girilmiş bir değer varsa açık gelir.
+  // Kullanıcı elle açtıysa (girdi henüz kaydedilmemiş) açık kalsın.
+  iceFixPanel(!!S.cmp?.icefix || $('c-icefix-wrap').style.display !== 'none');
 
   // ---- Araç giderleri: hesaplamaya dahil edilir (liste/kategori UI'ı Aracım sekmesinde) ----
   // WT-18: `|| !e.aracId` koşulu aracId'si null olan giderleri HER araca
@@ -77,9 +110,21 @@ async function renderCompare() {
   $('c-veh-note').textContent = inclNames.length
     ? t('tcoVehNote', {v: inclNames.join(', ')}) : '';
 
+  // WT-73/Kıyasla 4: TCO ve yakıt dışı gider blokları YALNIZ iki tarafta da
+  // sabit gider varsa anlamlı. Tek taraf boşken blok sıfıra karşı kıyas
+  // gösteriyor (EV giderleri boşsa kazancı şişiriyor, yakıtlı boşsa tersi);
+  // ikisi de boşken zaten üstteki "bugüne kadar" bloğunun kopyası oluyor.
+  // Karar mesafeden BAĞIMSIZ, o yüzden distKm hesabından önce veriliyor.
+  const evFixVar = ex.some(e => expB(e) > 0);
+  const iceFixVar = !!(S.cmp && S.cmp.icefix);
+  const tcoGoster = evFixVar && iceFixVar;
+  $('c-tco-wrap').style.display = tcoGoster ? '' : 'none';
+  $('c-tco-need').style.display = tcoGoster ? 'none' : '';
+  $('c-tco-need').textContent = tcoGoster ? '' : t('tcoNeedFix');
+
   await fuelHistSync();
   const box = $('c-result');
-  if (!S.cmp) { box.style.display = 'none'; return; }
+  if (!S.cmp) { box.style.display = 'none'; splitParenLabels(); return; }
 
   const all = vehFilter(await allSessions(), S.cmpVeh);
   reportFxGaps(all, 'c-warnings', 'fxCompare');   // WT-10
@@ -116,6 +161,7 @@ async function renderCompare() {
     $('c-nf-diff-pill').textContent = '';
     $('c-nf-bar-ev').style.width = '0%'; $('c-nf-bar-ice').style.width = '0%';
     $('c-nf-bar-ev-lbl').textContent = ''; $('c-nf-bar-ice-lbl').textContent = '';
+    splitParenLabels();
     return;
   }
   $('c-perkm').style.fontSize = '28px';
@@ -231,8 +277,9 @@ async function renderCompare() {
     + (nFiyat >= 2 ? t('fuelHistUsed', {n: nFiyat}) : t('fuelHistSingle'));
 
   // ---- Yakıt dışı gider kıyaslaması (EV vs Yakıtlı) ----
-  // Yakıtlı aracın yıllık sabit gideri girilmemişse (opsiyonel alan) kıyas anlamsız olur — gizle.
-  if (!S.cmp.icefix) { $('c-nf-wrap').style.display = 'none'; return; }
+  // WT-73/Kıyasla 4: eskiden yalnız yakıtlı taraf boşken gizleniyordu; EV tarafı
+  // boşken de kıyas sıfıra karşı yapılıyordu. Artık ikisi de dolu olacak.
+  if (!tcoGoster) { $('c-nf-wrap').style.display = 'none'; splitParenLabels(); return; }
   $('c-nf-wrap').style.display = '';
   const kwhSum = all.reduce((s, r) => s + (r.kwh || 0), 0);
   const nfEvPerKm = expTot / distKm;
@@ -255,6 +302,7 @@ async function renderCompare() {
   const nfMax = Math.max(1, nfEvYear, nfIceYear);
   $('c-nf-bar-ev').style.width = Math.round(nfEvYear / nfMax * 100) + '%';
   $('c-nf-bar-ice').style.width = Math.round(nfIceYear / nfMax * 100) + '%';
+  splitParenLabels();
 }
 
 // ---------- basit SVG çizgi grafik ----------
