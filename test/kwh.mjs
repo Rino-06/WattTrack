@@ -63,7 +63,8 @@ async function boot() {
     'app.js']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
     + `\n;window.__app = {db, S, t, finishOnboarding, kwhPriceAutofill,
-         defaultKwhPrice, renderSettings, saveSetting};`;
+         defaultKwhPrice, renderSettings, saveSetting, backupPayload,
+         importBackupText, loadSettings};`;
   window.eval(bundle);
   await new Promise(r => setTimeout(r, 1200));
   return window;
@@ -138,6 +139,39 @@ await A.saveSetting('homeKwhPrice', 2.8076);
 const degistiMi2 = await A.kwhPriceAutofill();
 check('WT-81/8: yükseltmede işaretsiz değere dokunulmuyor (sürpriz yazma yok)',
   degistiMi2 === false && A.S.homeKwhPrice === 2.8076, 'homeKwhPrice=' + A.S.homeKwhPrice);
+
+// ---- Köken işareti YEDEK turundan sağ çıkmalı ----
+// WT-78'in değişmezi artık homeKwhAuto'ya DAYANIYOR; işaret yedekte
+// kaybolursa değişmez de kaybolur.
+A.S.homeKwhPrice = 0.28;
+A.S.homeKwhAuto = false;                       // kullanıcı elle yazdı
+await A.saveSetting('homeKwhPrice', 0.28);
+await A.saveSetting('homeKwhAuto', false);
+const yedek = await A.backupPayload();
+const isaretSatiri = yedek.settings.find(r => r.key === 'homeKwhAuto');
+check('WT-81/8: köken işareti yedeğe giriyor',
+  isaretSatiri && isaretSatiri.value === false,
+  'satır=' + JSON.stringify(isaretSatiri));
+
+// ESKİ (v35) yedek senaryosu: dosyada homeKwhAuto satırı YOK, ama canlı
+// oturumda taze kurulumun autofill'inden kalan true var. Geri yükleme
+// yalnız gelen anahtarları yazdığı için işaret true kalır ve kullanıcının
+// yedekteki elle girdiği fiyat sonraki ülke değişikliğinde ezilirdi.
+const eskiYedek = {...yedek, settings: yedek.settings.filter(r => r.key !== 'homeKwhAuto')};
+A.S.homeKwhAuto = true;
+await A.saveSetting('homeKwhAuto', true);
+await A.importBackupText(JSON.stringify(eskiYedek));
+await sleep(500);
+await A.loadSettings();
+check('WT-81/8 KABUL: eski yedekte işaret yoksa fiyat "elle girilmiş" sayılıyor',
+  A.S.homeKwhAuto === false && Math.abs(A.S.homeKwhPrice - 0.28) < 1e-9,
+  `auto=${A.S.homeKwhAuto} fiyat=${A.S.homeKwhPrice}`);
+
+A.S.country = 'DE';
+await A.saveSetting('country', 'DE');
+await A.kwhPriceAutofill();
+check('WT-81/8 KABUL: eski yedekten gelen fiyat ülke değişince EZİLMİYOR',
+  Math.abs(A.S.homeKwhPrice - 0.28) < 1e-9, 'fiyat=' + A.S.homeKwhPrice);
 
 console.log('');
 if (errors.length) {
