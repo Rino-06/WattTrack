@@ -33,13 +33,21 @@ This repository bundles third-party software that is NOT covered by the terms
 above. Each component remains governed by its own license, and nothing in
 Section 1 limits the rights those licenses grant you in respect of it:
 
+A complete copy of the Apache License, Version 2.0 — required by its
+section 4(a) — is included in this repository at:
+
+    LICENSES/Apache-2.0.txt
+    (also at https://www.apache.org/licenses/LICENSE-2.0)
+
+It governs every component listed below.
+
   dexie.min.js
     Dexie.js 3.2.4 — Copyright (c) David Fahlander and contributors
     Licensed under the Apache License, Version 2.0
     https://github.com/dexie/dexie.js
-    Full license: https://www.apache.org/licenses/LICENSE-2.0
-    (The distributed file is minified and carries no header of its own;
-    this notice is provided to satisfy Apache-2.0 sections 4(a) and 4(b).)
+    (The distributed file is minified and carries no header of its own,
+    so this notice — together with the license copy named above — is
+    where the Apache-2.0 section 4(a) and 4(b) obligations are met.)
 
   vendor/ocr/*  — when present
     Tesseract.js and tesseract-core — Apache License, Version 2.0
@@ -88,7 +96,8 @@ Telif hakkı (c) 2026 Fatih Hasdemir. Tüm hakları saklıdır.
 
 3. Depodaki `dexie.min.js` (Dexie.js 3.2.4) ve — eklendiğinde — `vendor/ocr/`
    altındaki Tesseract dosyaları Apache-2.0 lisanslıdır ve yukarıdaki
-   kısıtlamalara TABİ DEĞİLDİR.
+   kısıtlamalara TABİ DEĞİLDİR. Apache-2.0'ın tam metni depoda
+   `LICENSES/Apache-2.0.txt` dosyasındadır.
 
 4. Gömülü elektrik ve yakıt fiyatı tabloları kamu kurumlarının yayımlanmış
    istatistiklerinden türetilmiştir; her kaydın kaynağı ve yılı kodda yazılıdır.
