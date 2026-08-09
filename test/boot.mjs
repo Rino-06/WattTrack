@@ -3256,6 +3256,37 @@ const failed = results.filter(r => !r.pass);
     olu.length === 0, olu.join(', ') || 'tamam');
 }
 
+// ---- WT-81/5: ölü CSS sınıfı kalmadı ----
+{
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const i = html.indexOf('<style>'), j = html.indexOf('</style>');
+  let css = html.slice(i, j).replace(/\/\*[\s\S]*?\*\//g, '');
+  for (let n = 0; n < 30; n++) {
+    const m = /@media[^{]*\{/.exec(css);
+    if (!m) break;
+    let d = 1, k = m.index + m[0].length;
+    while (d > 0 && k < css.length) {
+      if (css[k] === '{') d++; else if (css[k] === '}') d--;
+      k++;
+    }
+    css = css.slice(0, m.index) + css.slice(m.index + m[0].length, k - 1) + css.slice(k);
+  }
+  const siniflar = new Set();
+  for (const m of css.matchAll(/([^{}]+)\{[^}]*\}/g))
+    for (const sel of m[1].split(','))
+      for (const c of sel.matchAll(/\.([A-Za-z][\w-]*)/g)) siniflar.add(c[1]);
+  // Kullanım: stil bloğu DIŞINDAKİ işaretleme + bütün betikler
+  const kullanim = html.slice(0, i) + html.slice(j)
+    + ['app.js', 'calc.js', 'db.js', 'ocr.js', 'evprices.js', 'i18n.js',
+       'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js',
+       'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js']
+      .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  const olu = [...siniflar].filter(c =>
+    !new RegExp('\\b' + c.replace(/[-]/g, '\\-') + '\\b').test(kullanim)).sort();
+  check('WT-81/5 KABUL: hiçbir ekranda kullanılmayan CSS sınıfı kalmadı',
+    olu.length === 0, olu.join(', ') || ('tarandı=' + siniflar.size));
+}
+
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
 if (errors.length) {

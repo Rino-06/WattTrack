@@ -112,8 +112,6 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
    ============================================ */
 .hero .delta.up{color:var(--red)}
 .hero .delta.down{color:var(--accent-dark)}
-.hero .sub2{font-size:13px;color:var(--muted);margin-top:6px}
-.hero .sub2 b{color:var(--text)}
 .hero .pill{display:inline-block;margin-top:6px;padding:5px 10px;border-radius:100px;background:var(--pill);color:var(--accent-text);font-size:12px;font-weight:600}
 .donut-wrap{display:flex;align-items:center;gap:16px;background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);margin-bottom:14px}
 .donut-wrap svg{width:96px;height:96px;flex-shrink:0}
@@ -133,22 +131,9 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .toplist .tv{font-weight:700;flex-shrink:0}
 .toplist .tbar{flex:0 0 68px;height:6px;background:var(--track);border-radius:100px;overflow:hidden}
 .toplist .tbar>div{height:100%;background:var(--accent);border-radius:100px}
-.side2{display:flex;gap:10px;align-items:stretch;margin-bottom:6px}
-.side2>div{flex:1;min-width:0}
-.stack2{display:flex;flex-direction:column;gap:14px;margin-bottom:14px}
-.compactfirm{gap:8px}
-.compactfirm .cmp{padding:10px}
-.compactfirm .cmp-head{gap:7px;margin-bottom:7px}
-.compactfirm .cmp-head .avatar{width:24px;height:24px;font-size:11px;border-radius:7px}
-.compactfirm .cmp-head .name{font-size:12px}
-.compactfirm .cmp-head .sub{display:none}
-.compactfirm .cmp-head .total{font-size:12px}
-.donut-col{flex-direction:column;height:calc(100% - 26px);justify-content:center}
-.donut-col svg{width:84px;height:84px}
-.donut-col .legend{width:100%;font-size:11.5px}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .page.active .hero,.page.active .tiles,.page.active .card,.page.active .monthbars,
-.page.active .donut-wrap,.page.active .toplist,.page.active .side2,.page.active .dstat,
+.page.active .donut-wrap,.page.active .toplist,.page.active .dstat,
 .page.active .chart-card,.page.active .rows{animation:fadeUp .35s ease both}
 @keyframes barGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 .mb .bar{transform-origin:bottom;animation:barGrow .5s ease both}
@@ -526,10 +511,6 @@ nav button{min-height:48px;justify-content:center}
      esnetilmemeli; içerik okunur bir ölçüde ortalanıyor. */
   .ov-body{max-width:640px;width:100%;margin:0 auto}
   #photo-view .ov-body{max-width:none}
-  .side2{display:block}
-  .side2>div+div{margin-top:14px}
-  .donut-col{flex-direction:row;height:auto}
-  .donut-col svg{width:110px;height:110px}
 }
 /* WT-80: Aracım iki sütuna ancak gerçekten yer varken bölünüyor —
    araç listesi solda, gider kartı sağda. 760-999px arasında gider kartı
@@ -544,9 +525,6 @@ nav button{min-height:48px;justify-content:center}
   /* WT-33: sabit `columns:3` yerine auto-fit sütun sayısını genişliğe göre
      kendisi seçiyor; ayrı bir kural gerekmiyor. */
   #page-history,#page-settings{max-width:900px}
-  .side2{display:flex}
-  .side2>div+div{margin-top:0}
-  .donut-col{flex-direction:column}
 }
 @media(min-width:760px) and (orientation:landscape){
   .content{padding-bottom:120px}
