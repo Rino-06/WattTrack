@@ -211,38 +211,41 @@ async function renderStats() {
 
   // WT-41/3: aylık tüketim trendi. Son 6 ay; atlanan kayıtlar hariç.
   // Kışın artışı görmek EV sahipleri için en değerli sinyallerden biri.
-  const consAy = sonAylar(6).map(m => {
-    const g = all.filter(r => monthKey(r.tarih) === m.key && !r.atlanan
-      && r.mesafeKm > 0 && r.kwh > 0);
-    const km = g.reduce((s, r) => s + r.mesafeKm, 0);
-    const kw = g.reduce((s, r) => s + r.kwh, 0);
-    return {label: m.label, v: km >= 20 ? kw / km * 100 : null};
-  });
+  const consAy = sonAylar(6).map(m => ({
+    label: m.label,
+    v: tuketimOrt(all.filter(r => monthKey(r.tarih) === m.key))
+  }));
+  // WT-81/6: başlık birimi taşıyor, o yüzden data-i18n ile DEĞİL burada
+  // yazılıyor (para/birim içeren etiketlerin yerleşik kalıbı — applyI18n
+  // yalnız statik metni çevirir).
+  $('s-cons-lbl').textContent = t('consTrend', {u: S.unit});
   $('s-cons').innerHTML = barChartHTML(consAy.map(x => ({
     label: x.label, value: x.v, text: x.v != null ? fmtNum(x.v, 1) : ''
   })));
   // WT-81/hata avı: bu grafiğin metin alternatifi HİÇ YOKTU. WT-30 üç
   // grafiği kapsamıştı, tüketim trendi ondan sonra (WT-41/3) eklendi ve
   // ekran okuyucuya görünmez kaldı.
-  labelBarChart('s-cons', t('consTrend'), consAy.map(x => ({
+  labelBarChart('s-cons', t('consTrend', {u: S.unit}), consAy.map(x => ({
     label: x.label,
-    text: x.v != null ? fmtNum(x.v, 1) + ' kWh/100 km' : t('noData')
+    text: x.v != null ? fmtNum(x.v, 1) + ' ' + consUnit() : t('noData')
   })));
   // WLTP ile karşılaştırma KASITLI olarak yok (WT-41/2): araçlar o değere
   // ulaşmıyor, yanıltıcı olurdu. Ölçek kullanıcının kendi geçmişi.
   const dolu = consAy.filter(x => x.v != null);
   $('s-cons-note').textContent = dolu.length >= 2
     ? t('consTrendNote', {
+        u: S.unit,
         min: fmtNum(Math.min(...dolu.map(x => x.v)), 1),
         max: fmtNum(Math.max(...dolu.map(x => x.v)), 1)})
     : t('consTrendNeed');
 }
 
-// WT-41/4: kaydın kendi tüketimi (kWh/100 km). Atlanan kayıtta gösterilmez —
-// o kaydın mesafesi kendisine ait değil.
+// WT-41/4: kaydın kendi tüketimi. Atlanan kayıtta gösterilmez — o kaydın
+// mesafesi kendisine ait değil. WT-81/6: değer artık kullanıcının birimine
+// çevriliyor (cons100), etiketle uyumsuzluğu buydu.
 function rowCons(r) {
   if (r.atlanan || !(r.mesafeKm > 0) || !(r.kwh > 0)) return '';
-  return ' · ' + fmtNum(r.kwh / r.mesafeKm * 100, 1) + ' kWh/100 ' + S.unit;
+  return ' · ' + fmtNum(cons100(r.kwh, r.mesafeKm), 1) + ' ' + consUnit();
 }
 // WT-46/3: çok araçlı kullanıcıda satır hangi araca ait olduğunu söylemeli.
 // VEH_ADI'yi ui/history.js dolduruyor; tek araçlı kullanıcıda null kalır ve

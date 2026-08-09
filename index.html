@@ -757,7 +757,9 @@ nav button{min-height:48px;justify-content:center}
   </div>
 
   <div class="gcell">
-    <h2 class="h2"><span data-i18n="consTrend">Aylık tüketim (kWh/100 km)</span></h2>
+    <!-- WT-81/6: başlık birim taşıyor (km/mi), applyI18n statik metin
+         çevirdiği için id ile render sırasında yazılıyor. -->
+    <h2 class="h2"><span id="s-cons-lbl">Aylık tüketim (kWh/100 km)</span></h2>
     <div class="monthbars" id="s-cons"></div>
     <div class="about" id="s-cons-note" style="margin:-8px 0 14px;font-size:12px"></div>
   </div>

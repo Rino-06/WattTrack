@@ -203,19 +203,13 @@ async function renderDashboard() {
   const powMin = durs.reduce((s, r) => s + r.dur, 0);
   $('d-power').textContent = powMin > 0 ? fmtNum(powKwh / (powMin / 60), 1) + ' kWh/h' : '—';
 
-  // WT-41: ortalama tüketim (kWh/100 km). Ev-İş şarjları DAHİL; DC/AC ayrımı
-  // dsAll üzerinden korunuyor. WT-20'de atlanan işaretli kayıtlar HARİÇ —
-  // onların mesafesi bir sonraki kayda ait.
-  const tuketim = liste => {
-    const g = liste.filter(r => !r.atlanan && r.mesafeKm > 0 && r.kwh > 0);
-    const km = g.reduce((s, r) => s + r.mesafeKm, 0);
-    const kw = g.reduce((s, r) => s + r.kwh, 0);
-    return km >= 20 ? kw / km * 100 : null;    // 20 km altında anlamsız
-  };
-  const cons = tuketim(dsAll);
-  $('d-cons').textContent = cons != null ? fmtNum(cons, 1) + ' kWh/100 ' + S.unit : '—';
+  // WT-41: ortalama tüketim. Ev-İş şarjları DAHİL; DC/AC ayrımı dsAll
+  // üzerinden korunuyor. WT-81/6: hesap ve birim çevirisi calc.js'te
+  // (tuketimOrt) — buradaki kopya km tabanlı sayıya 'mi' etiketi basıyordu.
+  const cons = tuketimOrt(dsAll);
+  $('d-cons').textContent = cons != null ? fmtNum(cons, 1) + ' ' + consUnit() : '—';
   // WLTP ile DEĞİL, kullanıcının KENDİ önceki dönemiyle karşılaştırılıyor
-  const oncekiCons = tuketim(S.dstatType
+  const oncekiCons = tuketimOrt(S.dstatType
     ? prevPeriodFilter(all).filter(r => r.tip === S.dstatType) : prevPeriodFilter(all));
   const cd = $('d-cons-d');
   if (cons != null && oncekiCons) {
