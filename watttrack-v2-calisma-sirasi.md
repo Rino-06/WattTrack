@@ -241,7 +241,7 @@ diğerinin ön koşulu olduğu yerlerde bağımlılık yazıldı.
 
 | # | Madde | Kaynak | Not |
 |---|---|---|---|
-| **WT-79** | Tablette dikey moda zorlama | Arayüz 3 | **Kök neden bulundu:** `manifest.json:9` → `"orientation": "portrait-primary"`. Tesla'da bu sorunun çıkmaması muhtemelen manifest'in orada uygulanmamasından (**doğrulanmadı, varsayım**). Alan kaldırılacak ya da `"any"` yapılacak — ardından yatay yerleşimin bozulmadığı doğrulanacak (WT-80'in ön koşulu). |
+| **WT-79** | Tablette dikey moda zorlama | Arayüz 3 | **Kök neden doğrulandı ve düzeltildi (09.08.2026).** `manifest.json` `orientation` alanı `portrait-primary` → **`any`**. Alan SİLİNMEDİ: WT-53'ün "19 alan duruyor" kontrolü varlığını şart koşuyor. Yatay yerleşim tarafında `@media(min-width:760px)` (WT-33 grid düzeni) ve `(orientation:landscape)` kuralları yerinde. **Gerçek cihazda (tablet/Tesla) doğrulama elle test borcunda** — jsdom yönelim değiştiremiyor. |
 | **WT-80** | Geniş ekranda (Tesla / PC / tablet) yerleşimin ölçeklenmesi | Arayüz 2 | Uygulama telefon genişliğine göre kurulmuş. Kırılma noktaları eklenecek; **WT-59 ve WT-79 bitmeden başlanmaz** — ikisi de yerleşimi etkiliyor. |
 
 ### Faz 9 — Kod sağlığı
