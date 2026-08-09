@@ -19,7 +19,7 @@ npm test
 | `homework.mjs` (33) | WT-16 Ev-İş/Firma ayrımı, şema v3 migration'ı (v2 verisiyle ayrı açılış), kWh birim fiyatından tutar, dil değişimi regresyonu · WT-81/10 tutarın kuruş kutusu |
 | `odo.mjs` (29) | WT-19 sırasız kayıt, iki komşu doğrulaması, silme, kmStart sınırı, mi birim dönüşümü · WT-20 atlanan kayıt ve sezgi · WT-17 sayaç modunda grafik |
 | `stats.mjs` (13) | WT-55/56 dönem filtresi ve "bu dönemde kayıt yok" ayrımı · WT-81/6 tüketimin km/mi gösterimi |
-| `kwh.mjs` (13) | WT-81/8 taze kurulumda ev elektrik fiyatı + `homeKwhAuto` köken işaretinin yedek turu. **Onboarding'i ATLAMAYAN tek koşum** — kusur yalnız orada görünüyordu |
+| `kwh.mjs` (22) | WT-81/8 taze kurulumda ev elektrik fiyatı + `homeKwhAuto` köken işaretinin yedek turu · WT-83 tek seferlik onarımın DOKUNMAMASI gereken dört durumu. **Onboarding'i ATLAMAYAN tek koşum** — kusur yalnız orada görünüyordu |
 
 **Not:** Bu, WT-51'in (birim testleri + CI) yerine geçmez — o madde saf
 fonksiyonları izole test edecek ve GitHub Actions'a bağlanacak. Buradakiler

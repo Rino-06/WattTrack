@@ -64,7 +64,7 @@ async function boot() {
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
     + `\n;window.__app = {db, S, t, finishOnboarding, kwhPriceAutofill,
          defaultKwhPrice, renderSettings, saveSetting, backupPayload,
-         importBackupText, loadSettings};`;
+         importBackupText, loadSettings, kwhFiyatOnar, kwhRegions};`;
   window.eval(bundle);
   await new Promise(r => setTimeout(r, 1200));
   return window;
@@ -172,6 +172,75 @@ await A.saveSetting('country', 'DE');
 await A.kwhPriceAutofill();
 check('WT-81/8 KABUL: eski yedekten gelen fiyat ülke değişince EZİLMİYOR',
   Math.abs(A.S.homeKwhPrice - 0.28) < 1e-9, 'fiyat=' + A.S.homeKwhPrice);
+
+// ============================================================
+// WT-83 — WT-81/8'den ÖNCE kurulmuş cihazlar için tek seferlik onarım
+// ============================================================
+// Asıl sınav POZİTİF durum değil, DOKUNMAMASI gereken durumlar: bu geri
+// alınamaz bir yazma, yanlış tetiklenirse kullanıcının kendi verisini bozar.
+const TR = A.defaultKwhPrice('TR', '').p;
+
+// Onarımı çağırmadan önce cihazı "kusurlu kurulum" hâline getiren yardımcı
+const kur = async (country, currency, fiyat) => {
+  A.S.country = country; A.S.currency = currency; A.S.homeKwhPrice = fiyat;
+  A.S.kwhRegion = '';
+  delete A.S.homeKwhAuto;                 // v35'ten yükselen kurulum: işaret yok
+  await A.saveSetting('country', country);
+  await A.saveSetting('currency', currency);
+  await A.saveSetting('homeKwhPrice', fiyat);
+  await A.saveSetting('kwhRegion', '');
+};
+
+// --- POZİTİF: tam olarak kusurun ürettiği imza ---
+await kur('DE', 'EUR', TR);
+const onarildi = await A.kwhFiyatOnar();
+check('WT-83 KABUL: TR dışı kurulumdaki TR fiyatı onarılıyor',
+  onarildi === true && Math.abs(A.S.homeKwhPrice - A.defaultKwhPrice('DE').p) < 1e-9,
+  `onarıldı=${onarildi} fiyat=${A.S.homeKwhPrice} (DE=${A.defaultKwhPrice('DE').p})`);
+check('WT-83: onarılan değer tablo değeri olarak işaretleniyor',
+  A.S.homeKwhAuto === true, 'homeKwhAuto=' + A.S.homeKwhAuto);
+check('WT-83 KABUL: kullanıcıya ESKİ ve YENİ değer birlikte gösteriliyor',
+  (() => { const el = $(w, 'd-warnings');
+    const m = el && el.textContent || '';
+    return /2,81/.test(m) && new RegExp(A.defaultKwhPrice('DE').p.toFixed(2).replace('.', ',')).test(m);
+  })(), ($(w, 'd-warnings').textContent || '').replace(/\s+/g, ' ').trim().slice(0, 110));
+
+// Tekrar koşarsa bir daha yazmamalı (init her açılışta çağırıyor)
+const ikinci = await A.kwhFiyatOnar();
+check('WT-83: ikinci açılışta yeniden yazmıyor (tekrar koruması)',
+  ikinci === false, 'dönüş=' + ikinci);
+
+// --- NEGATİF 1: ülke TR ise dokunma (fiyat zaten doğru) ---
+await kur('TR', 'TRY', TR);
+check('WT-83: TR kurulumuna DOKUNMUYOR',
+  (await A.kwhFiyatOnar()) === false && A.S.homeKwhPrice === TR,
+  'fiyat=' + A.S.homeKwhPrice);
+
+// --- NEGATİF 2: TR dışı ama para birimi TRY (kullanıcı bilerek seçmiş) ---
+await kur('DE', 'TRY', TR);
+check('WT-83: para birimi TRY ise DOKUNMUYOR',
+  (await A.kwhFiyatOnar()) === false && A.S.homeKwhPrice === TR,
+  'fiyat=' + A.S.homeKwhPrice);
+
+// --- NEGATİF 3: TR dışı, fiyat TR varsayılanı DEĞİL (kullanıcının kendi değeri) ---
+await kur('DE', 'EUR', 0.42);
+check('WT-83 KABUL: kullanıcının kendi fiyatına DOKUNMUYOR',
+  (await A.kwhFiyatOnar()) === false && A.S.homeKwhPrice === 0.42,
+  'fiyat=' + A.S.homeKwhPrice);
+
+// Kıl payı fark bile eşleşme sayılmamalı — imza BİT BİT aynı olmalı
+await kur('DE', 'EUR', TR + 0.0001);
+check('WT-83: TR fiyatına çok yakın ama eşit olmayan değere DOKUNMUYOR',
+  (await A.kwhFiyatOnar()) === false,
+  'fiyat=' + A.S.homeKwhPrice + ' (TR=' + TR + ')');
+
+// --- NEGATİF 4: tabloda karşılığı olmayan ülke (MC/AD/SM) — temiz çıkmalı ---
+const tablosuz = ['MC', 'AD', 'SM'].find(c => !A.defaultKwhPrice(c, ''));
+await kur(tablosuz, 'EUR', TR);
+const cikis = await A.kwhFiyatOnar();
+check('WT-83 KABUL: tablosu olmayan ülkede fiyatı NULL yapmıyor, temiz çıkıyor',
+  cikis === false && A.S.homeKwhPrice === TR,
+  `ülke=${tablosuz} dönüş=${cikis} fiyat=${A.S.homeKwhPrice}`);
 
 console.log('');
 if (errors.length) {

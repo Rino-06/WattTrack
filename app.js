@@ -82,6 +82,11 @@ async function loadSettings() {
 
 (async function init() {
   await loadSettings();
+  // WT-83: WT-81/8'den ÖNCE kurulmuş TR dışı cihazlarda kalan yanlış fiyatı
+  // onar. Autofill'den ÖNCE koşuyor: onarım değeri kendi yazıp homeKwhAuto'yu
+  // işaretlediği için autofill'in `S.homeKwhPrice === d.p` kısa devresi onu
+  // no-op yapar — tekrar koşma koruması da bu.
+  await kwhFiyatOnar();
   // WT-78: ev elektrik fiyatı hiç girilmemişse gömülü tablodan doldur.
   // Girilmiş bir değerin üstüne YAZMAZ; kaynak Ayarlar'da yazılı.
   await kwhPriceAutofill();
