@@ -487,28 +487,77 @@ nav button{min-height:48px;justify-content:center}
      doldurur: görsel sıra = DOM sırası = Tab sırası.
      (Eski `#page-compare>.page-title` seçicisi zaten hiç eşleşmiyordu;
       Kıyasla sayfasının doğrudan çocuğu .page-title-row.) */
-  #page-dashboard,#page-compare{display:grid;
+  /* WT-80/WT-59: `.active` ŞART. `#page-dashboard` (id, özgüllük 1-0-0)
+     `.page{display:none}` (0-1-0) kuralını eziyordu; 760px üstü HER ekranda
+     Ana sayfa ve Kıyasla, başka sekme açıkken bile çizilmeye devam
+     ediyordu — WT-59'un ("Tesla'da bütün sekmeler alt alta") bozuk kapanış
+     etiketlerinden BAĞIMSIZ ikinci sebebi. Aynı tuzak aşağıdaki
+     #page-vehicle kuralı için de geçerli. */
+  #page-dashboard.active,#page-compare.active{display:grid;
     grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;align-items:start}
   #page-dashboard>*,#page-compare>*{margin-bottom:0}
   #page-dashboard>.h2row:first-child,#page-dashboard>.warn-host,
   #page-dashboard>.seg,#page-dashboard>.hero,
   #page-compare>.page-title-row{grid-column:1/-1}
-  #page-history,#page-settings,#page-vehicle,#page-stats{max-width:820px;margin:0 auto}
+  /* WT-80: sayfalar iki sınıfa ayrıldı.
+     IZGARA sayfaları (Ana sayfa, Kıyasla, İstatistik, Aracım) genişliği
+     sütunlara dağıtır, .app'in 1200px'ini kullanır.
+     OKUMA sayfaları (Geçmiş, Ayarlar) tek sütunluk liste/form; genişletmek
+     satır uzunluğunu okunmaz yapardı, dar kalıyorlar. */
+  #page-history,#page-settings{max-width:820px;margin:0 auto}
+  /* WT-80: İstatistik detayları da ızgaraya geçti. Sarmalayıcı #s-data,
+     sayfanın kendisi DEĞİL — başlık, dönem seçici ve boş-dönem uyarısı
+     dışarıda kalsın, seçici tüm sayfayı etkilediğini göstermeye devam
+     etsin (WT-15). */
+  #s-data{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    gap:14px;align-items:start}
+  #s-data>.lbl,#s-data>.seg,#s-data>#s-period-empty{grid-column:1/-1}
+  #s-data>.gcell>:last-child{margin-bottom:0}
+  /* .dstat'a DOKUNULMADI: iki örneği de #page-dashboard içinde, yani
+     auto-fit ızgaranın 280-400px'lik hücrelerinde. Orada `1fr 1fr` iki
+     kutuyu yan yana tutuyor; minmax(150px,…) 280px'lik hücrede tek sütuna
+     düşürürdü. "Geniş sütunda iki dev kutu" diye bir durum yok. */
+  /* WT-80: panel 780px'e çıkıyor ama form alanları o genişlikte
+     esnetilmemeli; içerik okunur bir ölçüde ortalanıyor. */
+  .ov-body{max-width:640px;width:100%;margin:0 auto}
+  #photo-view .ov-body{max-width:none}
   .side2{display:block}
   .side2>div+div{margin-top:14px}
   .donut-col{flex-direction:row;height:auto}
   .donut-col svg{width:110px;height:110px}
 }
+/* WT-80: Aracım iki sütuna ancak gerçekten yer varken bölünüyor —
+   araç listesi solda, gider kartı sağda. 760-999px arasında gider kartı
+   (kutular + grafik + dağılım + liste) 300px'lik bir sütuna sığmıyor. */
+@media(min-width:1000px){
+  #page-vehicle.active{display:grid;grid-template-columns:minmax(300px,1fr) minmax(380px,1.3fr);
+    gap:18px;align-items:start}
+  #page-vehicle>.page-title-row{grid-column:1/-1}
+  #page-vehicle>.card{margin-top:0}
+}
 @media(min-width:1240px){
   /* WT-33: sabit `columns:3` yerine auto-fit sütun sayısını genişliğe göre
      kendisi seçiyor; ayrı bir kural gerekmiyor. */
-  #page-history,#page-settings,#page-vehicle,#page-stats{max-width:900px}
+  #page-history,#page-settings{max-width:900px}
   .side2{display:flex}
   .side2>div+div{margin-top:0}
   .donut-col{flex-direction:column}
 }
 @media(min-width:760px) and (orientation:landscape){
   .content{padding-bottom:120px}
+}
+/* WT-80 — DİKEY EKSEN: araç ekranı ve tablet yatayda geniş AMA ALÇAK
+   (Tesla ~1088x780, tablet yatay ~800). Telefon dikey için seçilmiş
+   boşluklar burada ekranın yarısını yiyordu. Yalnız boşluk ve başlık
+   ölçüleri küçülüyor — dokunma hedefleri (WT-25) ELLENMİYOR. */
+@media(orientation:landscape) and (max-height:820px){
+  .content{padding-top:12px;padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+  .page-title{margin-bottom:10px}
+  .page-title-row{margin-bottom:10px}
+  .hero{padding:14px 16px;margin-bottom:10px}
+  .hero .v{font-size:24px}
+  .h2row{margin-top:14px}
+  .monthbars{height:110px}
 }
 </style>
 </head>
@@ -677,11 +726,17 @@ nav button{min-height:48px;justify-content:center}
   <!-- .warn-host DEĞİL: renderWarnings() o sınıftaki her kutuyu boşaltıyor -->
   <div id="s-period-empty" style="display:none;margin-bottom:14px"></div>
 
-  <div class="h2row" style="margin-top:0">
-    <h2 class="h2" data-i18n="spendChart">Harcama grafiği</h2>
-    <span class="scope-badge" id="s-chart-scope"></span>
+  <!-- WT-80: geniş ekranda #s-data ızgaraya geçiyor. Her başlık KENDİ
+       bloğuyla aynı .gcell içinde — WT-33'ün kuralı: hücre tek başına
+       anlamlı olmalı, başlık bir sütunda değeri başka sütunda kalmamalı.
+       Dar ekranda .gcell düz bir <div>, hiçbir şeyi değiştirmiyor. -->
+  <div class="gcell">
+    <div class="h2row" style="margin-top:0">
+      <h2 class="h2" data-i18n="spendChart">Harcama grafiği</h2>
+      <span class="scope-badge" id="s-chart-scope"></span>
+    </div>
+    <div class="monthbars" id="d-months"></div>
   </div>
-  <div class="monthbars" id="d-months"></div>
 
   <!-- WT-72: haftanın günlerine göre dağılım grafiği kaldırıldı;
        firma dağılımı sayfanın sonuna taşındı. -->
@@ -689,37 +744,51 @@ nav button{min-height:48px;justify-content:center}
   <!-- WT-16/5: iki AYRI boyut, iki ayrı donut.
        DC/AC bir teknoloji boyutu; Ev-İş / Şarj firması bir yer boyutu.
        Eskiden tek donutta karışıyorlardı (ev şarjı fiziksel olarak AC'dir). -->
-  <h2 class="h2" data-i18n="typeSplit">Şarj tipi dağılımı</h2>
-  <div class="donut-wrap">
-    <svg viewBox="0 0 42 42" id="d-donut"></svg>
-    <div class="legend" id="d-donut-legend"></div>
+  <div class="gcell">
+    <h2 class="h2" data-i18n="typeSplit">Şarj tipi dağılımı</h2>
+    <div class="donut-wrap">
+      <svg viewBox="0 0 42 42" id="d-donut"></svg>
+      <div class="legend" id="d-donut-legend"></div>
+    </div>
   </div>
 
-  <h2 class="h2" data-i18n="placeSplit">Şarj yeri dağılımı (kWh)</h2>
-  <div class="donut-wrap">
-    <svg viewBox="0 0 42 42" id="d-donut2"></svg>
-    <div class="legend" id="d-donut2-legend"></div>
+  <div class="gcell">
+    <h2 class="h2" data-i18n="placeSplit">Şarj yeri dağılımı (kWh)</h2>
+    <div class="donut-wrap">
+      <svg viewBox="0 0 42 42" id="d-donut2"></svg>
+      <div class="legend" id="d-donut2-legend"></div>
+    </div>
   </div>
 
-  <h2 class="h2" data-i18n="topBanks">Bankalar (indirim kazancı)</h2>
-  <div class="toplist" id="d-banks"></div>
+  <div class="gcell">
+    <h2 class="h2" data-i18n="topBanks">Bankalar (indirim kazancı)</h2>
+    <div class="toplist" id="d-banks"></div>
+  </div>
 
   <!-- WT-41/3: aylık tüketim trendi — kışın artışı görmek EV sahipleri için değerli -->
   <!-- WT-42/3: hangi operatörün ölçümü sapıyor — kullanıcı bunu başka yerde göremiyor -->
-  <h2 class="h2" data-i18n="lossByFirm">Firma bazında ortalama şarj kaybı</h2>
-  <div class="toplist" id="s-loss"></div>
-  <div class="about" id="s-loss-note" style="margin:-8px 0 14px;font-size:12px" data-i18n="lossNote">Faturalanan enerji ile bataryaya giren enerji arasındaki fark. Şarj kaybını ve istasyonun ölçüm sapmasını birlikte içerir.</div>
+  <div class="gcell">
+    <h2 class="h2" data-i18n="lossByFirm">Firma bazında ortalama şarj kaybı</h2>
+    <div class="toplist" id="s-loss"></div>
+    <div class="about" id="s-loss-note" style="margin:-8px 0 14px;font-size:12px" data-i18n="lossNote">Faturalanan enerji ile bataryaya giren enerji arasındaki fark. Şarj kaybını ve istasyonun ölçüm sapmasını birlikte içerir.</div>
+  </div>
 
-  <h2 class="h2"><span data-i18n="consTrend">Aylık tüketim (kWh/100 km)</span></h2>
-  <div class="monthbars" id="s-cons"></div>
-  <div class="about" id="s-cons-note" style="margin:-8px 0 14px;font-size:12px"></div>
+  <div class="gcell">
+    <h2 class="h2"><span data-i18n="consTrend">Aylık tüketim (kWh/100 km)</span></h2>
+    <div class="monthbars" id="s-cons"></div>
+    <div class="about" id="s-cons-note" style="margin:-8px 0 14px;font-size:12px"></div>
+  </div>
 
-  <h2 class="h2" data-i18n="topLocations">En çok şarj edilen lokasyonlar</h2>
-  <div class="toplist" id="d-locs"></div>
+  <div class="gcell">
+    <h2 class="h2" data-i18n="topLocations">En çok şarj edilen lokasyonlar</h2>
+    <div class="toplist" id="d-locs"></div>
+  </div>
 
   <!-- WT-72: firma dağılımı sayfanın SONUNDA (kullanıcı isteği) -->
-  <h2 class="h2" data-i18n="firmDist">Firma dağılımı</h2>
-  <div class="rows" id="d-firms" style="margin-bottom:14px"></div>
+  <div class="gcell">
+    <h2 class="h2" data-i18n="firmDist">Firma dağılımı</h2>
+    <div class="rows" id="d-firms" style="margin-bottom:14px"></div>
+  </div>
   </div><!-- /#s-data -->
 </section>
 
@@ -928,6 +997,9 @@ nav button{min-height:48px;justify-content:center}
     <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
   </div>
 
+  <!-- WT-80: geniş ekranda araç listesi solda, gider kartı sağda.
+       #v-top tek bir ızgara hücresi; dar ekranda düz <div>. -->
+  <div class="gcell" id="v-top">
   <!-- WT-44/3: en yakın üç hatırlatma; gecikenler kırmızı -->
   <div id="v-upcoming" style="display:none">
     <div class="section-lbl" data-i18n="upcoming">Yaklaşanlar</div>
@@ -943,8 +1015,9 @@ nav button{min-height:48px;justify-content:center}
   <div class="about" style="margin-top:8px" data-i18n="defaultHint">★ varsayılan araç · 📷 fotoğraf ekle/değiştir · × arşivle</div>
   <div class="section-lbl" id="arch-lbl" style="display:none" data-i18n="archived">Arşiv (satılan/kullanılmayan)</div>
   <ul class="vlist" id="set-archived" style="opacity:.75"></ul>
+  </div><!-- /#v-top -->
 
-  <div class="card" style="margin-top:20px">
+  <div class="card gcell" style="margin-top:20px">
     <div id="wrap-veh-exp" style="display:none;margin-bottom:14px">
       <label class="lbl" data-i18n="vehicle" for="veh-exp-sel">Araç</label>
       <select id="veh-exp-sel"></select>
