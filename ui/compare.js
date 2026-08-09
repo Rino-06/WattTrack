@@ -179,7 +179,10 @@ async function renderCompare() {
   const evGrossPerKm = grossAvg / distAvg;
   // WT-43/4: her kaydın TARİHİNDEKİ fiyatı kullan. Fiyat geçmişi boşsa
   // formdaki tek fiyat geçerli (eski davranış) ve altında uyarı çıkar.
-  const fiyatlar = (await allFuelPrices()).filter(x => !x.ulke || x.ulke === S.country);
+  // WT-77: kullanıcının girdiği fiyatların üstüne gömülü EPDK geçmişi eklenir
+  // (aynı tarih + tür varsa KULLANICININKİ kalır, gömülü satır elenir).
+  const fiyatlar = fuelHistMerge(
+    (await allFuelPrices()).filter(x => !x.ulke || x.ulke === S.country), S.country);
   const fiyatAt = tarih => {
     const f = fiyatBul(fiyatlar, tarih, S.cmp.fuel);
     return f ? f.fiyat : S.cmp.price;
@@ -340,7 +343,11 @@ function drawLineChart(id, labels, series) {
 const FUEL_TURLERI = ['petrol', 'diesel', 'hybrid', 'lpg'];
 
 async function fuelHistSync() {
-  const n = (await allFuelPrices()).filter(x => !x.ulke || x.ulke === S.country).length;
+  // WT-77: bağlantıdaki sayı gömülü geçmişi de içerir — hesapta ikisi de
+  // kullanılıyor, kullanıcı kaç fiyatla kıyaslandığını görebilmeli.
+  const n = fuelHistMerge(
+    (await allFuelPrices()).filter(x => !x.ulke || x.ulke === S.country),
+    S.country).length;
   $('c-price-hist').textContent = t('fuelHistLink', {n});
 }
 $('c-price-hist').addEventListener('click', () => openFuelHist());
@@ -360,13 +367,21 @@ $('btn-close-fuelprice').addEventListener('click', () => overlayClose('page-fuel
 bindDecimalInput('fp-price', 2);
 
 async function fuelHistList() {
-  const liste = (await allFuelPrices())
-    .filter(x => !x.ulke || x.ulke === S.country)
+  // WT-77: gömülü EPDK satırları da listeleniyor ama SİLİNEMİYOR (id'leri yok,
+  // veri tabanında değiller). Nereden geldikleri listenin üstünde yazılı.
+  const liste = fuelHistMerge(
+    (await allFuelPrices()).filter(x => !x.ulke || x.ulke === S.country), S.country)
     .sort((a, b) => b.tarih.localeCompare(a.tarih));
-  $('fp-list').innerHTML = liste.length ? liste.map(f => `<li data-fid="${f.id}">
+  const gomuluN = liste.filter(x => x.gomulu).length;
+  const kaynak = gomuluN && FUEL_HIST[S.country]
+    ? FUEL_HIST_SRC[FUEL_HIST[S.country].src] : null;
+  $('fp-embed').style.display = gomuluN ? '' : 'none';
+  if (gomuluN) $('fp-embed').textContent =
+    t('fuelHistEmbedded', {n: gomuluN, s: kaynak ? kaynak.ad : ''});
+  $('fp-list').innerHTML = liste.length ? liste.map(f => `<li data-fid="${f.id || ''}">
     <div class="vn">${fm(sym(), fmtNum(fiyatGoster(f.fiyat), 2))}
-      <div class="vd">${shortDate(f.tarih)} · ${esc(t(f.tur))}</div></div>
-    <button class="rm" data-fdel="${f.id}" title="${esc(t('delete'))}">×</button>
+      <div class="vd">${shortDate(f.tarih)} · ${esc(t(f.tur))}${f.gomulu ? ' · ' + esc(t('fuelHistSrcTag')) : ''}</div></div>
+    ${f.gomulu ? '' : `<button class="rm" data-fdel="${f.id}" title="${esc(t('delete'))}">×</button>`}
   </li>`).join('') : `<li style="color:var(--faint);font-weight:400">${t('noData')}</li>`;
   $('fp-list').querySelectorAll('[data-fdel]').forEach(b =>
     b.addEventListener('click', async () => {
