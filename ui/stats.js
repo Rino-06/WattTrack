@@ -84,11 +84,8 @@ async function renderStats() {
       });
     }
   } else if (S.gran === 'year') {
-    for (let i = 4; i >= 0; i--) {
-      const y = String(now.getFullYear() - i);
-      bars.push({label: y, year: y,
-        sum: T_.yil[y] || 0});
-    }
+    for (const y of sonYillar(5))
+      bars.push({label: y.label, year: y.year, sum: T_.yil[y.key] || 0});
   } else if (S.gran === 'all') {
     // WT-56: son 5 takvim yılı DEĞİL, verinin kendi yılları — eski bir yedeği
     // geri yükleyen kullanıcının çubukları boş çıkmasın.
@@ -96,15 +93,8 @@ async function renderStats() {
     (yls.length ? yls : [String(now.getFullYear())]).forEach(y =>
       bars.push({label: y, year: y, sum: T_.yil[y] || 0}));
   } else {
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-      bars.push({
-        label: MONTHS[S.lang][d.getMonth()].slice(0, 3),
-        year: String(d.getFullYear()),
-        sum: T_.ay[key] || 0
-      });
-    }
+    for (const m of sonAylar(6))
+      bars.push({label: m.label, year: m.year, sum: T_.ay[m.key] || 0});
   }
   // WT-81: çizim barChartHTML()'e taşındı (oran bozulması düzeltmesi)
   $('d-months').innerHTML = barChartHTML(bars.map(b => ({
@@ -221,17 +211,13 @@ async function renderStats() {
 
   // WT-41/3: aylık tüketim trendi. Son 6 ay; atlanan kayıtlar hariç.
   // Kışın artışı görmek EV sahipleri için en değerli sinyallerden biri.
-  const consAy = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    const g = all.filter(r => monthKey(r.tarih) === key && !r.atlanan
+  const consAy = sonAylar(6).map(m => {
+    const g = all.filter(r => monthKey(r.tarih) === m.key && !r.atlanan
       && r.mesafeKm > 0 && r.kwh > 0);
     const km = g.reduce((s, r) => s + r.mesafeKm, 0);
     const kw = g.reduce((s, r) => s + r.kwh, 0);
-    consAy.push({label: MONTHS[S.lang][d.getMonth()].slice(0, 3),
-      v: km >= 20 ? kw / km * 100 : null});
-  }
+    return {label: m.label, v: km >= 20 ? kw / km * 100 : null};
+  });
   $('s-cons').innerHTML = barChartHTML(consAy.map(x => ({
     label: x.label, value: x.v, text: x.v != null ? fmtNum(x.v, 1) : ''
   })));

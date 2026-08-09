@@ -136,6 +136,34 @@ function isValidDate(s) {
   return !isNaN(d.getTime()) && localISO(d) === s;
 }
 const monthKey = iso => iso.slice(0, 7);
+
+// WT-81/2: "son N ay" ve "son N yıl" listesi üç ayrı yerde (ui/stats.js iki
+// kez, ui/vehicle.js bir kez) elle üretiliyordu — aynı Date aritmetiği, aynı
+// padStart, aynı etiket kırpması. Tek yere alındı.
+// Dönen kayıt: {key, label, year}. `key` veriyle eşleştirmek için ('2026-08'
+// ya da '2026'), `label` eksende yazan kısa ad, `year` sütuna tıklanınca
+// Geçmiş'e taşınan yıl. Etiket dile bağlı, o yüzden çağrı anında okunuyor.
+function sonAylar(n = 6, now = new Date()) {
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    out.push({
+      key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'),
+      label: MONTHS[S.lang][d.getMonth()].slice(0, 3),
+      year: String(d.getFullYear())
+    });
+  }
+  return out;
+}
+function sonYillar(n = 5, now = new Date()) {
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const y = String(now.getFullYear() - i);
+    out.push({key: y, label: y, year: y});
+  }
+  return out;
+}
+
 const distDisp = km => S.unit === 'mi' ? km / MI : km;
 const distFactor = () => S.unit === 'mi' ? MI : 1;   // 100 birim = 100*factor km
 
