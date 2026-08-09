@@ -516,8 +516,12 @@ function renderCountryList(query) {
       }
       S.country = c[0]; S.currency = c[3]; S.unit = c[5];
       if (LANG_NAMES[c[6]]) S.lang = c[6];
-      for (const [k, v] of [['country', S.country], ['currency', S.currency], ['unit', S.unit], ['lang', S.lang]])
+      // WT-78: eyalet/il seçimi ülkeye bağlı, ülke değişince geçersiz kalıyor
+      S.kwhRegion = '';
+      for (const [k, v] of [['country', S.country], ['currency', S.currency],
+        ['unit', S.unit], ['lang', S.lang], ['kwhRegion', '']])
         await saveSetting(k, v);
+      await kwhPriceAutofill();   // WT-78: yalnız alan boşsa doldurur
       overlayClose('page-country', {force: true});
       applyI18n(); renderSettings();
     }));

@@ -68,13 +68,16 @@ function clearFormErr() {
 // init ve yedek geri yükleme aynı listeyi kullanır (WT-07)
 const SETTING_KEYS = ['country','currency','unit','lang','advOpen','defaultVehicleId',
   'onboarded','cmp','bankCountries','customBanks','gran','theme','homeKwhPrice',
-  'ocrOn','budgetM','budgetY'];   // WT-39, WT-45
+  'ocrOn','budgetM','budgetY','kwhRegion'];   // WT-39, WT-45, WT-78
 
 (async function init() {
   for (const key of SETTING_KEYS) {
     const row = await db.settings.get(key);
     if (row) S[key] = row.value;
   }
+  // WT-78: ev elektrik fiyatı hiç girilmemişse gömülü tablodan doldur.
+  // Girilmiş bir değerin üstüne YAZMAZ; kaynak Ayarlar'da yazılı.
+  await kwhPriceAutofill();
   history.replaceState({page: 'dashboard'}, '');   // WT-24/6 taban durum
   initOnboarding();
   initSegments();   // WT-28

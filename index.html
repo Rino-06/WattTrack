@@ -14,6 +14,7 @@
 <script src="version.js"></script>
 <script src="dexie.min.js"></script>
 <script src="evdata.js"></script>
+<script src="evprices.js"></script>
 <style>
 :root{
   --bg:#F1F7F2; --card:#FFFFFF; --text:#131714; --muted:#5F6560;
@@ -1048,7 +1049,19 @@ nav button{min-height:48px;justify-content:center}
 
   <label class="lbl" id="set-homekwh-lbl" for="set-homekwh">Ev/İş elektrik birim fiyatı (kWh başına)</label>
   <input type="text" inputmode="decimal" id="set-homekwh" placeholder="0,00" aria-describedby="set-homekwh-d">
-  <div class="about" id="set-homekwh-d" style="margin:5px 0 20px" data-i18n="homeKwhPriceD">Vergiler dahil tek bir kWh fiyatı yeter. Ev-İş şarjlarında tutar bundan hesaplanır.</div>
+  <!-- WT-78: yalnız alt bölgesi olan ülkelerde (ABD eyaleti, Kanada ili)
+       görünür; gömülü tabloda ülke geneli ortalama yoksa varsayılan ancak
+       bölge seçilince doluyor. -->
+  <div id="wrap-kwh-region" style="display:none;margin-top:8px">
+    <label class="lbl" id="set-kwhregion-lbl" data-i18n="kwhRegion" for="set-kwhregion">Eyalet / il</label>
+    <select id="set-kwhregion"></select>
+  </div>
+  <div class="about" id="set-homekwh-d" style="margin:5px 0 6px" data-i18n="homeKwhPriceD">Vergiler dahil tek bir kWh fiyatı yeter. Ev-İş şarjlarında tutar bundan hesaplanır.</div>
+  <!-- WT-78: varsayılan nereden geldi — kaynak ve yıl açıkça yazılıyor -->
+  <div style="margin-bottom:20px">
+    <div class="about" id="set-kwh-src" style="display:none;margin:0 0 6px;font-size:12px"></div>
+    <button type="button" class="details-toggle" id="btn-kwh-default" style="display:none"></button>
+  </div>
 
   <div class="section-lbl" data-i18n="dataSection">Veri</div>
   <button class="setting-btn" id="btn-export-json" data-i18n="exportJson">Dışa Aktar (JSON)</button>
