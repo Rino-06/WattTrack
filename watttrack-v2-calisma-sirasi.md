@@ -93,8 +93,22 @@ vergi, bakım, lastik…) yakıtlı araç için girdiğin **yıllık sabit gider
 tahminini karşılaştırır. Yani üstteki kutu "yakıt vs. şarj", bu kutu
 "geri kalan her şey". Bu yüzden Kıyasla 4 (sabit gider girilmemişse gizle)
 mantıklı — girdi yoksa kutu 0'a karşı kıyas gösteriyor.
-> Kutunun satır satır dökümünü **WT-73** sırasında koda bakarak doğrulayıp
-> buraya yazacağım; şu an genel mantığı verildi.
+**Satır satır dökümü (WT-73 sırasında `ui/compare.js`'e bakılarak doğrulandı,
+09.08.2026):**
+
+| Satır | Nereden geliyor |
+|---|---|
+| **Yıllık yakıt dışı gider farkı** (büyük sayı) | `icefix − (expTot / gün × 365)` — senin yazdığın yıllık yakıtlı gider eksi EV giderlerinin yıllığa çevrilmişi |
+| Yanındaki rozet | Aynı farkın 100 km başına düşen kısmı |
+| **İki bar** | Üstteki: EV'nin yıllığa çevrilmiş gideri · alttaki: senin yazdığın yıllık yakıtlı gider. Barlar büyük olana göre ölçekleniyor |
+| Detay: 1 km başına (EV / Yakıtlı) | `expTot / toplam km` ve `oranlı icefix / toplam km` |
+| Detay: 100 km başına (EV / Yakıtlı) | Aynı ikisinin 100 katı |
+| Detay: yıllık (EV / Yakıtlı) | `expTot / gün × 365` ve `icefix` (ham, oranlanmamış) |
+| Detay: kWh başına | `expTot / toplam kWh` — yalnız EV tarafı, karşılığı yok |
+
+Dikkat: "yıllık" satırında yakıtlı taraf **ham** `icefix`, km başına satırlarda
+ise **döneme oranlanmış** hâli kullanılıyor. İkisi de doğru (biri yıllık, biri
+dönemsel) ama aynı kutuda yan yana durdukları için karıştırılabilir.
 
 ### Kıyasla 2 — Yakıt fiyatını lokasyona göre aylık çekiyor mu?
 **Hayır.** Türkiye ortalama dizel fiyatını aylara göre çeken bir şey yok.
@@ -211,7 +225,7 @@ diğerinin ön koşulu olduğu yerlerde bağımlılık yazıldı.
 | **WT-70** | "Detay istatistikler" ve "Kilometre sayacı" başlıklarının kaldırılması; "Araç sayacı" → "Araç km sayacı" | Anasayfa 4, 5 | ✅ **BİTTİ.** Detay istatistiklerdeki dönem rozeti KALDI (kutuların hangi dönemi gösterdiğini söyleyen tek şey oydu). Sayaç etiketi `odoNowUnit` ile birime bağlandı, altı dilde dolu; `applyI18n` içinde `1 km` etiketleriyle aynı yerde güncelleniyor. |
 | **WT-71** | Geçmiş'teki arama kutusunun kaldırılması | Geçmiş 1 | ✅ **BİTTİ.** WT-46/1'de eklenmişti; kutu, ayrıştırma fonksiyonu ve dinleyicisi kaldırıldı. Filtre paneli (yıl, firma, tip, araç, banka, lokasyon), özet şeridi ve geri alma yerinde. WT-46/1'in iki testi silinmedi — arama kontrolleri, kutunun gerçekten gittiğini ve filtre panelinin sağlam kaldığını doğrulayan kontrollerle değiştirildi. |
 | **WT-72** | İstatistik: haftanın günleri grafiğinin **silinmesi** + firma dağılımının sayfa sonuna alınması | İstatistik 2, 4 | ✅ **BİTTİ.** Grafik (`ui/stats.js`), `#d-weekdays` bloğu ve `weekdayDist` anahtarı altı dilden silindi; firma dağılımı "En çok şarj edilen lokasyonlar"ın altına, detay bölümünün sonuna taşındı. WT-15'in "seçici tüm sayfayı daraltıyor" kontrolü gün dağılımı yerine kalan bloklarla doğrulanıyor; WT-30'un görsel gizli özet tablo eşiği 4 → 3 indi (grafik sayısı azaldı). `DAYS` sözlüğü duruyor — haftalık dönem etiketleri hâlâ kullanıyor. |
-| **WT-73** | Kıyasla düzeltmeleri | Kıyasla 1, 3, 4, 5 | (1) yakıtlı araç sabit gideri **varsayılan kapalı**; (3) parantezli metinler alt satıra — taşma bitecek; (4) sabit gider girilmemişse "yakıt + sabit gider" kutuları gizlensin; (5) "gider dahil" → "**sabit gider dahil**" (altı dil). Kıyasla 6'nın doğrulaması da burada yapılacak. |
+| **WT-73** | Kıyasla düzeltmeleri | Kıyasla 1, 3, 4, 5 | ✅ **BİTTİ.** (1) Yıllık sabit gider alanı `#c-icefix-toggle` arkasına alındı, varsayılan kapalı; kayıtlı değer varsa açık geliyor. (3) `splitParenLabels()` parantezli kısmı `<span class="paren">` içine alıp alt satıra indiriyor; `#page-compare .tile .k` nowrap+ellipsis kesmesi kalktı. Parantez satırı 12px'te bırakıldı (WT-31/1 sınırı). (4) TCO ve yakıt dışı bloklar artık **iki tarafta da** sabit gider varsa görünüyor — eskiden yalnız yakıtlı taraf kontrol ediliyordu, EV tarafı boşken kazanç şişiyordu; gizlendiğinde `tcoNeedFix` satırı ne yapılacağını söylüyor. Karar mesafe hesabından ÖNCE veriliyor, yani "veri yok" yolunda da geçerli. (5) `tcoIce/tco1km/tco1kmIce/tcoSaved` + tutarlılık için `tcoEv/tcoTitle` altı dilde "sabit gider" diyor. Kıyasla 6'nın satır satır dökümü §2'ye yazıldı. |
 | **WT-74** | Aracım kart yerleşimi: model/içerik metni **üstte tam genişlik**, km–ayar–resim altında | Aracım 2 | |
 | **WT-75** | Aracım sabit giderler: listenin üstünde **gider türü + ay/yıl** filtresi; **son girilen en üstte**; gider dağılımı tablosu grafiğin **altına** | Aracım 5, 6, 7 | Üçü aynı bloğa dokunuyor, tek commit. |
 

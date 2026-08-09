@@ -165,6 +165,13 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .tile .k{font-size:12px;color:var(--muted2);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile .v{font-size:16px;font-weight:600}
 .tile .yd{font-size:12px;font-weight:600;margin-top:3px;min-height:15px}
+/* WT-73/Kıyasla 3: Kıyasla etiketleri parantezli ve uzun ("EV toplam (şarj +
+   sabit gider)"); nowrap+ellipsis parantezi kesip taşma hissi veriyordu.
+   splitParenLabels() parantezli kısmı <span class="paren"> içine alır, burada
+   kendi satırına iner. Kural yalnız Kıyasla sayfasına dokunur. */
+#page-compare .tile .k{white-space:normal;overflow:visible;text-overflow:clip}
+/* WT-31/1: parantez satırı KÜÇÜLTÜLMÜYOR — üst etiketle aynı 12px'te kalıyor. */
+#page-compare .tile .k .paren,#page-compare .hero .k .paren{display:block;line-height:1.3}
 .h2{font-size:14px;font-weight:600;margin:0 0 12px}
 .h2row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:20px}
 .h2row .h2{margin:0}
@@ -772,7 +779,11 @@ nav button{min-height:48px;justify-content:center}
     </div>
     <!-- WT-43/2: fiyat güncellenince eskisi EZİLMEZ, geçmişe satır eklenir -->
     <button type="button" class="details-toggle" id="c-price-hist" style="margin-bottom:14px"></button>
-    <div style="margin-bottom:14px">
+    <!-- WT-73/Kıyasla 1: alan İSTEĞE BAĞLI, bu yüzden varsayılan KAPALI gelir.
+         Daha önce girilmiş bir değer varsa renderCompare panelı açık getirir. -->
+    <button type="button" class="details-toggle" id="c-icefix-toggle"
+      aria-expanded="false" aria-controls="c-icefix-wrap" style="margin-bottom:12px"></button>
+    <div id="c-icefix-wrap" style="display:none;margin-bottom:14px">
       <label class="lbl" id="c-icefix-lbl" data-i18n="iceFixLabel" for="c-icefix">Yakıtlı aracın yıllık sabit gideri (vergi + sigorta + bakım)</label>
       <input type="text" inputmode="decimal" id="c-icefix" placeholder="0">
       <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;cursor:pointer">
@@ -831,26 +842,33 @@ nav button{min-height:48px;justify-content:center}
          yerine açıklama konur. Grafik SİLİNMİYOR — WT-43'ten sonra anlamlı. -->
     <div class="scope-note" id="c-line-note" style="display:none"></div>
 
-    <h2 class="h2" data-i18n="tcoTitle">Toplam sahip olma maliyeti (şarj + giderler)</h2>
+    <!-- WT-73/Kıyasla 4: iki tarafta da sabit gider yoksa bu blok yalnızca
+         üstteki "bugüne kadar" bloğunu tekrar eder (tcoEv=net, tcoIce=iceTot)
+         ya da tek taraflı gideri kıyas gibi gösterir. O durumda gizlenir ve
+         yerine ne yapılacağını söyleyen tek satır çıkar. -->
+    <div class="scope-note" id="c-tco-need" style="display:none;margin:0 0 14px"></div>
+    <div id="c-tco-wrap">
+    <h2 class="h2" data-i18n="tcoTitle">Toplam sahip olma maliyeti (şarj + sabit giderler)</h2>
     <div class="about" data-i18n="tcoExplain" style="margin:-4px 0 10px;font-size:12px">Giderler toplamı, Aracım sekmesine girdiğin vergi, sigorta, bakım gibi kalemlerdir.</div>
     <div class="tiles">
       <div class="tile"><div class="k" data-i18n="tcoExpEv">EV sabit giderleri (Aracım)</div><div class="v" id="c-exptot" style="color:var(--accent-dark)">—</div></div>
       <div class="tile"><div class="k" data-i18n="tcoExpIce">Yakıtlı sabit gider (döneme oranlı)</div><div class="v" id="c-icefixtot" style="color:var(--blue)">—</div></div>
     </div>
     <div class="tiles">
-      <div class="tile"><div class="k" data-i18n="tcoEv">EV toplam (şarj + gider)</div><div class="v" id="c-tcoev" style="color:var(--accent-dark)">—</div></div>
-      <div class="tile"><div class="k" data-i18n="tcoIce">Yakıtlı toplam (gider dahil)</div><div class="v" id="c-tcoice" style="color:var(--blue)">—</div></div>
+      <div class="tile"><div class="k" data-i18n="tcoEv">EV toplam (şarj + sabit gider)</div><div class="v" id="c-tcoev" style="color:var(--accent-dark)">—</div></div>
+      <div class="tile"><div class="k" data-i18n="tcoIce">Yakıtlı toplam (sabit gider dahil)</div><div class="v" id="c-tcoice" style="color:var(--blue)">—</div></div>
     </div>
     <div class="tiles">
-      <div class="tile"><div class="k" id="c-tco1km-lbl">EV 1 km (gider dahil)</div><div class="v" id="c-tco1km" style="color:var(--accent-dark)">—</div></div>
-      <div class="tile"><div class="k" id="c-tcoice1km-lbl">Yakıtlı 1 km (gider dahil)</div><div class="v" id="c-tcoice1km" style="color:var(--blue)">—</div></div>
+      <div class="tile"><div class="k" id="c-tco1km-lbl">EV 1 km (sabit gider dahil)</div><div class="v" id="c-tco1km" style="color:var(--accent-dark)">—</div></div>
+      <div class="tile"><div class="k" id="c-tcoice1km-lbl">Yakıtlı 1 km (sabit gider dahil)</div><div class="v" id="c-tcoice1km" style="color:var(--blue)">—</div></div>
     </div>
     <div class="hero" style="margin-top:2px">
-      <div class="k" data-i18n="tcoSaved">Gider dahil toplam kazanç</div>
+      <div class="k" data-i18n="tcoSaved">Sabit gider dahil toplam kazanç</div>
       <div class="v" id="c-tcosave" style="font-size:26px">—</div>
       <div class="pill" id="c-tcopill">—</div>
     </div>
     <div class="about" id="c-tco-note" style="margin:-4px 0 14px;font-size:12px"></div>
+    </div><!-- /#c-tco-wrap -->
 
     <!-- WT-35: blok 7 kutu + 2 bar + 1 pill = 10 sayı gösteriyordu; hepsi
          kullanıcının tahminen girdiği TEK bir sayıdan türüyor. Girdi belirsizken
