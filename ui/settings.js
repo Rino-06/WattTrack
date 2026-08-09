@@ -632,6 +632,15 @@ async function importBackupText(text) {
           return {...row, value: idMap.has(row.value) ? idMap.get(row.value) : null};
         return row;
       });
+      // WT-81/8: v35 ve öncesinin yedeğinde `homeKwhAuto` satırı YOK.
+      // bulkPut yalnız gelen anahtarları yazdığı için taze kurulumun
+      // autofill'inden kalan `homeKwhAuto=true` canlı kalırdı; kullanıcının
+      // yedekteki ELLE girdiği fiyat, sonraki ülke değişikliğinde sessizce
+      // ezilirdi. Fiyat geliyor ama işaret gelmiyorsa "elle girilmiş" sayılır
+      // — yükseltmedeki tedbirli davranışın aynısı.
+      if (rows.some(r => r.key === 'homeKwhPrice')
+        && !rows.some(r => r.key === 'homeKwhAuto'))
+        rows.push({key: 'homeKwhAuto', value: false});
       await db.settings.bulkPut(rows);
     }
   }));
