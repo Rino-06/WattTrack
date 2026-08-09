@@ -1,0 +1,152 @@
+/* WT-81/8 — "yeni kurulumda ev elektrik fiyatı Türkiye fiyatı kalıyor"
+
+   KUSUR: app.js init() `kwhPriceAutofill()`i onboarding'den ÖNCE çağırıyor.
+   Yeni kurulumda ayarlar tablosu boş, dolayısıyla S.country hâlâ calc.js'teki
+   varsayılan 'TR'. Kullanıcı daha ülkesini SEÇMEDEN Türkiye fiyatı
+   (2,8076 TRY) `homeKwhPrice`a yazılıyordu. finishOnboarding() ülkeyi sonra
+   kaydediyor ama autofill'i tekrar çağırmıyordu; ayarlardaki ülke seçicisinin
+   çağrısı da alan artık dolu olduğu için ölüydü (`homeKwhPrice != null`).
+
+   Sonuç: Almanya'da kurulan uygulamada €/kWh fiyatı 2,8076 kalıyordu —
+   gerçeğin (~0,395 €) yedi katı — ve ev/iş şarjlarının tutarını bu hesaplıyor.
+
+   Bu dosya uygulamayı BOŞ veritabanıyla, onboarding'i ATLAMADAN açıyor;
+   diğer koşumlar (boot.mjs) onboarded=true yazarak başlıyor, bu yüzden
+   kusur oralarda görünmüyordu.
+*/
+import fs from 'fs';
+import path from 'path';
+import { JSDOM, VirtualConsole } from 'jsdom';
+import FDBFactory from 'fake-indexeddb/lib/FDBFactory';
+import FDBKeyRange from 'fake-indexeddb/lib/FDBKeyRange';
+
+const ROOT = new URL('..', import.meta.url).pathname;
+const errors = [];
+const results = [];
+const check = (name, pass, detail) => {
+  results.push({ name, pass });
+  console.log(`${pass ? '✓' : '✗'} ${name}${detail ? '  — ' + detail : ''}`);
+};
+
+async function boot() {
+  const vc = new VirtualConsole();
+  vc.on('jsdomError', e => {
+    if (/Not implemented: navigation/.test(e.message || '')) return;
+    errors.push('jsdomError: ' + (e.stack || e.message));
+  });
+  vc.on('error', (...a) => errors.push('console.error: ' + a.join(' ')));
+
+  const dom = new JSDOM(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), {
+    url: 'http://localhost/', runScripts: 'outside-only',
+    pretendToBeVisual: true, virtualConsole: vc
+  });
+  const { window } = dom;
+  window.indexedDB = new FDBFactory();
+  window.IDBKeyRange = FDBKeyRange;
+  window.matchMedia = () => ({ matches: false, addEventListener() {}, addListener() {} });
+  window.fetch = () => Promise.reject(new Error('offline'));
+  Object.defineProperty(window.navigator, 'serviceWorker', {
+    configurable: true,
+    value: { register: () => Promise.reject(new Error('no sw')), addEventListener() {} }
+  });
+  window.scrollTo = () => {};
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+  window.URL.createObjectURL = () => 'blob:test';
+  window.URL.revokeObjectURL = () => {};
+  window.HTMLMediaElement.prototype.play = () => Promise.reject(new Error('autoplay blocked (test)'));
+  window.confirm = () => true;
+  window.alert = () => {};
+
+  const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', 'db.js',
+    'calc.js', 'i18n.js', 'ocr.js', 'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js',
+    'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js',
+    'app.js']
+    .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
+    + `\n;window.__app = {db, S, t, finishOnboarding, kwhPriceAutofill,
+         defaultKwhPrice, renderSettings, saveSetting};`;
+  window.eval(bundle);
+  await new Promise(r => setTimeout(r, 1200));
+  return window;
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const $ = (w, id) => w.document.getElementById(id);
+
+const w = await boot();
+const A = w.__app;
+
+// ---- Taban: onboarding gerçekten AÇIK, yani bu taze bir kurulum ----
+check('WT-81/8: taze kurulumda onboarding açılıyor (senaryo doğru kuruldu)',
+  A.S.onboarded === false, 'onboarded=' + A.S.onboarded);
+
+// init() çalıştı; kusur buradaydı: ülke seçilmeden TR fiyatı yazılıyordu.
+const trFiyat = A.defaultKwhPrice('TR');
+const deFiyat = A.defaultKwhPrice('DE');
+check('WT-81/8: gömülü tabloda TR ve DE fiyatları ayrı (test anlamlı)',
+  trFiyat && deFiyat && Math.abs(trFiyat.p - deFiyat.p) > 1,
+  `TR=${trFiyat?.p} ${trFiyat?.cur} · DE=${deFiyat?.p} ${deFiyat?.cur}`);
+
+// ---- Kullanıcı onboarding'de ALMANYA'yı seçiyor ----
+$(w, 'ob-country').value = 'DE';
+$(w, 'ob-currency').value = 'EUR';
+$(w, 'ob-lang').value = 'de';
+await A.finishOnboarding(false);
+await sleep(300);
+
+check('WT-81/8: onboarding ülkeyi kaydetti',
+  A.S.country === 'DE' && A.S.currency === 'EUR', `country=${A.S.country} cur=${A.S.currency}`);
+
+check('WT-81/8 KABUL: onboarding sonrası fiyat SEÇİLEN ülkenin fiyatı',
+  Math.abs(A.S.homeKwhPrice - deFiyat.p) < 1e-9,
+  `homeKwhPrice=${A.S.homeKwhPrice} · beklenen ${deFiyat.p} · TR fiyatı ${trFiyat.p}`);
+
+check('WT-81/8 KABUL: Türkiye fiyatı Almanya kurulumunda KALMIYOR',
+  Math.abs(A.S.homeKwhPrice - trFiyat.p) > 1e-9, `homeKwhPrice=${A.S.homeKwhPrice}`);
+
+// Değer veritabanına da yazılmış olmalı (yalnız bellekte kalmasın)
+const kayit = await A.db.settings.get('homeKwhPrice');
+check('WT-81/8: doğru fiyat veritabanına yazıldı',
+  kayit && Math.abs(kayit.value - deFiyat.p) < 1e-9, 'kayıtlı=' + kayit?.value);
+
+// ---- Köken işareti: tablodan gelen değer ülke değişince tazelenir ----
+check('WT-81/8: tablodan gelen değer homeKwhAuto ile işaretli',
+  A.S.homeKwhAuto === true, 'homeKwhAuto=' + A.S.homeKwhAuto);
+
+A.S.country = 'FR';
+await A.saveSetting('country', 'FR');
+await A.kwhPriceAutofill();
+const frFiyat = A.defaultKwhPrice('FR');
+check('WT-81/8 KABUL: ülke değişince OTOMATİK fiyat tazeleniyor',
+  Math.abs(A.S.homeKwhPrice - frFiyat.p) < 1e-9,
+  `homeKwhPrice=${A.S.homeKwhPrice} · FR=${frFiyat.p}`);
+
+// ---- WT-78'in asıl değişmezi: ELLE girilen değer ASLA ezilmez ----
+A.S.homeKwhPrice = 0.1234;
+A.S.homeKwhAuto = false;                       // kullanıcı elle yazdı
+await A.saveSetting('homeKwhPrice', 0.1234);
+await A.saveSetting('homeKwhAuto', false);
+A.S.country = 'ES';
+await A.saveSetting('country', 'ES');
+const degistiMi = await A.kwhPriceAutofill();
+check('WT-81/8 KABUL: elle girilen fiyat ülke değişse de EZİLMİYOR (WT-78)',
+  degistiMi === false && A.S.homeKwhPrice === 0.1234, 'homeKwhPrice=' + A.S.homeKwhPrice);
+
+// ---- Mevcut kurulumlar: işaretsiz değer elle girilmiş sayılır (tedbirli) ----
+A.S.homeKwhPrice = 2.8076;
+delete A.S.homeKwhAuto;                        // v35'ten yükselen kurulum
+await A.saveSetting('homeKwhPrice', 2.8076);
+const degistiMi2 = await A.kwhPriceAutofill();
+check('WT-81/8: yükseltmede işaretsiz değere dokunulmuyor (sürpriz yazma yok)',
+  degistiMi2 === false && A.S.homeKwhPrice === 2.8076, 'homeKwhPrice=' + A.S.homeKwhPrice);
+
+console.log('');
+if (errors.length) {
+  console.log('KONSOL HATALARI:');
+  errors.forEach(e => console.log('  ' + e));
+}
+const fail = results.filter(r => !r.pass).length;
+if (fail || errors.length) {
+  console.log(`${fail} KONTROL BAŞARISIZ (${results.length} kontrol)`);
+  process.exit(1);
+}
+console.log(`TÜM KONTROLLER GEÇTİ (${results.length} kontrol)`);

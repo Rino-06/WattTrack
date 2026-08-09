@@ -474,7 +474,9 @@ $('set-homekwh').addEventListener('change', async () => {
   const r = checkNum('birimFiyat', $('set-homekwh').value);
   if (!r.ok) { toast(r.msg); $('set-homekwh').value = fmtInput(S.homeKwhPrice, 2); return; }
   S.homeKwhPrice = r.value;
+  S.homeKwhAuto = false;       // WT-81/8: elle girildi — artık tablo ezmez
   await saveSetting('homeKwhPrice', S.homeKwhPrice);
+  await saveSetting('homeKwhAuto', false);
 });
 
 // ---------- ülke seçici (ayarlar) ----------

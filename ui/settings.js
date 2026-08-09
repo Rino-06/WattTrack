@@ -63,13 +63,28 @@ function renderKwhDefault() {
   btn.textContent = t('kwhUseDefault', {v: fm(symOf(d.cur), fmtNum(d.p, 2))});
 }
 
-// Alan boşken tabloyu uygula. Dolu bir değerin üstüne YAZMAZ.
+// Alan boşken tabloyu uygula. Kullanıcının GİRDİĞİ değerin üstüne YAZMAZ.
+//
+// WT-81/8 KUSURU: eskiden ölçüt yalnız `homeKwhPrice == null` idi ve init()
+// bu işlevi onboarding'den ÖNCE çağırıyor. Yeni kurulumda ayarlar tablosu boş
+// olduğu için S.country hâlâ varsayılan 'TR'ydi: kullanıcı daha ülkesini
+// seçmeden Türkiye fiyatı (2,8076) yazılıyordu. finishOnboarding() ülkeyi
+// sonra kaydediyor ve autofill'i bir daha çağırmıyordu; ülke seçicisindeki
+// çağrı da alan artık dolu olduğu için ölüydü. Sonuç: Almanya'da kurulum
+// yapan kullanıcının €/kWh fiyatı 2,8076 kalıyordu — gerçeğin (0,3951) ~7
+// katı — ve her ev/iş şarjının tutarını bu hesaplıyordu.
+//
+// ÇÖZÜM köken işareti (uygulamanın `specElle`/`tutarKaynak` kalıbı):
+// `homeKwhAuto` değerin tablodan geldiğini söyler. Tablodan gelen değer ülke
+// değişince TAZELENİR, elle girilen değere ASLA dokunulmaz.
 async function kwhPriceAutofill() {
-  if (S.homeKwhPrice != null) return false;
+  if (S.homeKwhPrice != null && !S.homeKwhAuto) return false;
   const d = defaultKwhPrice(S.country, S.kwhRegion);
-  if (!d) return false;
+  if (!d || S.homeKwhPrice === d.p) return false;
   S.homeKwhPrice = d.p;
+  S.homeKwhAuto = true;
   await saveSetting('homeKwhPrice', d.p);
+  await saveSetting('homeKwhAuto', true);
   return true;
 }
 
@@ -83,7 +98,9 @@ $('btn-kwh-default').addEventListener('click', async () => {
   const d = defaultKwhPrice(S.country, S.kwhRegion);
   if (!d) return;
   S.homeKwhPrice = d.p;
+  S.homeKwhAuto = true;        // WT-81/8: tablo değeri — ülke değişince tazelenir
   await saveSetting('homeKwhPrice', d.p);
+  await saveSetting('homeKwhAuto', true);
   toast(t('savedLocal'));
   renderSettings();
 });
@@ -169,6 +186,10 @@ async function finishOnboarding(withCar) {
   for (const [k, v] of [['country', S.country], ['currency', S.currency],
     ['unit', S.unit], ['lang', S.lang], ['onboarded', true]])
     await saveSetting(k, v);
+  // WT-81/8: ülke ancak BURADA belli oluyor. init()'teki çağrı S.country
+  // 'TR' varsayılanıyla koştuğu için yanlış fiyatı yazmıştı; doğrusu artık
+  // üstüne geliyor (o değer homeKwhAuto işaretli olduğu için ezilebilir).
+  await kwhPriceAutofill();
   if (!S.bankCountries) { S.bankCountries = [S.country]; await saveSetting('bankCountries', S.bankCountries); }
   if (withCar && obEv) {
     const rec = vehicleRec(obEv);

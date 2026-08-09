@@ -68,7 +68,7 @@ function clearFormErr() {
 // init ve yedek geri yükleme aynı listeyi kullanır (WT-07)
 const SETTING_KEYS = ['country','currency','unit','lang','advOpen','defaultVehicleId',
   'onboarded','cmp','bankCountries','customBanks','gran','theme','homeKwhPrice',
-  'ocrOn','budgetM','budgetY','kwhRegion'];   // WT-39, WT-45, WT-78
+  'ocrOn','budgetM','budgetY','kwhRegion','homeKwhAuto'];   // WT-39, WT-45, WT-78
 
 // WT-81/3: ayarların S'e okunması init() ve yedek geri yükleme
 // (ui/settings.js) içinde iki kez yazılmıştı — SETTING_KEYS'e yeni anahtar

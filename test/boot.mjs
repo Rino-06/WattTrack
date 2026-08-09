@@ -2917,10 +2917,29 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.kwhPriceAutofill();
   check('WT-78 KABUL: alan boşken tablodan doluyor',
     Math.abs(A.S.homeKwhPrice - P.TR.p) < 1e-9, 'değer=' + A.S.homeKwhPrice);
-  A.S.homeKwhPrice = 9.99;
+  // WT-81/8: "kullanıcı girdi" artık S'e elle atamakla DEĞİL, gerçek giriş
+  // yolundan geçirilerek kuruluyor — çünkü tablodan gelen değer (homeKwhAuto)
+  // ile elle yazılan değer artık ayrışıyor ve ayrımı koyan yer o dinleyici.
+  // Testin gerçek yolu sürmesi ayrıca daha güçlü: bir kusur dinleyiciye
+  // girerse burada yakalanır.
+  await A.renderSettings();
+  await sleep(200);
+  doc.getElementById('set-homekwh').value = '9,99';
+  doc.getElementById('set-homekwh')
+    .dispatchEvent(new window.Event('change', {bubbles: true}));
+  await sleep(300);
+  check('WT-81/8: elle girilen fiyat "otomatik" işaretini kaldırıyor',
+    A.S.homeKwhPrice === 9.99 && A.S.homeKwhAuto === false,
+    'değer=' + A.S.homeKwhPrice + ' auto=' + A.S.homeKwhAuto);
   const degisti = await A.kwhPriceAutofill();
   check('WT-78 KABUL: kullanıcının girdiği değer ASLA ezilmiyor',
     degisti === false && A.S.homeKwhPrice === 9.99, 'değer=' + A.S.homeKwhPrice);
+  // Ülke değişse bile elle girilen değer korunur (asıl WT-78 değişmezi)
+  A.S.country = 'DE';
+  const degisti2 = await A.kwhPriceAutofill();
+  check('WT-78 KABUL: ülke değişse de elle girilen değer korunuyor',
+    degisti2 === false && A.S.homeKwhPrice === 9.99, 'değer=' + A.S.homeKwhPrice);
+  A.S.country = 'TR';
 
   // --- ayarlar arayüzü ---
   A.S.country = 'US'; A.S.kwhRegion = ''; A.S.currency = 'USD';
