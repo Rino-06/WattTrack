@@ -624,11 +624,9 @@ async function importBackupText(text) {
     await tureMesafe(vid);
 
   if (restoreSettings) {
-    // S nesnesini yeniden doldur ve arayüzü tazele
-    for (const key of SETTING_KEYS) {
-      const row = await db.settings.get(key);
-      if (row) S[key] = row.value;
-    }
+    // S nesnesini yeniden doldur ve arayüzü tazele (WT-81/3: init() ile
+    // aynı fonksiyon — liste tek yerden okunuyor)
+    await loadSettings();
     applyI18n();
     applyTheme();
   }

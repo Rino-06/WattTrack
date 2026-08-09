@@ -314,29 +314,40 @@ async function formCountryChanged(keepRate, onceden) {
     : $('in-firm').value;
   fillFirmSelect(code, curFirm && curFirm !== t('other') ? curFirm : '', counts);
   $('in-bank').innerHTML = bankOptions();
-  $('in-amount-lbl').textContent = t('amount', {s: symOf(c[3])});
 
   // döviz kuru alanı
-  const foreign = c[3] !== S.currency;
-  $('wrap-rate').style.display = foreign ? '' : 'none';
-  if (foreign) {
-    $('rate-lbl').textContent = t('rateLbl', {f: c[3], b: S.currency});
-    // WT-10/4: bu para birimleri ECB tablosunda yok — kur otomatik gelmez
-    const noAuto = NO_AUTO_FX.includes(c[3]) || NO_AUTO_FX.includes(S.currency);
-    $('rate-note').textContent = noAuto
-      ? t('fxNoAuto') + ' — ' + t('rateNote', {b: S.currency})
-      : t('rateNote', {b: S.currency});
-    if (!keepRate) {
-      $('in-rate').value = '';
-      if (!noAuto) {
-        const got = await fetchRate(c[3], S.currency, $('in-date').value);
-        if (got && $('in-country').value === code) {
-          $('in-rate').value = fmtInput(got.rate, 6);
-          $('rate-note').textContent = t('rateAuto', {d: got.date}) + ' — ' + t('rateNote', {b: S.currency});
-        }
+  if (syncRateFields(c[3]) && !keepRate) {
+    $('in-rate').value = '';
+    if (!fxNoAuto(c[3])) {
+      const got = await fetchRate(c[3], S.currency, $('in-date').value);
+      if (got && $('in-country').value === code) {
+        $('in-rate').value = fmtInput(got.rate, 6);
+        $('rate-note').textContent = t('rateAuto', {d: got.date}) + ' — ' + t('rateNote', {b: S.currency});
       }
     }
   }
+}
+
+// WT-10/4: bu para birimleri ECB tablosunda yok — kur otomatik gelmez.
+const fxNoAuto = cur => NO_AUTO_FX.includes(cur) || NO_AUTO_FX.includes(S.currency);
+
+// WT-81/3: tutar etiketi + kur alanının görünürlüğü ve metinleri iki yerde
+// (formCountryChanged ve openAdd) ayrı ayrı yazılmıştı ve openAdd'deki kopya
+// NO_AUTO_FX uyarısını ATLIYORDU — ECB tablosunda olmayan bir para biriminde
+// kayıt düzenlerken "kur otomatik gelmez" notu görünmüyordu. Tek yer.
+// Kuru ÇEKMEZ; ağa yalnız formCountryChanged() çıkar.
+// Döner: alan yabancı para birimi olduğu için görünür mü?
+function syncRateFields(cur) {
+  $('in-amount-lbl').textContent = t('amount', {s: symOf(cur)});
+  const foreign = cur !== S.currency;
+  $('wrap-rate').style.display = foreign ? '' : 'none';
+  if (foreign) {
+    $('rate-lbl').textContent = t('rateLbl', {f: cur, b: S.currency});
+    $('rate-note').textContent = fxNoAuto(cur)
+      ? t('fxNoAuto') + ' — ' + t('rateNote', {b: S.currency})
+      : t('rateNote', {b: S.currency});
+  }
+  return foreign;
 }
 
 async function openAdd(id) {
@@ -410,14 +421,9 @@ async function openAdd(id) {
     $('in-bank').innerHTML = bankOptions();
     $('in-bank').value = r?.banka || '';
     const c = COUNTRIES.find(x => x[0] === selCode);
-    $('in-amount-lbl').textContent = t('amount', {s: symOf(c[3])});
-    const foreign = c[3] !== S.currency;
-    $('wrap-rate').style.display = foreign ? '' : 'none';
-    if (foreign) {
-      $('rate-lbl').textContent = t('rateLbl', {f: c[3], b: S.currency});
-      $('rate-note').textContent = t('rateNote', {b: S.currency});
-      if (!r?.rate) formCountryChanged(undefined, allSess);
-    }
+    // WT-81/3: aynı iş burada elle tekrarlanıyordu ve NO_AUTO_FX uyarısını
+    // atlıyordu; artık formCountryChanged ile aynı yerden geçiyor.
+    if (syncRateFields(c[3]) && !r?.rate) formCountryChanged(undefined, allSess);
   })();
 
   // lokasyon önerileri (daha önce girilenler)

@@ -3165,6 +3165,50 @@ const failed = results.filter(r => !r.pass);
     cons.nextElementSibling?.tagName + '.' + cons.nextElementSibling?.className);
 }
 
+// ---- WT-81/3: kur alanları tek yerden dolduruluyor ----
+{
+  const A = app();
+  const doc = window.document;
+  A.S.currency = 'TRY'; A.S.country = 'TR';
+  await A.db.sessions.clear();
+  // RSD ECB tablosunda yok (NO_AUTO_FX) ve kaydın KENDİ kuru var — eski
+  // kopyalanmış kod bu yolda "kur otomatik gelmez" uyarısını atlıyordu.
+  const id = await A.db.sessions.add({tarih: '2026-07-12T12:00', firma: 'X',
+    tip: 'DC', kwh: 30, tutar: 900, odenen: 900, cur: 'RSD', ulke: 'RS',
+    rate: 0.35, aracId: null});
+  await A.openAdd(id);
+  await sleep(400);
+  const not = doc.getElementById('rate-note').textContent;
+  check('WT-81/3 KABUL: kuru olan kaydı düzenlerken de "otomatik gelmez" uyarısı çıkıyor',
+    not.includes(A.T[A.S.lang].fxNoAuto), 'not=' + not.slice(0, 80));
+  check('WT-81/3: kur alanı yabancı para biriminde görünür',
+    doc.getElementById('wrap-rate').style.display !== 'none');
+  check('WT-81/3: tutar etiketi kaydın para birimini gösteriyor',
+    /RSD|дин|RSD/.test(doc.getElementById('in-amount-lbl').textContent)
+      || doc.getElementById('in-amount-lbl').textContent.length > 3,
+    doc.getElementById('in-amount-lbl').textContent);
+  A.overlayClose();
+  await sleep(200);
+
+  // Aynı para biriminde alan hiç görünmemeli
+  A.S.currency = 'TRY';
+  await A.openAdd();
+  await sleep(400);
+  check('WT-81/3: yerli para biriminde kur alanı gizli',
+    doc.getElementById('wrap-rate').style.display === 'none',
+    doc.getElementById('wrap-rate').style.display);
+  A.overlayClose();
+  await sleep(200);
+
+  // Ayar yükleme tek fonksiyondan geçiyor mu (init + yedek geri yükleme)
+  const app_js = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  const set_js = fs.readFileSync(path.join(ROOT, 'ui/settings.js'), 'utf8');
+  check('WT-81/3: ayar okuma döngüsü tek yerde (loadSettings)',
+    /async function loadSettings/.test(app_js)
+      && /await loadSettings\(\)/.test(app_js) && /await loadSettings\(\)/.test(set_js)
+      && (app_js + set_js).match(/for \(const key of SETTING_KEYS\)/g).length === 1);
+}
+
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
 if (errors.length) {
