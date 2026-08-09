@@ -57,7 +57,7 @@ async function boot() {
     'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js', 'app.js']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
     + `\n;window.__app = {db, S, t, allSessions, backupPayload, importBackupText,
-         renderStats, showScreen};`;
+         renderStats, showScreen, renderDashboard, rowCons, applyI18n};`;
   window.eval(bundle);
   await new Promise(r => setTimeout(r, 1200));
   return window;
@@ -154,6 +154,58 @@ await sleep(200);
 check('WT-56 KABUL-6: dönemde kayıt varken uyarı çıkmıyor',
   !!uyari && uyari.style.display === 'none',
   uyari ? `display="${uyari.style.display}"` : 's-period-empty yok');
+
+// ============================================================
+// WT-81/6 — tüketim birimi (kWh/100 km ↔ kWh/100 mi)
+// ============================================================
+// KUSUR: `mesafeKm` her zaman KM saklanıyor; ana sayfadaki `d-cons` kutusu ve
+// Geçmiş satırları km tabanlı sayının yanına `S.unit` etiketi basıyordu.
+// 'mi' seçen kullanıcı 100 MİL başına tüketimini %38 düşük görüyordu.
+// Beklenti şartnameden: ekranda YAZAN sayı ile YAZAN birim aynı olmalı.
+await A.db.sessions.clear();
+await A.db.sessions.bulkAdd([
+  {tarih: new Date().toISOString().slice(0, 16), firma: 'ZES', tip: 'DC', mekan: 'firma',
+   kwh: 18, tutar: 200, odenen: 200, cur: 'TRY', aracId: vid, mesafeKm: 100},
+  {tarih: new Date().toISOString().slice(0, 16), firma: 'ZES', tip: 'DC', mekan: 'firma',
+   kwh: 18, tutar: 200, odenen: 200, cur: 'TRY', aracId: vid, mesafeKm: 100}
+]);
+// 36 kWh / 200 km = 18,0 kWh/100 km  →  mi modunda 18 × 1,60934 = 29,0
+const consOku = () => ($(w, 'd-cons').textContent || '').trim();
+
+A.S.unit = 'km';
+await A.renderDashboard();
+await sleep(200);
+const kmMetin = consOku();
+check('WT-81/6: km modunda tüketim 18,0 kWh/100 km',
+  /^18,0 kWh\/100 km$/.test(kmMetin), `"${kmMetin}"`);
+
+A.S.unit = 'mi';
+await A.renderDashboard();
+await sleep(200);
+const miMetin = consOku();
+check('WT-81/6 KABUL: mi modunda değer de çevriliyor (29,0 kWh/100 mi)',
+  /^29,0 kWh\/100 mi$/.test(miMetin), `"${miMetin}"`);
+// Kusurun imzası tam olarak buydu: sayı aynı kalıp yalnız etiket değişiyordu.
+check('WT-81/6 KABUL: mi etiketiyle km sayısı BİRLİKTE gösterilmiyor',
+  !/^18,0 kWh\/100 mi$/.test(miMetin), `"${miMetin}"`);
+
+// Geçmiş satırı aynı kaydı aynı birimle göstermeli (ikinci kopya buydu)
+const satirMi = A.rowCons({kwh: 18, mesafeKm: 100});
+A.S.unit = 'km';
+const satirKm = A.rowCons({kwh: 18, mesafeKm: 100});
+check('WT-81/6 KABUL: Geçmiş satırındaki tüketim de birime uyuyor',
+  /29,0 kWh\/100 mi/.test(satirMi) && /18,0 kWh\/100 km/.test(satirKm),
+  `mi="${satirMi.trim()}" km="${satirKm.trim()}"`);
+
+// İstatistik başlığı ve trend notu da birimi taşımalı (sabit "km" kalmamalı)
+A.S.unit = 'mi';
+A.S.gran = 'all';
+await A.renderStats();
+await sleep(200);
+const baslik = ($(w, 's-cons-lbl').textContent || '').trim();
+check('WT-81/6: aylık trend başlığı seçili birimi yazıyor',
+  /mi\)/.test(baslik) && !/km\)/.test(baslik), `"${baslik}"`);
+A.S.unit = 'km';
 
 console.log('');
 if (errors.length) {

@@ -167,6 +167,29 @@ function sonYillar(n = 5, now = new Date()) {
 const distDisp = km => S.unit === 'mi' ? km / MI : km;
 const distFactor = () => S.unit === 'mi' ? MI : 1;   // 100 birim = 100*factor km
 
+// WT-81/6: TÜKETİM (kWh/100 birim) — tek hesap ve tek etiket.
+//
+// KUSUR: `mesafeKm` her zaman KM'dir (ui/forms.js girişi MI ile çarpıp
+// km'ye çevirir). Gösterimde uygulamanın geri kalanı distDisp()/distFactor()
+// ile kullanıcının birimine döner — mesafe kutuları, menzil, sayaç, hatta
+// ui/compare.js'in "100 birim başına maliyet"i. Tüketim BEŞ yerde ayrı ayrı
+// hesaplanıyordu ve İKİSİ bu çevirmeyi atlıyordu: ana sayfadaki `d-cons`
+// kutusu ve Geçmiş satırlarındaki rowCons(), km tabanlı sayının yanına
+// `S.unit` etiketi basıyordu. 'mi' seçen kullanıcı (ABD/GB) tüketimini
+// %38 DÜŞÜK görüyordu: 18 kWh/100 km aslında 29 kWh/100 mi.
+//
+// 100 mi = 160.934 km olduğundan km tabanlı değer distFactor() ile ÇARPILIR.
+// EPA'nın resmi ölçütü de kWh/100 mi, yani çevirmek doğru olan.
+const cons100 = (kwh, km) => km > 0 ? kwh / km * 100 * distFactor() : null;
+const consUnit = () => 'kWh/100 ' + S.unit;
+// Liste ortalaması: WT-20'de atlanan işaretli kayıtlar HARİÇ (mesafeleri bir
+// sonraki kayda ait), 20 km altındaki toplam mesafede oran anlamsız.
+function tuketimOrt(liste) {
+  const g = liste.filter(r => !r.atlanan && r.mesafeKm > 0 && r.kwh > 0);
+  const km = g.reduce((s, r) => s + r.mesafeKm, 0);
+  return km >= 20 ? cons100(g.reduce((s, r) => s + r.kwh, 0), km) : null;
+}
+
 
 /* ---- esc/colorFor ve para hesapları (savingsOf, convOf, amtB…) ---- */
 function esc(s) {

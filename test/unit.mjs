@@ -51,7 +51,8 @@ const KOPRU = ['pf', 'fmtNum', 'fmtInput', 'savingsOf', 'netFromGross', 'convOf'
   'amtB', 'savB', 'expB', 'isConv', 'periodFilter', 'prevPeriodFilter', 'inPeriod',
   'odoDistOf', 'S', 'localISO', 'localMonth', 'monthKey', 'esc', 'checkNum',
   'kayipHesapla', 'KAYIP_UYARI', 'fiyatBul', 'fiyatGoster', 'fiyatMetrik',
-  'tuketimGoster', 'tuketimMetrik', 'sonAylar', 'sonYillar'];
+  'tuketimGoster', 'tuketimMetrik', 'sonAylar', 'sonYillar',
+  'cons100', 'consUnit', 'tuketimOrt', 'distDisp', 'distFactor'];
 const kaynak = ['calc.js', 'ui/dashboard.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
   + `\n;Object.assign(globalThis, {${KOPRU.join(', ')}});`;
@@ -59,7 +60,7 @@ vm.runInContext(kaynak, sandbox, {filename: 'calc+dashboard'});
 
 const {pf, fmtNum, savingsOf, netFromGross, convOf, amtB, savB, expB,
        periodFilter, prevPeriodFilter, odoDistOf, S, localISO, monthKey,
-       sonAylar, sonYillar} = sandbox;
+       sonAylar, sonYillar, cons100, consUnit, tuketimOrt} = sandbox;
 
 const iso = d => localISO(d);
 const gunOnce = n => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
@@ -538,4 +539,65 @@ test('sonAylar/sonYillar: n kadar kayıt döner', () => {
   assert.equal(sonAylar(1, new Date(2026, 0, 1)).length, 1);
   assert.equal(sonAylar(12, new Date(2026, 0, 1)).length, 12);
   assert.equal(sonYillar(1, new Date(2026, 0, 1)).length, 1);
+});
+
+// WT-81/6 · Tüketim birimi. Kusur: `mesafeKm` her zaman KM tutuluyor ama iki
+// gösterim yeri (ana sayfa d-cons, Geçmiş satırları) km tabanlı sayının yanına
+// kullanıcının birimini yazıyordu — 'mi' seçende tüketim %38 düşük okunuyordu.
+// Beklenti şartnameden: gösterilen sayı ile etiket AYNI birimde olmalı.
+test('WT-81/6: km modunda tüketim km tabanlı (çeviri yok)', () => {
+  S.unit = 'km';
+  // 200 km'de 36 kWh = 18 kWh/100 km
+  assert.equal(cons100(36, 200), 18);
+  assert.equal(consUnit(), 'kWh/100 km');
+});
+
+test('WT-81/6 KABUL: mi modunda değer 100 MİL başına çevriliyor', () => {
+  S.unit = 'mi';
+  // 18 kWh/100 km = 18 × 1.60934 = 28.97 kWh/100 mi
+  assert.ok(Math.abs(cons100(36, 200) - 28.968) < 0.01,
+    'beklenen ~28.97, gelen ' + cons100(36, 200));
+  assert.equal(consUnit(), 'kWh/100 mi');
+  S.unit = 'km';
+});
+
+test('WT-81/6: mi değeri km değerinden BÜYÜK (yön kontrolü)', () => {
+  // Kusurun kendisi buydu: ikisi eşit çıkıyordu.
+  S.unit = 'km'; const k = cons100(36, 200);
+  S.unit = 'mi'; const m = cons100(36, 200);
+  assert.ok(m > k, 'mil başına tüketim km başınadan büyük olmalı');
+  S.unit = 'km';
+});
+
+test('WT-81/6: mesafe yoksa null döner (sıfıra bölme yok)', () => {
+  S.unit = 'km';
+  assert.equal(cons100(10, 0), null);
+  assert.equal(cons100(10, undefined), null);
+});
+
+test('WT-81/6: tuketimOrt atlanan kayıtları saymıyor (WT-20)', () => {
+  S.unit = 'km';
+  const l = [{kwh: 20, mesafeKm: 100}, {kwh: 99, mesafeKm: 100, atlanan: true}];
+  assert.equal(tuketimOrt(l), 20);   // atlanan girseydi ~59.5 çıkardı
+});
+
+test('WT-81/6: tuketimOrt 20 km altında null (anlamsız oran)', () => {
+  S.unit = 'km';
+  assert.equal(tuketimOrt([{kwh: 5, mesafeKm: 19}]), null);
+  assert.equal(tuketimOrt([{kwh: 5, mesafeKm: 20}]), 25);
+});
+
+test('WT-81/6: tuketimOrt mesafesiz/kWh\'siz kayıtları eliyor', () => {
+  S.unit = 'km';
+  const l = [{kwh: 20, mesafeKm: 100}, {kwh: 0, mesafeKm: 50}, {kwh: 8, mesafeKm: 0}];
+  assert.equal(tuketimOrt(l), 20);
+});
+
+test('WT-81/6: tuketimOrt ile cons100 aynı sonucu veriyor (tek kaynak)', () => {
+  for (const u of ['km', 'mi']) {
+    S.unit = u;
+    assert.equal(tuketimOrt([{kwh: 15, mesafeKm: 60}, {kwh: 21, mesafeKm: 140}]),
+      cons100(36, 200), u + ' modunda liste ve tekil hesap ayrışmamalı');
+  }
+  S.unit = 'km';
 });
