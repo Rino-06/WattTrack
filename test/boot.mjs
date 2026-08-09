@@ -3209,6 +3209,53 @@ const failed = results.filter(r => !r.pass);
       && (app_js + set_js).match(/for \(const key of SETTING_KEYS\)/g).length === 1);
 }
 
+// ---- WT-81/4: sözlük bütünlüğü ve ölü çeviri anahtarları ----
+{
+  const A = app();
+  const diller = Object.keys(A.T);
+  const taban = Object.keys(A.T.tr);
+  check('WT-81/4: altı dil de yüklü', diller.length === 6, diller.join(','));
+  // Kural 3 "altı dili DOLDUR" diyordu ama bunu sınayan bir kontrol yoktu:
+  // yalnız tek tek maddeler kendi anahtarlarına bakıyordu.
+  for (const l of diller) {
+    const k = Object.keys(A.T[l]);
+    const eksik = taban.filter(x => !(x in A.T[l]));
+    const fazla = k.filter(x => !taban.includes(x));
+    check('WT-81/4: ' + l + ' sözlüğü tr ile birebir aynı anahtarlara sahip',
+      eksik.length === 0 && fazla.length === 0,
+      'eksik=' + (eksik.join(',') || '-') + ' fazla=' + (fazla.join(',') || '-'));
+  }
+  const bos = taban.filter(k => diller.some(l =>
+    typeof A.T[l][k] !== 'string' || !A.T[l][k].trim()));
+  check('WT-81/4 KABUL: hiçbir anahtar hiçbir dilde BOŞ değil',
+    bos.length === 0, bos.slice(0, 8).join(',') || 'tamam');
+
+  // Ölü anahtar taraması: sözlükteki her anahtar ya kodda geçmeli ya da
+  // dinamik bir önekle (exp_, rem_, spec_) üretiliyor olmalı.
+  const kaynak = ['index.html', 'app.js', 'calc.js', 'db.js', 'ocr.js',
+    'evprices.js', 'evdata.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js',
+    'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js',
+    'ui/forms.js', 'ui/settings.js']
+    .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  // T sözlüğünün kendisi "kullanım" sayılmaz — yoksa her anahtar kendini bulur
+  const i18nSrc = fs.readFileSync(path.join(ROOT, 'i18n.js'), 'utf8');
+  const tBas = i18nSrc.indexOf('const T = {');
+  let d = 1, e = tBas + 'const T = {'.length;
+  while (d > 0 && e < i18nSrc.length) {
+    if (i18nSrc[e] === '{') d++; else if (i18nSrc[e] === '}') d--;
+    e++;
+  }
+  const kod = kaynak.replace(i18nSrc.slice(tBas, e), '');
+  const onekler = ['exp_', 'rem_', 'spec_'];
+  const olu = taban.filter(k => {
+    if (onekler.some(o => k.startsWith(o))) return false;
+    const q = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return !new RegExp(`['"]${q}['"]|data-i18n(?:-aria)?="${q}"|\\.${q}\\b`).test(kod);
+  });
+  check('WT-81/4 KABUL: sözlükte kodda hiç kullanılmayan anahtar kalmadı',
+    olu.length === 0, olu.join(', ') || 'tamam');
+}
+
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
 if (errors.length) {
