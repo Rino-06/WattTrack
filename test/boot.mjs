@@ -945,8 +945,10 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-33: #page-dashboard / #page-compare üzerinde `columns` kalmadı',
     !/#page-(dashboard|compare)[^{]*\{[^}]*(?<![-\w])columns\s*:/.test(css)
       && !/column-span\s*:/.test(css));
+  // WT-80: seçiciye `.active` eklendi (aşağıdaki WT-80 bloğu nedenini
+  // açıklıyor); grid tanımının kendisi değişmedi.
   check('WT-33: yerine auto-fit grid tanımlı',
-    /#page-dashboard,#page-compare\{[^}]*display:grid[^}]*repeat\(auto-fit,minmax\(280px,1fr\)\)/
+    /#page-dashboard\.active,#page-compare\.active\{[^}]*display:grid[^}]*repeat\(auto-fit,minmax\(280px,1fr\)\)/
       .test(css.replace(/\s*\n\s*/g, '')));
   const span = /([^{}]*)\{grid-column:1\/-1\}/.exec(css.replace(/\s*\n\s*/g, ''));
   const spanSel = span ? span[1] : '';
@@ -2753,6 +2755,116 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-79: yatay yerleşim için kırılma noktası duruyor',
     /@media\(min-width:760px\)/.test(css)
       && /orientation:landscape/.test(css));
+}
+
+// ---- WT-80: geniş ekranda yerleşimin ölçeklenmesi ----
+// UYARI: jsdom'da yerleşim motoru YOK. Buradaki kontroller kuralın ve DOM
+// yapısının doğru olduğunu gösterir, gerçek ekranda ÖYLE ÇİZİLDİĞİNİ değil.
+// Tesla / tablet doğrulaması elle test borcunda (WT-79 ile aynı sepette).
+{
+  const doc = window.document;
+  const css = [...doc.querySelectorAll('style')].map(x => x.textContent).join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s*\n\s*/g, '');
+
+  // --- 1) EN ÖNEMLİSİ: id'li sayfa kuralları .active olmadan display vermemeli.
+  // `#page-x{display:grid}` (1-0-0) `.page{display:none}` (0-1-0) kuralını ezer
+  // ve sayfa hangi sekme açık olursa olsun çizilir — WT-59'un şikayeti.
+  // Tarama #page-* ile SINIRLI DEĞİL: aynı tuzak id'li her gizlenebilir
+  // öğe için geçerli. İstisnalar aşağıda tek tek gerekçeli.
+  const gizliIstisna = new Set([
+    // #s-data'yı ui/shell.js SATIR İÇİ style.display ile açıp kapıyor;
+    // satır içi stil her stylesheet kuralını yener, ızgara kuralı güvenli.
+    '#s-data'
+  ]);
+  // Tehlikeli olan yön: id'li kuralın öğeyi GÖRÜNÜR yapması. `display:none`
+  // veren id kuralı (ör. #adv-fields) tersine güvenli — onu açan kural
+  // (#adv-fields.open) zaten daha özgül.
+  const idDisplay = [...css.matchAll(/([^{}]*#[\w-]+[^{}]*)\{([^}]*)\}/g)]
+    .filter(([, , body]) => {
+      const m = /(?:^|;)\s*display\s*:\s*([\w-]+)/.exec(body);
+      return m && m[1] !== 'none';
+    })
+    .map(([, sel]) => sel.trim());
+  const korumasiz = idDisplay.filter(sel => sel.split(',').some(s => {
+    s = s.trim();
+    return /#[\w-]+$/.test(s) && !/\.active/.test(s) && !gizliIstisna.has(s);
+  }));
+  check('WT-80/WT-59 KABUL: id\'li hiçbir kural .active olmadan display vermiyor',
+    korumasiz.length === 0, korumasiz.join(' | ') || 'temiz');
+  check('WT-80: ızgaraya geçen sayfaların hepsinde .active var',
+    /#page-dashboard\.active,#page-compare\.active\{[^}]*display:grid/.test(css)
+      && /#page-vehicle\.active\{[^}]*display:grid/.test(css));
+
+  // --- 2) İstatistik detayları ızgaraya geçti mi, hücreler kendi başına
+  // anlamlı mı (WT-33'ün kuralı: başlık ve değeri ayrı hücreye düşmesin)
+  check('WT-80: #s-data auto-fit ızgara',
+    /#s-data\{[^}]*display:grid[^}]*repeat\(auto-fit,minmax\(300px,1fr\)\)/.test(css));
+  const sData = doc.getElementById('s-data');
+  const hucreler = [...sData.querySelectorAll(':scope > .gcell')];
+  check('WT-80: İstatistik blokları hücrelere sarıldı', hucreler.length >= 7,
+    'hücre=' + hucreler.length);
+  const basliksiz = hucreler.filter(g => !g.querySelector('h2'));
+  check('WT-80 KABUL: her hücrede kendi başlığı var (başlık/değer ayrılmıyor)',
+    basliksiz.length === 0,
+    basliksiz.map(g => g.firstElementChild?.className).join(',') || 'tamam');
+  const icerikVar = g => !!g.querySelector('.monthbars,.donut-wrap,.toplist,.rows');
+  check('WT-80: her hücrede başlığın anlattığı blok da var',
+    hucreler.every(icerikVar));
+  // Dönem seçici ve boş-dönem uyarısı hücre DIŞINDA, tam genişlikte kalmalı
+  // (WT-15: seçicinin tüm sayfayı etkilediği görünmeye devam etsin)
+  const tamGenis = /([^{}]*)\{grid-column:1\/-1\}/g;
+  const spanKurallar = [...css.matchAll(tamGenis)].map(m => m[1]).join(' | ');
+  for (const s of ['#s-data>.seg', '#s-data>#s-period-empty'])
+    check('WT-80: tam genişlik — ' + s, spanKurallar.includes(s), spanKurallar);
+  for (const id of ['d-gran', 's-period-empty'])
+    check('WT-80: ' + id + ' hücreye sarılmadı (tam genişlikte kalıyor)',
+      doc.getElementById(id).parentElement === sData,
+      doc.getElementById(id).parentElement.id || doc.getElementById(id).parentElement.className);
+
+  // --- 3) Aracım: liste solda, gider kartı sağda
+  const vTop = doc.getElementById('v-top');
+  check('WT-80: Aracım üst bölümü tek hücrede', !!vTop
+    && vTop.classList.contains('gcell')
+    && !!vTop.querySelector('#set-vehicles') && !!vTop.querySelector('#set-archived'));
+  check('WT-80: gider kartı ayrı hücre',
+    doc.querySelector('#page-vehicle > .card.gcell') !== null);
+  check('WT-80: Aracım başlığı iki sütuna yayılıyor',
+    spanKurallar.includes('#page-vehicle>.page-title-row'), spanKurallar);
+
+  // --- 4) Liste/form sayfaları bilerek dar kalıyor (okunabilirlik)
+  check('WT-80: Geçmiş ve Ayarlar okuma genişliğinde kaldı',
+    /#page-history,#page-settings\{[^}]*max-width:820px/.test(css)
+      && /#page-history,#page-settings\{max-width:900px\}/.test(css));
+  const darKurallar = [...css.matchAll(/([^{}]*)\{[^}]*max-width:(?:820|900)px[^}]*\}/g)]
+    .map(m => m[1]).join(' | ');
+  check('WT-80: İstatistik ve Aracım dar sınırın DIŞINDA (genişliği kullanıyorlar)',
+    !/#page-(?:stats|vehicle)/.test(darKurallar), darKurallar);
+
+  // --- 5) .dstat KASITLI olarak dokunulmadan bırakıldı: iki örneği de
+  // #page-dashboard içinde, auto-fit ızgaranın 280-400px'lik hücrelerinde.
+  // minmax(150px,…) orada iki kutuyu tek sütuna düşürürdü.
+  check('WT-80: .dstat dar hücrede iki sütun kalmaya devam ediyor',
+    /\.dstat\{display:grid;grid-template-columns:1fr 1fr;/.test(css)
+      && !/\.dstat\{grid-template-columns:repeat\(auto-fit/.test(css));
+  check('WT-80: .dstat yalnız Ana sayfada (gerekçe buna dayanıyor)',
+    [...doc.querySelectorAll('.dstat')].every(el => el.closest('#page-dashboard')),
+    [...doc.querySelectorAll('.dstat')].map(el => el.closest('section')?.id).join(','));
+
+  // --- 6) Form alanları 780px'lik panelde esnetilmiyor
+  check('WT-80: overlay içeriği okunur ölçüde ortalanıyor',
+    /\.ov-body\{max-width:640px;width:100%;margin:0 auto\}/.test(css)
+      && /#photo-view \.ov-body\{max-width:none\}/.test(css));
+
+  // --- 7) DİKEY EKSEN: alçak yatay ekran için kırılma noktası
+  check('WT-80: alçak yatay ekran (Tesla/tablet) için kırılma noktası var',
+    /@media\(orientation:landscape\) and \(max-height:820px\)/.test(css));
+  // Dokunma hedefleri bu blokta KÜÇÜLTÜLMEMELİ (WT-25 sınırı)
+  const alcak = /@media\(orientation:landscape\) and \(max-height:820px\)\{([\s\S]*)$/.exec(css);
+  const hedefler = ['.crow .del', '.vlist .cam', '.chip', '.seg.mini button',
+    '.ov-head .close', '.theme-btn', '.mini-btn', '.sw', '.details-toggle', '.h2row .link'];
+  check('WT-80: alçak ekran bloğu dokunma hedeflerine dokunmuyor (WT-25)',
+    !alcak || !hedefler.some(h => alcak[1].includes(h + '{')),
+    hedefler.filter(h => alcak && alcak[1].includes(h + '{')).join(',') || 'temiz');
 }
 
 // ---- WT-78: gömülü elektrik tarifesi tablosu ----
