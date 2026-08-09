@@ -90,10 +90,17 @@ $('in-unitprice').addEventListener('input', () => {
 ['in-kwh', 'in-kwh-dec'].forEach(id => $(id).addEventListener('input', () => {
   if (amountSrc === 'birimFiyat' && homeSelected()) recalcFromUnitPrice();
 }));
-// Tutara ELLE dokunmak birim fiyat hesabını devre dışı bırakır
-$('in-amount').addEventListener('input', () => {
+// Tutara ELLE dokunmak birim fiyat hesabını devre dışı bırakır.
+// WT-81/10 KUSURU: tutar da kWh gibi İKİ kutu (tam + kuruş) ama yalnız tam
+// kısım dinleniyordu — hemen üstteki kWh satırı ikisini de listeliyor, bu
+// çift ayrışmıştı. Kullanıcı ev/iş şarjında yalnız kuruş kutusunu
+// düzeltirse (12,00 → 12,35) kaynak 'birimFiyat' kalıyor; sonraki kWh
+// dokunuşu recalcFromUnitPrice()'ı tetikleyip parcaliYaz ile İKİ kutuyu da
+// yeniden yazıyor ve düzeltme sessizce siliniyordu. Kayıt da hâlâ
+// tutarKaynak:'birimFiyat' ile kaydediliyordu.
+['in-amount', 'in-amount-dec'].forEach(id => $(id).addEventListener('input', () => {
   if (homeSelected() && amountSrc === 'birimFiyat') { amountSrc = 'manuel'; syncHomePricing(); }
-});
+}));
 $('in-disc-type').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   $('in-disc-type').querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b));
