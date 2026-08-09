@@ -231,6 +231,53 @@ check('WT-16/B: DC seçilince firma listesi Ev-İş\'ten çıktı',
   A.applyI18n();
 }
 
+// ============================================================
+// WT-81/10 — tutarın KURUŞ kutusuna yazılan düzeltme siliniyordu
+// ============================================================
+// Tutar WT-65'ten beri iki kutu (tam + kuruş) ama yalnız tam kısım
+// dinleniyordu. Kuruşu düzelten kullanıcıda kaynak 'birimFiyat' kalıyor,
+// sonraki kWh dokunuşu recalcFromUnitPrice()'ı tetikliyor ve parcaliYaz
+// İKİ kutuyu birden yeniden yazıp düzeltmeyi siliyordu.
+{
+  await A.saveSetting('homeKwhPrice', 2.80);
+  A.S.currency = 'TRY'; A.S.country = 'TR';
+  await A.openAdd();
+  await sleep(300);
+  [...$('in-tip').querySelectorAll('button')].find(b => b.dataset.v === 'AC').click();
+  await sleep(200);
+  $('in-kwh').value = '40';
+  $('in-kwh').dispatchEvent(new w.Event('input', { bubbles: true }));
+  await sleep(150);
+  check('WT-81/10: senaryo kuruldu — 40 × 2,80 = 112,00 otomatik doldu',
+    $('in-amount').value === '112',
+    `${$('in-amount').value} | ${$('in-amount-dec').value}`);
+
+  // Kullanıcı YALNIZ kuruş kutusunu düzeltiyor: 112,00 → 112,35
+  $('in-amount-dec').value = '35';
+  $('in-amount-dec').dispatchEvent(new w.Event('input', { bubbles: true }));
+  await sleep(200);
+  check('WT-81/10: kuruş kutusuna dokunmak da birim fiyat hesabını kapatıyor',
+    $('in-unitprice').style.opacity === '0.5' || $('in-unitprice').style.opacity === '.5',
+    'opacity=' + $('in-unitprice').style.opacity);
+
+  // Şimdi kWh'ye dokun — kusurlu hâlde bu, tutarı 114,80'e yeniden yazıyordu
+  $('in-kwh').value = '41';
+  $('in-kwh').dispatchEvent(new w.Event('input', { bubbles: true }));
+  await sleep(250);
+  check('WT-81/10 KABUL: kWh değişince kuruş düzeltmesi SİLİNMİYOR',
+    $('in-amount').value === '112' && $('in-amount-dec').value === '35',
+    `tutar=${$('in-amount').value} | ${$('in-amount-dec').value}`);
+
+  $('in-date').value = '2026-07-22';
+  $('btn-save').click();
+  await sleep(500);
+  const k = (await A.db.sessions.toArray()).find(r => r.tarih.startsWith('2026-07-22'));
+  check('WT-81/10 KABUL: kaydedilen tutar kullanıcının yazdığı 112,35',
+    k && Math.abs(k.tutar - 112.35) < 1e-9, 'tutar=' + (k && k.tutar));
+  check('WT-81/10: kayıt artık "birim fiyattan" değil "elle" işaretli',
+    k && k.tutarKaynak === 'manuel', 'tutarKaynak=' + (k && k.tutarKaynak));
+}
+
 const failed = results.filter(r => !r).length;
 console.log('\n' + (failed ? `${failed} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ') + ` (${results.length} kontrol)`);
 if (errors.length) { console.log('\nHatalar:'); errors.slice(0, 6).forEach(e => console.log('  - ' + e.slice(0, 250))); }
