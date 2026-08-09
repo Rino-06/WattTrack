@@ -29,11 +29,64 @@ async function renderSettings() {
     b.classList.toggle('sel', b.dataset.v === S.unit));
   $('set-lang').innerHTML = Object.keys(LANG_NAMES).map(k =>
     `<option value="${k}" ${k === S.lang ? 'selected' : ''}>${LANG_NAMES[k]}</option>`).join('');
+  renderKwhDefault();
   $('set-adv').checked = !!S.advOpen;
   $('set-theme').querySelectorAll('button').forEach(b =>
     b.classList.toggle('sel', b.dataset.v === (S.theme || 'light')));
   renderBankCountries();
 }
+
+
+/* ---- WT-78: gömülü elektrik fiyatı tablosundan varsayılan ----
+   Kural: KULLANICININ GİRDİĞİ DEĞER ASLA EZİLMEZ. Tablo yalnız iki
+   durumda devreye girer: alan hiç doldurulmamışsa (homeKwhPrice == null)
+   kendiliğinden, ya da kullanıcı "önerilen fiyatı kullan" düğmesine
+   basarsa. Kaynak ve yıl her zaman alanın altında yazılı. */
+function renderKwhDefault() {
+  const bolgeler = typeof kwhRegions === 'function' ? kwhRegions(S.country) : null;
+  $('wrap-kwh-region').style.display = bolgeler ? '' : 'none';
+  if (bolgeler) {
+    $('set-kwhregion').innerHTML = `<option value="">${esc(t('kwhRegionPick'))}</option>`
+      + bolgeler.map(([k, ad]) => `<option value="${k}">${esc(ad)}</option>`).join('');
+    $('set-kwhregion').value = S.kwhRegion || '';
+  }
+  const d = defaultKwhPrice(S.country, S.kwhRegion);
+  const src = $('set-kwh-src'), btn = $('btn-kwh-default');
+  if (!d) { src.style.display = 'none'; btn.style.display = 'none'; return; }
+  const k = KWH_SRC[d.s];
+  src.style.display = '';
+  src.textContent = t('kwhSrcNote',
+    {v: fm(symOf(d.cur), fmtNum(d.p, 2)), y: d.y, s: k ? k.ad : d.s});
+  // Alan zaten bu değerdeyse düğmeyi gösterme
+  const ayni = S.homeKwhPrice != null && Math.abs(S.homeKwhPrice - d.p) < 1e-9;
+  btn.style.display = ayni ? 'none' : '';
+  btn.textContent = t('kwhUseDefault', {v: fm(symOf(d.cur), fmtNum(d.p, 2))});
+}
+
+// Alan boşken tabloyu uygula. Dolu bir değerin üstüne YAZMAZ.
+async function kwhPriceAutofill() {
+  if (S.homeKwhPrice != null) return false;
+  const d = defaultKwhPrice(S.country, S.kwhRegion);
+  if (!d) return false;
+  S.homeKwhPrice = d.p;
+  await saveSetting('homeKwhPrice', d.p);
+  return true;
+}
+
+$('set-kwhregion').addEventListener('change', async () => {
+  S.kwhRegion = $('set-kwhregion').value;
+  await saveSetting('kwhRegion', S.kwhRegion);
+  await kwhPriceAutofill();
+  renderSettings();
+});
+$('btn-kwh-default').addEventListener('click', async () => {
+  const d = defaultKwhPrice(S.country, S.kwhRegion);
+  if (!d) return;
+  S.homeKwhPrice = d.p;
+  await saveSetting('homeKwhPrice', d.p);
+  toast(t('savedLocal'));
+  renderSettings();
+});
 
 
 /* ---- Onboarding ---- */

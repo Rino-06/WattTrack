@@ -59,7 +59,7 @@ window.HTMLMediaElement.prototype.play = function () {
 const APP_FILES = ['db.js', 'calc.js', 'i18n.js', 'ocr.js', 'ui/shell.js', 'ui/dashboard.js',
   'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js',
   'ui/settings.js', 'app.js'];
-const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
+const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP_FILES]
   .map(f => `/* ==== ${f} ==== */\n` + fs.readFileSync(path.join(ROOT, f), 'utf8'))
   .join('\n;\n')
   // const/let bildirimleri window'a iliştirilmez; teste açmak için köprü kur
@@ -78,6 +78,8 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', ...APP_FILES]
        reverseGeo, nearbyStations,
        openCsvImport, importFileText, importBackupText, overlayOpen,
        parcaliOku, parcaliYaz,
+       KWH_PRICES, KWH_SRC, defaultKwhPrice, kwhRegions, kwhPriceAutofill,
+       renderSettings,
        renderVehiclePage: renderVehiclePage};`;
 try {
   window.eval(bundle);
@@ -2745,6 +2747,102 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-79: yatay yerleşim için kırılma noktası duruyor',
     /@media\(min-width:760px\)/.test(css)
       && /orientation:landscape/.test(css));
+}
+
+// ---- WT-78: gömülü elektrik tarifesi tablosu ----
+{
+  const A = app();
+  const doc = window.document;
+  const P = A.KWH_PRICES, SRC = A.KWH_SRC;
+
+  // --- veri bütünlüğü: her kaydın kaynağı ve yılı olacak ---
+  const kodlar = Object.keys(P);
+  check('WT-78: tablo 45 ülkenin çoğunu kapsıyor', kodlar.length >= 40,
+    'ülke=' + kodlar.length);
+  check('WT-78 KABUL: HER kaydın kaynağı ve yılı var (uydurma veri yok)',
+    kodlar.every(k => P[k].s && SRC[P[k].s] && P[k].y >= 2024 && P[k].cur),
+    kodlar.filter(k => !(P[k].s && SRC[P[k].s] && P[k].y >= 2024 && P[k].cur)).join(',') || 'tamam');
+  check('WT-78: her kaynak künyesinde ad, url ve tarih var',
+    Object.values(SRC).every(s => s.ad && /^https:/.test(s.url) && /^\d{4}-\d{2}-\d{2}$/.test(s.guncel)));
+  check('WT-78: fiyatlar makul aralıkta (0 < p, sıfır/negatif yok)',
+    kodlar.every(k => P[k].p == null || P[k].p > 0),
+    kodlar.filter(k => P[k].p != null && P[k].p <= 0).join(','));
+  // Tablodaki para birimi uygulamanın o ülke için kullandığıyla aynı olmalı,
+  // yoksa varsayılan yanlış para biriminde dolar.
+  const curOf = Object.fromEntries(A.COUNTRIES.map(c => [c[0], c[3]]));
+  check('WT-78 KABUL: her ülkenin para birimi COUNTRIES ile aynı',
+    kodlar.every(k => P[k].cur === curOf[k]),
+    kodlar.filter(k => P[k].cur !== curOf[k]).map(k => k + ':' + P[k].cur + '≠' + curOf[k]).join(', ') || 'tamam');
+  check('WT-78: tabloda COUNTRIES dışı ülke yok',
+    kodlar.every(k => curOf[k]), kodlar.filter(k => !curOf[k]).join(','));
+
+  // --- arama: ülke ve alt bölge ---
+  const tr = A.defaultKwhPrice('TR');
+  check('WT-78: TR için fiyat dönüyor', !!tr && tr.cur === 'TRY' && tr.p > 0,
+    JSON.stringify(tr));
+  check('WT-78 KABUL: ABD eyalet seçilince eyalet fiyatı dönüyor',
+    A.defaultKwhPrice('US', 'HI').p !== A.defaultKwhPrice('US').p
+      && A.defaultKwhPrice('US', 'HI').region === 'HI',
+    'HI=' + A.defaultKwhPrice('US', 'HI').p + ' US=' + A.defaultKwhPrice('US').p);
+  check('WT-78 KABUL: Kanada ülke geneli YOK, il seçilince geliyor',
+    A.defaultKwhPrice('CA') === null && A.defaultKwhPrice('CA', 'QC').p > 0,
+    'QC=' + JSON.stringify(A.defaultKwhPrice('CA', 'QC')));
+  check('WT-78: kaynağı olmayan ülkede null dönüyor (uydurulmuyor)',
+    A.defaultKwhPrice('MC') === null && A.defaultKwhPrice('XX') === null);
+  check('WT-78: alt bölge listesi yalnız ABD ve Kanada için var',
+    A.kwhRegions('US').length === 51 && A.kwhRegions('CA').length === 10
+      && A.kwhRegions('TR') === null,
+    'US=' + A.kwhRegions('US').length + ' CA=' + A.kwhRegions('CA').length);
+
+  // --- otomatik doldurma: KULLANICI DEĞERİ EZİLMEZ ---
+  A.S.country = 'TR'; A.S.kwhRegion = '';
+  A.S.homeKwhPrice = null;
+  await A.kwhPriceAutofill();
+  check('WT-78 KABUL: alan boşken tablodan doluyor',
+    Math.abs(A.S.homeKwhPrice - P.TR.p) < 1e-9, 'değer=' + A.S.homeKwhPrice);
+  A.S.homeKwhPrice = 9.99;
+  const degisti = await A.kwhPriceAutofill();
+  check('WT-78 KABUL: kullanıcının girdiği değer ASLA ezilmiyor',
+    degisti === false && A.S.homeKwhPrice === 9.99, 'değer=' + A.S.homeKwhPrice);
+
+  // --- ayarlar arayüzü ---
+  A.S.country = 'US'; A.S.kwhRegion = ''; A.S.currency = 'USD';
+  await A.renderSettings();
+  await sleep(200);
+  check('WT-78: ABD seçiliyken eyalet kutusu görünüyor',
+    doc.getElementById('wrap-kwh-region').style.display !== 'none'
+      && doc.querySelectorAll('#set-kwhregion option').length === 52,
+    'seçenek=' + doc.querySelectorAll('#set-kwhregion option').length);
+  check('WT-78 KABUL: varsayılanın kaynağı ve yılı ekranda yazılı',
+    doc.getElementById('set-kwh-src').style.display !== 'none'
+      && /EIA/.test(doc.getElementById('set-kwh-src').textContent)
+      && /2024/.test(doc.getElementById('set-kwh-src').textContent),
+    doc.getElementById('set-kwh-src').textContent.slice(0, 80));
+  A.S.country = 'TR'; A.S.currency = 'TRY'; A.S.kwhRegion = '';
+  await A.renderSettings();
+  await sleep(200);
+  check('WT-78: alt bölgesi olmayan ülkede kutu gizli',
+    doc.getElementById('wrap-kwh-region').style.display === 'none');
+  check('WT-78: farklı fiyat girilmişken "önerileni kullan" düğmesi çıkıyor',
+    doc.getElementById('btn-kwh-default').style.display !== 'none',
+    'metin=' + doc.getElementById('btn-kwh-default').textContent.slice(0, 50));
+  doc.getElementById('btn-kwh-default')
+    .dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(400);
+  check('WT-78 KABUL: düğmeye basınca önerilen fiyat uygulanıyor',
+    Math.abs(A.S.homeKwhPrice - P.TR.p) < 1e-9, 'değer=' + A.S.homeKwhPrice);
+  check('WT-78: uygulandıktan sonra düğme kayboluyor',
+    doc.getElementById('btn-kwh-default').style.display === 'none');
+
+  check('WT-78: dört yeni anahtar altı dilde de dolu',
+    ['tr', 'en', 'de', 'fr', 'es', 'it'].every(l =>
+      ['kwhRegion', 'kwhRegionPick', 'kwhSrcNote', 'kwhUseDefault']
+        .every(k => (A.T[l][k] || '').length > 3)));
+  const dosya = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  check('WT-78: kwhRegion ayarı yedekten geri yüklenenler arasında',
+    /'kwhRegion'/.test(dosya('app.js')));
+  check('WT-78: yeni dosya sw.js ve index.html ile birlikte eklendi',
+    /evprices\.js/.test(dosya('sw.js')) && /evprices\.js/.test(html));
 }
 
 const failed = results.filter(r => !r.pass);
