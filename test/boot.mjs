@@ -3153,7 +3153,6 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     /^\d{4}-\d{2}$/.test(A.EV_DB_TARIH), A.EV_DB_TARIH);
 }
 
-const failed = results.filter(r => !r.pass);
 // ---- WT-81/1: bar grafiklerinin ORANI (tek çizim yolu) ----
 {
   const A = app();
@@ -3308,6 +3307,21 @@ const failed = results.filter(r => !r.pass);
     const q = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return !new RegExp(`['"]${q}['"]|data-i18n(?:-aria)?="${q}"|\\.${q}\\b`).test(kod);
   });
+  // WT-81/11: TERS YÖN. WT-81/4 yalnız "sözlükte olup kodda olmayan"ı
+  // tarıyordu; "kodda çağrılıp sözlükte olmayan" hiç bakılmamıştı. t() böyle
+  // bir anahtarda ANAHTARIN KENDİSİNİ döndürür, yani ekranda ham İngilizce
+  // bir kelime çıkar ve altı dilde de aynı kalır — sessiz bir çeviri kusuru.
+  // Nitekim `t('delete')` (ui/compare.js, yakıt fiyatı silme düğmesinin
+  // title'ı) hiçbir sözlükte yoktu ve tooltip "delete" yazıyordu.
+  const cagrilan = new Set();
+  for (const m of kod.matchAll(/\bt\(\s*'([A-Za-z_][A-Za-z0-9_]*)'/g)) cagrilan.add(m[1]);
+  for (const m of kod.matchAll(/data-i18n(?:-aria|-ph)?="([A-Za-z_][A-Za-z0-9_]*)"/g))
+    cagrilan.add(m[1]);
+  const sozluksuz = [...cagrilan].filter(k =>
+    !onekler.some(o => k.startsWith(o)) && !diller.every(l => k in A.T[l]));
+  check('WT-81/11 KABUL: kodda çağrılan her anahtar altı sözlükte de var',
+    sozluksuz.length === 0, sozluksuz.join(', ') || ('tarandı=' + cagrilan.size));
+
   check('WT-81/4 KABUL: sözlükte kodda hiç kullanılmayan anahtar kalmadı',
     olu.length === 0, olu.join(', ') || 'tamam');
 }
@@ -3411,6 +3425,13 @@ const failed = results.filter(r => !r.pass);
   window.fetch = () => Promise.reject(new Error('offline'));   // taban duruma dön
 }
 
+// WT-81/11 KUSURU: bu satır dosyanın ORTASINDA (WT-76 bloğundan hemen sonra)
+// duruyordu. `results` sonradan büyümeye devam ettiği için ondan SONRAKİ
+// blokların — WT-81/1 grafik oranı, WT-81/4 sözlük bütünlüğü, WT-81/5 ölü
+// CSS, WT-81/7 kur yedeği — düşüşleri sayıma ve ÇIKIŞ KODUNA hiç girmiyordu.
+// Yani o "kalıcı değişmezler" kırmızıya dönse bile npm test yeşil kalırdı.
+// Sayım artık bütün kontroller koştuktan SONRA yapılıyor.
+const failed = results.filter(r => !r.pass);
 console.log('\n' + (failed.length ? `${failed.length} BAŞARISIZ` : 'TÜM KONTROLLER GEÇTİ')
   + ` (${results.length} kontrol)`);
 if (errors.length) {

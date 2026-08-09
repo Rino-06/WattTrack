@@ -844,8 +844,13 @@ $('evspec-save').addEventListener('click', async () => {
     Object.assign(specTaslak.rec, upd);
     const kaynak = EV_TASLAK[specTaslak.kutu];
     if (kaynak) {
-      $(specTaslak.kutu).innerHTML =
-        evSummaryHTML(specTaslak.rec) + (kaynak.foto ? photoBtnHTML(false) : '');
+      // WT-81/11: `false` sabitti — taslakta fotoğraf VARKEN bile kart
+      // yeniden çizilince düğme "Fotoğraf ekle"ye dönüyordu. Fotoğrafı
+      // yükleyen dal (yukarıda) photoBtnHTML(true) yazıyor; bu dal ondan
+      // ayrışmıştı, dolayısıyla ⚙ ile teknik veri düzenleyip kaydeden
+      // kullanıcı fotoğrafını kaybetmiş sanıyordu (kart özetinde duruyor).
+      $(specTaslak.kutu).innerHTML = evSummaryHTML(specTaslak.rec)
+        + (kaynak.foto ? photoBtnHTML(!!specTaslak.rec.photo) : '');
       if (kaynak.foto) bindPhotoBtn();
     }
     specTaslak = null;

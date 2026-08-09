@@ -63,10 +63,12 @@ function inPeriod(all, period) {
   return all.filter(r => monthKey(r.tarih) === localMonth(now));
 }
 const granFilter = all => inPeriod(all, S.gran);
-// Kısa ad (rozet/etiket için: "Hafta"/"Ay"/"Yıl") ve uzun ad ("Bu hafta toplam")
+// Kısa ad (rozet/etiket için: "Hafta"/"Ay"/"Yıl").
+// WT-81/11: yanındaki uzun ad yardımcısı (periodName) hiçbir yerden
+// çağrılmıyordu — WT-81/4'ün ölü ANAHTAR taraması sözlüğe bakıyor, ölü
+// FONKSİYONA bakmıyor; anahtarları başka yerde kullanıldığı için görünmedi.
 const periodShort = p => t(p === 'week' ? 'week' : p === 'year' ? 'year'
   : p === 'all' ? 'periodAll' : 'month');
-const periodName = p => t(p === 'week' ? 'periodWeek' : p === 'year' ? 'periodYear' : 'periodMonth');
 const vehFilter = (list, vid) => vid ? list.filter(r => String(r.aracId) === vid) : list;
 // odometre için araç: seçili > tek araç > varsayılan araç
 function pickOdoVeh(vehicles, sel) {
