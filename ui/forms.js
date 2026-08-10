@@ -429,19 +429,22 @@ async function openAdd(id) {
   $('in-tip').querySelectorAll('button').forEach(b =>
     b.classList.toggle('sel', b.dataset.v === (r?.tip || 'DC')));
 
-  // WT-86: ev/iş kutucukları. YENİ kayıt "Ev" işaretli açılır — kullanıcının
-  // şikayeti buydu: liste en çok kullanılan firmayla (TR'de Trugo) açılıyor,
-  // ev/iş seçimi listenin içinde farkedilmiyordu. Kutucuğu boşaltmak tek
-  // dokunuş, liste olduğu gibi geri geliyor.
+  // WT-86: ev/iş kutucukları drop-down'ın DIŞINDA, iki ayrı kutucukta.
+  // WT-89: YENİ kayıt artık HİÇBİR kutucuk işaretli DEĞİL açılıyor — şarjların
+  // çoğu firmada yapılıyor, "Ev" varsayılanı her seferinde bir dokunuşla
+  // boşaltılmak zorundaydı. Kutucuklar boşken firma listesi etkin ve
+  // listenin İLK sırası (en çok kullanılan firma) seçili geliyor
+  // (bkz. fillFirmSelect: `used[0] || list[0]`).
   // Düzenlemede eski 'evis' kayıtları "Ev"e düşüyor: o etiket ev mi iş mi
   // olduğunu HİÇ söylemiyordu, kullanıcı kaydı zaten açmışken düzeltebilir.
   // TİP ayrı bir boyut (WT-16): burada tipe DOKUNULMUYOR, WT-47'nin önerisi
-  // geçerli kalıyor. Tip yalnız kullanıcı kutucuğa BASINCA AC'ye çekiliyor.
+  // geçerli kalıyor. Tip yalnız kullanıcı kutucuğa BASINCA AC'ye çekiliyor —
+  // ve AC'ye basmak hâlâ ev kutucuğunu işaretliyor (WT-16/B).
   setHomeMode(r
     ? (r.mekan === 'is' ? 'is'
       : (r.mekan === 'ev' || r.mekan === 'evis' || (!r.mekan && isHomeFirm(r.firma)))
         ? 'ev' : '')
-    : 'ev');
+    : '');
 
   // kWh: tek alan (WT-03)
   parcaliYaz('in-kwh', r?.kwh ?? null);

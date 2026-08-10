@@ -133,18 +133,29 @@ A.S.country = 'TR';
 
 await A.openAdd();
 await sleep(250);
-// WT-86: seçim artık drop-down'ın DIŞINDA iki ayrı kutucukta ve yeni kayıt
-// "Ev" işaretli açılıyor (eskiden liste en çok kullanılan firmayla geliyor,
-// ev/iş seçimi listenin içinde farkedilmiyordu).
-check('WT-86 KABUL: yeni kayıt "Ev" kutucuğu işaretli açılıyor',
-  $('in-home').checked && !$('in-work').checked,
+// WT-86: seçim artık drop-down'ın DIŞINDA iki ayrı kutucukta.
+// WT-89: yeni kayıt HİÇBİR kutucuk işaretli DEĞİL açılıyor; firma listesi
+// etkin ve listenin İLK sırası seçili geliyor.
+check('WT-89 KABUL: yeni kayıt ev/iş kutucukları BOŞ açılıyor',
+  !$('in-home').checked && !$('in-work').checked,
   `ev=${$('in-home').checked} iş=${$('in-work').checked}`);
-check('WT-86 KABUL: kutucuk işaretliyken firma listesi kapalı',
-  $('in-firm').disabled === true);
+check('WT-89 KABUL: kutucuk boşken firma listesi etkin ve İLK sıra seçili',
+  $('in-firm').disabled === false && $('in-firm').options.length > 0
+    && $('in-firm').value === $('in-firm').options[0].value,
+  `kapalı=${$('in-firm').disabled} seçili=${$('in-firm').value}` +
+  ` ilk=${$('in-firm').options[0]?.value}`);
+check('WT-89: kutucuk boşken kWh fiyatı alanı kapalı',
+  $('wrap-unitprice').style.display === 'none');
 check('WT-86: firma listesinde ev/iş satırı YOK (seçim kutucuklarda)',
   [...$('in-firm').options].filter(o => A.isHomeFirm(o.value)).length === 0,
   'ev satırları: ' + [...$('in-firm').options].filter(o => A.isHomeFirm(o.value)).map(o => o.value).join(', '));
-// Kutucuğu boşalt: liste geri gelmeli
+// Kutucuğu işaretle: liste kapanmalı
+$('in-home').checked = true;
+$('in-home').dispatchEvent(new w.Event('change', { bubbles: true }));
+await sleep(150);
+check('WT-86 KABUL: kutucuk işaretlenince firma listesi kapanıyor',
+  $('in-firm').disabled === true);
+// ve boşaltınca geri gelmeli
 $('in-home').checked = false;
 $('in-home').dispatchEvent(new w.Event('change', { bubbles: true }));
 await sleep(150);
@@ -186,9 +197,13 @@ $('in-work').dispatchEvent(new w.Event('change', { bubbles: true }));
 await sleep(200);
 check('WT-87 KABUL: elle yazılan birim fiyat kutucuk değişince EZİLMİYOR',
   $('in-unitprice').value === '9,99', 'değer=' + $('in-unitprice').value);
-// Bloğun geri kalanı ev + varsayılan fiyat bekliyor — durumu geri ver
+// Bloğun geri kalanı ev + varsayılan fiyat bekliyor — durumu geri ver.
+// WT-89: openAdd artık kutucukları BOŞ açıyor, ev'i elle işaretlemek gerek.
 await A.openAdd();
 await sleep(250);
+$('in-home').checked = true;
+$('in-home').dispatchEvent(new w.Event('change', { bubbles: true }));
+await sleep(150);
 
 // 40 kWh + 2,80 -> 112,00
 $('in-kwh').value = '40';
