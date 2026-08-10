@@ -273,6 +273,41 @@ check('WT-83 KABUL: tablosu olmayan ülkede fiyatı NULL yapmıyor, temiz çık�
   cikis === false && A.S.homeKwhPrice === TR,
   `ülke=${tablosuz} dönüş=${cikis} fiyat=${A.S.homeKwhPrice}`);
 
+// ============================================================
+// WT-87 — Ayarlar'daki fiyat alanları GERÇEKTEN kaydediyor mu
+// ============================================================
+// SESSİZ KUSUR (WT-87'de bulundu): `set-homekwh` alanının HİÇBİR dinleyicisi
+// yoktu. Kullanıcı Ayarlar'da fiyatı yazıyor, alan bir sonraki
+// renderSettings()'te S.homeKwhPrice'tan yeniden çiziliyor ve yazdığı değer
+// sessizce kayboluyordu — WT-78'in "kullanıcının girdiği değer asla ezilmez"
+// sözü pratikte hiç sınanamıyordu, çünkü değer zaten hiç GİRİLEMİYORDU.
+{
+  A.S.country = 'TR'; A.S.currency = 'TRY'; A.S.kwhRegion = '';
+  await A.saveSetting('country', 'TR');
+  await A.saveSetting('currency', 'TRY');
+  await A.renderSettings();
+  for (const [id, pKey, aKey, yazi, beklenen] of [
+    ['set-homekwh', 'homeKwhPrice', 'homeKwhAuto', '3,5', 3.5],
+    ['set-workkwh', 'workKwhPrice', 'workKwhAuto', '7,25', 7.25]]) {
+    const el = $(w, id);
+    el.value = yazi;
+    el.dispatchEvent(new w.Event('change', { bubbles: true }));
+    await sleep(200);
+    const satir = await A.db.settings.get(pKey);
+    check(`WT-87 KABUL: ${id} elle yazılan değeri veritabanına YAZIYOR`,
+      A.S[pKey] === beklenen && satir && satir.value === beklenen,
+      `S=${A.S[pKey]} db=${satir && satir.value}`);
+    check(`WT-87: ${id} elle yazılan değer "elle" işaretleniyor (ülke değişince ezilmez)`,
+      A.S[aKey] === false, `${aKey}=${A.S[aKey]}`);
+  }
+  // Köken işareti gerçekten koruyor mu — ülkeyi değiştir, iki değer de dursun
+  A.S.country = 'DE';
+  await A.kwhPriceAutofill();
+  check('WT-87 KABUL: elle girilen iki fiyat da ülke değişince KORUNUYOR',
+    A.S.homeKwhPrice === 3.5 && A.S.workKwhPrice === 7.25,
+    `ev=${A.S.homeKwhPrice} iş=${A.S.workKwhPrice}`);
+}
+
 console.log('');
 if (errors.length) {
   console.log('KONSOL HATALARI:');
