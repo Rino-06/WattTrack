@@ -322,3 +322,69 @@ tuttu mu), İstatistik ve Aracım sayfalarının kaç sütuna açıldığı, yat
 modda alt menünün içeriği kesmediği, formların panel içinde ortalanmış
 durduğu. Bir ekran görüntüsü yeterli — sütun sayısı yanlışsa `minmax()`
 eşikleri (300px / 380px) tek satırda ayarlanır.
+
+---
+
+# ÜÇÜNCÜ TUR — Faz 11 (10.08.2026, v38)
+
+Kullanıcı beş maddelik yeni bir liste verdi. Dördü iş kalemi oldu, biri
+soruydu (cevaplandı, iş kalemi açılmadı).
+
+| # | Madde | Durum |
+|---|---|---|
+| WT-84 | Açılış animasyonundan ÖNCE logo görünüyor | ✅ |
+| WT-85 | Animasyon masaüstünde bulanık | ✅ (hafifletme — kaynak sınırı) |
+| WT-86 | Ev/İş seçimi drop-down'ın içinde kayboluyor, ayrılmalı | ✅ |
+| WT-87 | Ev/iş kWh fiyatı TR için yanlış (2,84); iş fiyatı ayrı olmalı | ✅ |
+| WT-88 | "Ücretsiz şarj" açıklaması dar | ✅ |
+| soru | "Bu şarjdan öncekini girmeyi unuttum" nedir, gerekli mi? | cevaplandı |
+
+**WT-84 —** `.splash-static` varsayılan olarak GÖRÜNÜRDÜ; `video-on` sınıfını
+ancak `initSplash()` ekliyordu, aradaki ilk boyamada logo çiziliyordu. Splash
+artık HTML'de `video-on` ile açılıyor, statik blok `display:none` ve yalnız
+yedek yol (`static-on`) devreye girince gösteriliyor.
+
+**WT-85 — HAFİFLETME, tam çözüm DEĞİL.** `splash.mp4` 640x360 (asıl kaynak
+`animasyon.gif` 426x240). Video görüntü alanına yayılıyordu: telefonda
+küçülme olduğu için keskin, 1920 px'lik masaüstünde 3 kat büyütme.
+Artık doğal boyutunu aşmıyor, `margin:auto` ile ortalanıyor.
+**KULLANICIDAN GEREKEN:** gerçek keskinlik için 1920x1080 yeni bir render.
+
+**WT-86 —** ev/iş seçimi firma listesinin YANINDA iki ayrı kutucuk.
+`mekan` boyutunun değer kümesi genişledi: `'ev' | 'is' | 'firma'` (+ eski
+`'evis'`). **Migration YAZILMADI** — eski `evis` kayıtları ev mi iş mi
+olduğunu söylemiyor, geriye dönük tahmin veri uydurmak olurdu. Yeni ALAN
+eklenmediği ve `mekan` zaten indeksli olduğu için Dexie sürümü artmadı.
+Kayda yazılan firma dizgisi i18n'den değil `db.js`'teki `EV_LABEL`/
+`IS_LABEL` tablosundan geliyor; ikisinin ayrışmaması `boot.mjs`'te altı
+dilde kilitli. Yeni kayıt **"Ev" işaretli** açılıyor (kullanıcının asıl
+şikayeti listenin Trugo ile açılmasıydı).
+
+**WT-87 —** EPDK 2026, vergiler dahil: mesken (tek terimli/tek zamanlı AG,
+≤240 kWh/ay dilimi) **3,24 TL**, ticarethane (≤900 kWh dilimi) **5,46 TL**.
+Eski değer Eurostat'ın ORTALAMA birim fiyatıydı (2,8076) — EPDK dilimli
+tarife yayımlıyor ve ticarethane meskenden ayrı. Ayarlar'a ikinci alan
+(`workKwhPrice` + `workKwhAuto`) eklendi; hangisinin geleceğini WT-86'nın
+kutucuğu belirliyor. **WT-83'ün "kabul edilen sınır"ı kapandı:** onarım
+imzası artık tabloya değil `TR_KWH_2025 = 2.8076` sabitine bakıyor.
+
+**Yan bulgu (WT-86 içinde düzeltildi):** `formSnapshot()` onay kutusunu
+`.value` ile okuyordu — checkbox'ın değeri işaretli olsun olmasın HER ZAMAN
+`'on'`. WT-81/9'daki tuzağın aynısı: `in-missed`/`in-free` "kaydetmeden
+çıkıyorsun" korumasının dışında kalıyordu. Artık `checked` okunuyor.
+
+**Soru — "Bu şarjdan öncekini girmeyi unuttum" (WT-20):** GEREKLİ, kalıyor.
+Sayaç farkı İKİ şarjın mesafesini içerirken kWh tek şarjınki olduğunda
+tüketim ve km maliyeti şişer. İşaretli kayıt `calc.js:188` ve `calc.js:329`
+ile ORTALAMALARDAN çıkarılır, harcama/enerji TOPLAMLARINA girmeye devam
+eder (`ui/dashboard.js:118`). `looksLikeMissedCharge()` tüketim geçmiş
+ortalamanın yarısından düşükse zaten kendisi soruyor.
+
+## Elle test borcu (bu tura eklenenler)
+
+- **WT-84/85:** gerçek cihazda açılış — animasyondan önce logo çakması
+  kalmadı mı, masaüstünde video ortalanmış ve zemin beyaz mı.
+- **WT-86:** dar telefon ekranında kutucukların firma listesinin altına
+  sarması, `.cbx` dokunma hedefi, altı dilde etiket taşması.
+- **WT-87:** Ayarlar'da iki fiyat alanı, TR'de 3,24 / 5,46 varsayılanları
+  ve kendi faturanla karşılaştırma.
