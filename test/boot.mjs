@@ -963,14 +963,26 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const pk = doc.getElementById('d-perkm-wrap'), ds = doc.getElementById('d-dstat-wrap');
   check('WT-33: 1 km kutuları ve kaynak notu aynı hücrede',
     !!pk && !!pk.querySelector('#d-1km') && !!pk.querySelector('#d-dist-scope'));
-  check('WT-33: detay başlığı, filtresi ve değerleri aynı hücrede',
-    !!ds && !!ds.querySelector('#d-dstat-type') && !!ds.querySelector('#d-dur')
+  check('WT-33: detay başlığı ve değerleri aynı hücrede',
+    !!ds && !!ds.querySelector('#d-dstat-scope') && !!ds.querySelector('#d-dur')
       && !!ds.querySelector('#d-power'));
+  // WT-90: AC/DC filtresi artık sayfanın TAMAMINI süzüyor — dönem
+  // seçicisinin hemen altında, tam genişlikte ve boş durumda gizlenen
+  // .d-data ailesinde olmalı (yoksa "henüz kayıt yok" ekranında öksüz kalır).
+  const tf = doc.getElementById('d-dstat-type');
+  check('WT-90: tip filtresi ana sayfanın doğrudan çocuğu ve .d-data',
+    !!tf && tf.parentElement.id === 'page-dashboard'
+      && tf.classList.contains('d-data') && tf.classList.contains('seg'),
+    'ebeveyn=' + tf?.parentElement?.id + ' sınıf=' + tf?.className);
   // Tab sırası DOM sırasıyla aynı kalmalı (grid satır satır dolduruyor)
   const cocuk = [...doc.getElementById('page-dashboard').children].map(e => e.id || e.className);
   check('WT-33: ana sayfa doğrudan çocuk sırası bozulmadı',
     cocuk.indexOf('d-perkm-wrap') < cocuk.indexOf('d-dstat-wrap')
       && cocuk.indexOf('d-warnings') < cocuk.indexOf('d-perkm-wrap'),
+    cocuk.join(' > '));
+  check('WT-90: tip filtresi dönem seçicisinin hemen altında',
+    cocuk.indexOf('d-dstat-type') === cocuk.indexOf('d-period') + 1
+      && cocuk.indexOf('d-dstat-type') < cocuk.indexOf('hero d-data'),
     cocuk.join(' > '));
 }
 
@@ -1593,6 +1605,76 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     satirlar.some(x => /20,0 kWh\/100/.test(x)), satirlar.join(' || ').slice(0, 140));
   check('WT-41/4: atlanan kayıtta tüketim GÖSTERİLMİYOR',
     !satirlar.some(x => /90,0 kWh\/100/.test(x)));
+}
+
+// --- WT-90: AC/DC filtresi ana sayfanın TAMAMINI süzüyor ---
+{
+  const A = app();
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  A.S.period = 'year'; A.S.dashVeh = ''; A.S.dstatType = '';
+  A.S.budgetM = null; A.S.budgetY = null;
+  const y = new Date().getFullYear();
+  // Sayacı olan araç: km kutuları filtreden ETKİLENMEMELİ
+  const vid = await A.db.vehicles.add({ad: 'Test', kmStart: 1000, kmNow: 3000});
+  await A.db.sessions.bulkAdd([
+    {tarih: `${y}-03-10T10:00`, firma: 'ZES', tip: 'DC', kwh: 60, tutar: 600,
+      odenen: 600, cur: 'TRY', mesafeKm: 300, aracId: vid},
+    {tarih: `${y}-03-12T10:00`, firma: 'Trugo', tip: 'AC', kwh: 40, tutar: 200,
+      odenen: 200, cur: 'TRY', mesafeKm: 200, aracId: vid}
+  ]);
+
+  await A.renderDashboard();
+  await sleep(300);
+  const hepsi = {
+    total: $('d-total').textContent, kwh: $('d-kwh').textContent,
+    sess: $('d-sess').textContent, odo: $('d-odo-total').textContent,
+    km1: $('d-1km').textContent
+  };
+  check('WT-90 hazırlık: filtresiz toplamlar iki kaydı da sayıyor',
+    /800/.test(hepsi.total) && hepsi.kwh === '100' && /^2 \/ 2/.test(hepsi.sess),
+    JSON.stringify(hepsi));
+
+  A.S.dstatType = 'DC';
+  await A.renderDashboard();
+  await sleep(300);
+  check('WT-90 KABUL: harcama toplamı AC/DC filtresine uyuyor',
+    /600/.test($('d-total').textContent), 'd-total=' + $('d-total').textContent);
+  check('WT-90 KABUL: enerji toplamı AC/DC filtresine uyuyor',
+    $('d-kwh').textContent === '60', 'd-kwh=' + $('d-kwh').textContent);
+  check('WT-90 KABUL: şarj/firma sayısı AC/DC filtresine uyuyor',
+    /^1 \/ 1/.test($('d-sess').textContent), 'd-sess=' + $('d-sess').textContent);
+  check('WT-90 KABUL: kWh başı birim fiyat filtreye uyuyor (600/60=10)',
+    /10,00/.test($('d-avg').textContent), 'd-avg=' + $('d-avg').textContent);
+  check('WT-90 KABUL: 1 km maliyeti filtreye uyuyor (600/300=2,00)',
+    /2,00/.test($('d-1km').textContent), 'd-1km=' + $('d-1km').textContent);
+  check('WT-90 KABUL: araç km sayacı kutuları filtreden ETKİLENMİYOR',
+    $('d-odo-total').textContent === hepsi.odo && /2\.000/.test($('d-odo-total').textContent),
+    'önce=' + hepsi.odo + ' sonra=' + $('d-odo-total').textContent);
+  check('WT-90: rozet seçili tipi de yazıyor',
+    /DC/.test($('d-dstat-scope').textContent), 'rozet=' + $('d-dstat-scope').textContent);
+
+  // Filtre açıkken sayaç yedeği KULLANILMAZ: pay süzülü, payda değil olurdu.
+  await A.db.sessions.clear();
+  await A.db.sessions.bulkAdd([
+    {tarih: `${y}-03-10T10:00`, firma: 'ZES', tip: 'DC', kwh: 60, tutar: 600,
+      odenen: 600, cur: 'TRY', mesafeKm: 0, aracId: vid},
+    {tarih: `${y}-03-12T10:00`, firma: 'Trugo', tip: 'AC', kwh: 40, tutar: 200,
+      odenen: 200, cur: 'TRY', mesafeKm: 0, aracId: vid}
+  ]);
+  await A.renderDashboard();
+  await sleep(300);
+  check('WT-90 KABUL: filtre açıkken sayaç yedeği kullanılmıyor (pay/payda aynı küme)',
+    $('d-1km').textContent === '—' && $('d-dist-scope').textContent.trim() !== '',
+    'd-1km=' + $('d-1km').textContent + ' not=' + $('d-dist-scope').textContent);
+  A.S.dstatType = '';
+  await A.renderDashboard();
+  await sleep(300);
+  check('WT-90: filtre kalkınca sayaç yedeği geri geliyor',
+    $('d-1km').textContent !== '—', 'd-1km=' + $('d-1km').textContent);
+
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
 }
 
 // --- WT-40: menzil gösterimi, veri tarihi ve elle düzeltme ---

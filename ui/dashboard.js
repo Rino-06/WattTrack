@@ -34,12 +34,9 @@ $('s-vehsel').addEventListener('change', () => { S.dashVeh = $('s-vehsel').value
 function periodFilter(all) { return inPeriod(all, S.period); }
 function prevPeriodFilter(all) {
   const now = new Date();
-  if (S.period === 'week') {
-    const to = new Date(now); to.setDate(now.getDate() - 7);
-    const from = new Date(now); from.setDate(now.getDate() - 13);
-    const a = localISO(from), b = localISO(to);
-    return all.filter(r => { const d = r.tarih.slice(0, 10); return d >= a && d <= b; });
-  }
+  // WT-90: 'week' kolu SİLİNDİ — ana sayfada hafta seçeneği yok, S.period
+  // yalnız 'month' ya da 'year' olabiliyor (ve kaydedilmiyor, bkz.
+  // SETTING_KEYS). İstatistik sayfası bu fonksiyonu kullanmıyor.
   if (S.period === 'year')
     return all.filter(r => r.tarih.slice(0, 4) === String(now.getFullYear() - 1));
   const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -70,6 +67,10 @@ const granFilter = all => inPeriod(all, S.gran);
 const periodShort = p => t(p === 'week' ? 'week' : p === 'year' ? 'year'
   : p === 'all' ? 'periodAll' : 'month');
 const vehFilter = (list, vid) => vid ? list.filter(r => String(r.aracId) === vid) : list;
+// WT-90: AC/DC filtresi artık ana sayfanın TAMAMINI süzüyor (eskiden yalnız
+// detay kutularını). Araç km sayacı kutuları bunun dışında: onların kaynağı
+// şarj kaydı değil, aracın sayacı.
+const typeFilter = list => S.dstatType ? list.filter(r => r.tip === S.dstatType) : list;
 // odometre için araç: seçili > tek araç > varsayılan araç
 function pickOdoVeh(vehicles, sel) {
   if (sel) return vehicles.find(v => String(v.id) === sel) || null;
@@ -96,12 +97,15 @@ async function renderDashboard() {
   }
 
   const allRaw = await allSessions();
-  const all = vehFilter(allRaw, S.dashVeh);
+  const allVeh = vehFilter(allRaw, S.dashVeh);
+  const all = typeFilter(allVeh);   // WT-90
   const cur = periodFilter(all);
-  reportFxGaps(cur);   // WT-10
+  // WT-90: uyarı şeritleri VERİ BÜTÜNLÜĞÜ uyarısı — görünüm filtresine
+  // bağlanmamalı. AC seçiliyken kuru eksik bir DC kaydı susturulursa
+  // kullanıcı eksiği hiç öğrenemez.
+  reportFxGaps(periodFilter(allVeh));   // WT-10
 
-  $('d-period-lbl').textContent =
-    t(S.period === 'week' ? 'periodWeek' : S.period === 'year' ? 'periodYear' : 'periodMonth');
+  $('d-period-lbl').textContent = t(S.period === 'year' ? 'periodYear' : 'periodMonth');
 
   // WT-13: `net` kur çevrilemeyen kayıtları dışlıyordu (amtB → 0) ama `kwh`
   // BÜTÜN kayıtları topluyordu; yurt dışı kaydı olan kullanıcıda birim fiyat
@@ -148,7 +152,13 @@ async function renderDashboard() {
   } else {
     const oV = pickOdoVeh(vehicles, S.dashVeh);
     const oDist = odoDistOf(oV);
-    if (oDist >= 20) {
+    // WT-90: AC/DC seçiliyken sayaç yedeği KULLANILMAZ. Sayaç bütün sürüşü
+    // sayıyor; payı süzüp paydayı süzmemek WT-13'ün kuralını çiğner
+    // (pay ve payda aynı kümeden gelir) ve maliyeti olduğundan düşük gösterir.
+    if (S.dstatType) {
+      ['d-1km','d-1km-g'].forEach(id => $(id).textContent = '—');
+      scopeEl.textContent = t('distTypeFilter');
+    } else if (oDist >= 20) {
       const allConv = all.filter(isConv);
       const aNet = allConv.reduce((s, r) => s + amtB(r), 0);
       const aGross = aNet + allConv.reduce((s, r) => s + savB(r), 0);
@@ -180,7 +190,10 @@ async function renderDashboard() {
 
   // WT-14/A: detay istatistikler `all` (tüm zamanlar) üzerinden hesaplanıyordu
   // ama dönem seçicisinin ALTINDA duruyordu — kullanıcı bunu anlayamıyordu.
-  const dsAll = S.dstatType ? cur.filter(r => r.tip === S.dstatType) : cur;
+  // WT-90: tip süzmesi artık `all` kurulurken bir kez yapılıyor; buradaki
+  // ikinci kopya kaldırıldı (aynı işi iki yerde yapmak WT-81'in kusur
+  // kaynağıydı: kopyalardan biri er geç geride kalıyor).
+  const dsAll = cur;
   const durs = dsAll.filter(r => r.dur > 0);
   $('d-dur').textContent = durs.length
     ? (() => { const m = Math.round(durs.reduce((s, r) => s + r.dur, 0) / durs.length);
@@ -205,21 +218,23 @@ async function renderDashboard() {
   const powMin = durs.reduce((s, r) => s + r.dur, 0);
   $('d-power').textContent = powMin > 0 ? fmtNum(powKwh / (powMin / 60), 1) + ' kWh/h' : '—';
 
-  // WT-41: ortalama tüketim. Ev-İş şarjları DAHİL; DC/AC ayrımı dsAll
-  // üzerinden korunuyor. WT-81/6: hesap ve birim çevirisi calc.js'te
+  // WT-41: ortalama tüketim. Ev-İş şarjları DAHİL; DC/AC ayrımı `all`
+  // üzerinden korunuyor (WT-90). WT-81/6: hesap ve birim çevirisi calc.js'te
   // (tuketimOrt) — buradaki kopya km tabanlı sayıya 'mi' etiketi basıyordu.
   const cons = tuketimOrt(dsAll);
   $('d-cons').textContent = cons != null ? fmtNum(cons, 1) + ' ' + consUnit() : '—';
   // WLTP ile DEĞİL, kullanıcının KENDİ önceki dönemiyle karşılaştırılıyor
-  const oncekiCons = tuketimOrt(S.dstatType
-    ? prevPeriodFilter(all).filter(r => r.tip === S.dstatType) : prevPeriodFilter(all));
+  const oncekiCons = tuketimOrt(prevPeriodFilter(all));
   const cd = $('d-cons-d');
   if (cons != null && oncekiCons) {
     const pct = Math.round((cons - oncekiCons) / oncekiCons * 100);
     cd.textContent = (pct >= 0 ? '▲ +' : '▼ ') + pct + '% ' + t('prevPeriod');
     cd.style.color = pct >= 0 ? 'var(--red)' : 'var(--accent-dark)';   // WT-34
   } else cd.textContent = '';
-  $('d-dstat-scope').textContent = periodShort(S.period);
+  // WT-90: filtre yukarı taşınınca rozet tek başına kaldı; seçili tip de
+  // rozete giriyor ki kutuların kapsamı yine tek yerde yazılı olsun.
+  $('d-dstat-scope').textContent =
+    periodShort(S.period) + (S.dstatType ? ' · ' + S.dstatType : '');
 
   // WT-32/2: "Yıllık karşılaştırma" bloğu kaldırıldı — üstteki kutularla
   // mükerrerdi ve dönem seçicisinden bağımsız olması kafa karıştırıyordu.
