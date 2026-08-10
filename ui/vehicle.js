@@ -127,6 +127,39 @@ async function moveRecordsFlow(fromId = null) {
   return true;
 }
 
+// WT-98. ARAÇSIZ şarj kaydı tespiti — `aracId == null` ama cihazda araç VAR.
+// Öksüzden (scanOrphans) farkı: bağ kırık değil, hiç kurulmamış. Aracını
+// sonradan ekleyen ya da yedeğini araçsız kayıtlarla geri yükleyen herkeste
+// oluşuyor ve TEK araç varken görünmüyor: araç filtresi devre dışı olduğu
+// için toplamlar doğru çıkıyor. İkinci araç eklendiği gün o kayıtlar araç
+// seçilince kayboluyor — kullanıcının "verim gözükmüyor" korkusu tam bu.
+// Giderlerde bu iş otomatik yapılıyor (migrateExpenseVehicles); şarjda
+// YAPILMIYOR çünkü iki araçlı kullanıcıda hangi araca gideceği bilinemez.
+async function scanUnassigned() {
+  const vs = (await allVehicles()).filter(v => !v.archived);
+  const bos = (await allSessions()).filter(r => r.aracId == null);
+  if (!vs.length || !bos.length) { setWarning('novehicle', null); return; }
+  setWarning('novehicle', {
+    msg: t('unassignedWarn', {n: bos.length}),
+    actionLbl: t('orphanAssign'),
+    action: async () => {
+      const pick = await choiceDialog({
+        title: t('orphanAssign'),
+        msg: t('unassignedWarn', {n: bos.length}),
+        options: vs.map(v => ({label: vehName(v), value: v.id}))
+      });
+      if (pick == null) return;
+      await db.transaction('rw', db.sessions, async () => {
+        for (const r of bos) await db.sessions.update(r.id, {aracId: pick});
+      });
+      await tureMesafe(pick);   // WT-19: odo zinciri yeniden kurulmalı
+      setWarning('novehicle', null);
+      invalidateCache();
+      renderVehiclePage(); renderDashboard();
+    }
+  });
+}
+
 // WT-09/C. Öksüz kayıt tespiti — aracId'si var olmayan bir araca işaret ediyor.
 async function scanOrphans() {
   const ids = new Set((await allVehicles()).map(v => v.id));
