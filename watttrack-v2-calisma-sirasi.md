@@ -468,3 +468,56 @@ belirsizlikte.
   açılıyor, AC'ye basınca ev kutucuğu hâlâ işaretleniyor mu.
 - **WT-90:** ≥760px masaüstü ızgarasında iki seg üst üste düzgün duruyor mu;
   boş durumda (hiç kayıt yokken) tip filtresi gizleniyor mu.
+
+---
+
+# Faz 13 (10.08.2026, v40) — ana sayfa ikinci tur
+
+Faz 12'nin ardından kullanıcının altı maddelik ana sayfa geri bildirimi.
+Üçü iş kalemi, biri soru, biri onay.
+
+| No | Başlık | Durum |
+|---|---|---|
+| WT-91 | "Ort. eklenen +%N" satırı kaldırılsın | ✅ |
+| WT-92 | Ay/Yıl'ın yanına "Tümü", varsayılan olsun | ✅ |
+| WT-93 | Filtre şeritleri eşit yükseklikte + sayfa kompaktlaşsın | ✅ |
+
+**WT-91 —** WT-32/4c'nin eklediği satır. Gerekçesi ("kullanıcının asıl merak
+ettiği şarj başına eklenen yüzde") kullanıcı tarafından ÇÜRÜTÜLDÜ: aralığın
+iki ucu zaten okunuyor. `avgSocAdded` altı sözlükten silindi. Yan kazanç:
+`.dstat` ızgarasında komşu kutu (Ort. şarj süresi) artık bu satır kadar
+uzamıyor — kullanıcının şikayet ettiği boşluğun asıl kaynağı buydu.
+
+**WT-92 —** WT-56 "Tümü"yü ana sayfadan bilerek çıkarmıştı: dönem kutuları
+anlamsızlaşır diye. Asıl risk kutuların anlamsızlaşması değil, **sessizce
+yanlış kıyas yapılması**ydı — `prevPeriodFilter` 'all' bilmeseydi ay koluna
+düşüp tüm zamanları geçen ayla kıyaslardı. Çözüm: `if (S.period === 'all')
+return []`. Kıyas satırı ve tüketim kıyası kendiliğinden boş, bütçe çubuğu
+zaten `hedef == null` ile gizli. `S.period` varsayılanı `calc.js`'te
+`'all'`. Yeni anahtar `periodAllTotal` ("Tüm zamanlar toplam"), altı dil.
+
+**WT-93 — SINIR: 44px dokunma tabanı.** Kullanıcı filtre kutucuklarının
+yüksekliğini küçültmek istedi. İkisi de `.seg.mini` olduğu için yükseklikleri
+ZATEN eşitti ve `min-height:44px` WT-25'in (WCAG 2.5.5) tabanı —
+`test/boot.mjs`'teki statik denetim altına inilmesini engelliyor. Yapılan:
+yazı 12→13,5px büyütüldü (kutu dolu görünsün), dolgu 7→6px, aralar kısıldı.
+**Bu tabanı düşürmek bir erişilebilirlik kararıdır, kullanıcıya sorulmadan
+yapılmaz.**
+
+Kompaktlaştırma kalemleri (`.tile` dolgusu 13→9px, `.tiles`/`.dstat` aralığı
+10→8px, `.hero` dolgusu 20→15px, `.mb-lg` 20→14px, rozet satırı 12→6px) ana
+sayfaya özel DEĞİL, aynı sınıflar Kıyasla ve Aracım sayfalarında da
+kullanılıyor — oralarda da kompaktlaştı, bilinçli.
+**Boşken yer kaplayan iki `min-height` sıfırlandı** (`.hero .delta` 16px,
+`.tile .yd` 15px): "Tümü" seçiliyken kıyas satırı zaten hep boş.
+Karşılığı küçük bir yerleşim kayması — kıyas belirdiğinde satır uzuyor.
+
+**Soru — bütçe çubuğu neydi:** Ayarlar'da aylık/yıllık bütçe girilirse ana
+sayfada beliren ilerleme çubuğu (WT-45). Bütçe girilmemişse zaten görünmüyor;
+"Tümü" seçiliyken de görünmüyor.
+
+## Elle test borcu (bu faza eklenenler)
+
+- **WT-93:** gerçek telefonda filtre şeritlerinin yazısı taşıyor mu (altı
+  dilde "Tümü/Alle/Tout" + "DC/AC"), kutular hâlâ rahat basılabiliyor mu.
+- **WT-92:** çok kayıtlı cihazda "Tümü" ile ana sayfanın açılış hızı.
