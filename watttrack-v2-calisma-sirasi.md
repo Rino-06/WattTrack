@@ -396,3 +396,75 @@ ortalamanın yarısından düşükse zaten kendisi soruyor.
   sarması, `.cbx` dokunma hedefi, altı dilde etiket taşması.
 - **WT-87:** Ayarlar'da iki fiyat alanı, TR'de 3,24 / 5,46 varsayılanları
   ve kendi faturanla karşılaştırma.
+
+---
+
+# DÖRDÜNCÜ TUR — Faz 12 (10.08.2026, v39)
+
+Kullanıcının yedi maddelik geri bildirimi. İkisi soru, biri çalışma kuralı,
+biri depo temizliği; iş kalemi olarak **WT-89** ve **WT-90** açıldı.
+
+| No | Başlık | Durum |
+|---|---|---|
+| WT-89 | Veri girişinde "Ev" varsayılan işaretli gelmesin | ✅ |
+| WT-90 | Ana sayfa: AC/DC filtresi her alanı süzsün, filtre üste, hafta kalksın | ✅ |
+
+**WT-89 —** `openAdd()` yeni kayıtta `setHomeMode('ev')` çağırıyordu (WT-86'nın
+kararı). Şarjların çoğu firmada yapıldığı için bu her kayıtta fazladan bir
+dokunuş demekti. Artık `setHomeMode('')`: kutucuklar boş, firma listesi etkin
+ve `fillFirmSelect`'in kuralı gereği **listenin ilk sırası** (en çok kullanılan
+firma) seçili geliyor. **WT-16/B DEĞİŞMEDİ** — AC'ye basmak hâlâ ev kutucuğunu
+işaretliyor; o kullanıcının kendi hareketi, açılış varsayılanı değil.
+
+**WT-90 —** üç iş bir arada:
+1. Tip filtresi `renderDashboard()` içinde `all` kurulurken uygulanıyor
+   (`typeFilter`), dolayısıyla hero, kWh başı, 1 km, enerji, şarj/firma,
+   indirim, ücretsiz, bütçe ve detay kutularının hepsi süzülüyor. **Araç km
+   sayacı kutuları dışarıda** — kaynakları şarj kaydı değil aracın sayacı
+   (`odoNowOf` kendi okumasını yapıyor, filtreden etkilenmiyor).
+2. Filtre `d-dstat-wrap`'ın içinden çıkıp dönem seçicisinin hemen altına,
+   `#page-dashboard`'ın doğrudan çocuğu olarak taşındı. `d-data` sınıfı
+   ŞART: yoksa WT-36/1'in boş durumunda öksüz kalıp görünürdü.
+3. Ana sayfadan "Hafta" kaldırıldı (İstatistik'in `d-gran` seçicisinde
+   duruyor). `S.period` kaydedilmiyor (SETTING_KEYS'te yok), varsayılanı
+   `'year'` — migration gerekmedi.
+
+**WT-90'ın kasten kapattığı tuzak:** filtre açıkken 1 km maliyetinin kilometre
+sayacı yedeği (WT-14/B) KULLANILMIYOR. Sayaç bütün sürüşü sayıyor; payı süzüp
+paydayı süzmemek WT-13'ün "pay ve payda AYNI kümeden gelir" kuralını çiğner ve
+maliyeti sessizce düşük gösterirdi. O durumda kutular `—`, altında yeni
+`distTypeFilter` notu (altı dilde) gerekçeyi yazıyor.
+
+**Ölen kod:** `periodWeek` anahtarı altı sözlükten, `prevPeriodFilter`'ın week
+kolu, detay bloğundaki ikinci tip süzmesi (`dsAll = cur`).
+
+**Soru — "Ort. eklenen +%N" (WT-32/4c):** "Ort. şarj aralığı" iki UCUN ayrı
+ortalaması (%30 → %80), altındaki satır ise **şarj başına eklenen yüzdenin
+ortalaması** (`socA − socB`). İkisi aynı sayıyı vermez: farklı aralıklarda
+şarj eden kullanıcıda uçların ortalaması yanıltıcı olur. Sayıya yalnız
+`socA > socB` olan kayıtlar giriyor.
+
+**Soru — "Bu şarjdan öncekini girmeyi unuttum" (WT-20):** üçüncü turda
+cevaplandı, yukarıdaki bölümde duruyor. Özet: gerekli, kalıyor.
+
+## Depo temizliği (kullanıcının 7. maddesi)
+
+Silindi: `animasyon.mp4` (`splash.mp4` ile md5 olarak AYNI dosya),
+`animasyon.gif` (426×240, hiç kullanılmadı — WT-85'in istediği 1080p'yi zaten
+veremez), `watttrack-promptlar.md` ve `watttrack-calisma-sirasi.md` (birinci
+turun 54 maddesi 54/54 kapandı). Hepsi git geçmişinde duruyor.
+
+**BU DOSYA SİLİNMEDİ:** her turun kararları buraya yazılıyor, canlı belge.
+
+## Çalışma kuralı (kullanıcının 6. maddesi)
+
+Kullanıcı onay verdikten ve kod değişikliği bittikten sonra **push için
+ayrıca sorulmayacak** — doğrudan push edilecek. Soru sormak yalnız gerçek
+belirsizlikte.
+
+## Elle test borcu (bu tura eklenenler)
+
+- **WT-89:** gerçek cihazda yeni kayıt formu — firma listesi ilk sırayla mı
+  açılıyor, AC'ye basınca ev kutucuğu hâlâ işaretleniyor mu.
+- **WT-90:** ≥760px masaüstü ızgarasında iki seg üst üste düzgün duruyor mu;
+  boş durumda (hiç kayıt yokken) tip filtresi gizleniyor mu.
