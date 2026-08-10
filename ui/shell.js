@@ -35,8 +35,14 @@ function initSplash() {
   const el = document.getElementById('splash');
   if (!el) return;
   const v = document.getElementById('splash-video');
-  const staticYol = ms => { el.classList.remove('video-on'); v?.remove();
-    setTimeout(() => { splashVideoDone = true; splashTryClose(); }, ms); };
+  // WT-84: statik logo yalnız BURADA görünür olur. `video-on` HTML'de duruyor,
+  // burada kaldırılıp yerine `static-on` konuyor — ilk boyamada logo yok.
+  const staticYol = ms => {
+    el.classList.remove('video-on');
+    el.classList.add('static-on');
+    v?.remove();
+    setTimeout(() => { splashVideoDone = true; splashTryClose(); }, ms);
+  };
 
   // 7) video oturumda YALNIZ BİR KEZ oynasın
   let gorulmus = false;
