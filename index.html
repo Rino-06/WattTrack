@@ -65,14 +65,20 @@ body{background:var(--bg);color:var(--text);
    keyframe animasyonları kaldırıldı, logo artık hareketsiz duruyor. */
 .splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none}
 .splash.video-on .splash-video{display:block}
+/* WT-84: statik logo VARSAYILAN OLARAK GİZLİ. Eskiden görünürdü ve
+   `video-on` sınıfını ancak initSplash() ekliyordu — yani logo + yazı ilk
+   boyamada bir an ÇİZİLİYOR, sonra videoya yer açmak için kayboluyordu.
+   Kullanıcının gördüğü "animasyondan önce logo görünüyor" kusuru buydu.
+   Artık splash `video-on` ile AÇILIYOR (bkz. gövdedeki div) ve statik yol
+   yalnız gerçekten devreye girdiğinde `static-on` ile gösteriliyor. */
 /* WT-67: animasyon 16:9 yatay ve zemini BEYAZ. object-fit:cover dik ekranda
    kenarlardan ağır kırpar (logo kesilir), bu yüzden contain. Contain letterbox
    bırakır — video oynarken zemin videonun beyazına eşitleniyor ki bant
    görünmesin. Koyu temada da beyaz: zemin videonun kendi rengi. */
 .splash.video-on{background:#FFFFFF}
 [data-theme="dark"] .splash.video-on{background:#FFFFFF}
-.splash-static{display:flex;flex-direction:column;align-items:center;gap:20px}
-.splash.video-on .splash-static{display:none}
+.splash-static{display:none;flex-direction:column;align-items:center;gap:20px}
+.splash.static-on .splash-static{display:flex}
 .splash-logo{width:auto;height:132px}
 .splash-word{display:flex;font-size:27px;font-weight:700;letter-spacing:-.3px}
 .splash-word b{color:#6CB33F;font-weight:700}
@@ -545,7 +551,10 @@ nav button{min-height:48px;justify-content:center}
 </style>
 </head>
 <body>
-<div class="splash" id="splash" aria-hidden="true">
+<!-- WT-84: `video-on` sınıfı BAŞTAN duruyor. JS'in eklemesini beklersek
+     statik logo ilk boyamada bir an görünüyor. Video oynatılamazsa
+     initSplash() bu sınıfı kaldırıp `static-on` koyuyor. -->
+<div class="splash video-on" id="splash" aria-hidden="true">
   <!-- WT-37: muted + playsinline ZORUNLU; bunlar olmadan iOS Safari ve
        Android Chrome otomatik oynatmayı engeller. Dosya yoksa onerror
        statik yola düşürür, uygulama yine açılır. -->

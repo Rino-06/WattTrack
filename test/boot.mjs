@@ -1737,6 +1737,21 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     /splashVideoDone\s*&&\s*splashDataDone/.test(js));
   check('WT-37/4c: prefers-reduced-motion yolu var',
     /prefers-reduced-motion: reduce/.test(js));
+
+  // --- WT-84: animasyondan ÖNCE logo görünmesin ---
+  // Üç sözleşme birlikte tutmazsa kusur geri gelir: statik blok varsayılan
+  // olarak gizli OLMALI, splash `video-on` ile AÇILMALI ve yedek yol
+  // `static-on` EKLEMELİ. jsdom yerleşim çizmiyor; sınanan şey kuralın METNİ.
+  const cssSade = html.replace(/\/\*[\s\S]*?\*\//g, '');
+  check('WT-84: .splash-static varsayılan olarak display:none',
+    /\.splash-static\s*\{[^}]*display:\s*none/.test(cssSade));
+  check('WT-84: statik logo yalnız .static-on ile görünür oluyor',
+    /\.splash\.static-on\s+\.splash-static\s*\{[^}]*display:\s*flex/.test(cssSade)
+      && !/\.splash\.video-on\s+\.splash-static/.test(cssSade));
+  check('WT-84 KABUL: splash HTML\'de video-on ile açılıyor (ilk boyamada logo yok)',
+    /<div class="splash video-on" id="splash"/.test(html));
+  check('WT-84: yedek yol video-on\'u kaldırıp static-on ekliyor',
+    /classList\.remove\('video-on'\)[\s\S]{0,80}classList\.add\('static-on'\)/.test(js));
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   check('WT-37/6: splash medyası service worker listesinde',
     /splash\.mp4/.test(sw) && /splash-poster\.png/.test(sw));
