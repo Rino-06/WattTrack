@@ -63,7 +63,17 @@ body{background:var(--bg);color:var(--text);
 /* WT-37: açılış animasyonu video. Video oynayamazsa (dosya yok, otomatik
    oynatma engellendi, prefers-reduced-motion) statik logo devreye girer —
    keyframe animasyonları kaldırıldı, logo artık hareketsiz duruyor. */
-.splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none}
+/* WT-85: video KAYNAKTA 640x360. Eskiden `width:100%;height:100%` ile
+   görüntü alanına yayılıyordu: telefonda (~390 CSS px) küçültme olduğu için
+   keskin, ama 1920 px'lik bir masaüstünde 3 KAT büyütme oluyor ve görüntü
+   gözle görülür şekilde yumuşuyordu. Büyütme piksel EKLEMEZ — çözüm
+   büyütmemek: video kendi doğal boyutunu aşmıyor, `margin:auto` ile
+   ortalanıyor, artan yer splash'in kendi beyaz zeminiyle doluyor.
+   SINIR: gerçek yüksek çözünürlük için 1920x1080 yeni bir render gerekir;
+   depodaki kaynak (animasyon.gif 426x240) bundan daha iyisini veremez. */
+.splash-video{position:absolute;inset:0;margin:auto;
+  width:auto;height:auto;max-width:min(100%,640px);max-height:min(100%,360px);
+  object-fit:contain;display:none}
 .splash.video-on .splash-video{display:block}
 /* WT-84: statik logo VARSAYILAN OLARAK GİZLİ. Eskiden görünürdü ve
    `video-on` sınıfını ancak initSplash() ekliyordu — yani logo + yazı ilk

@@ -1752,6 +1752,17 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     /<div class="splash video-on" id="splash"/.test(html));
   check('WT-84: yedek yol video-on\'u kaldırıp static-on ekliyor',
     /classList\.remove\('video-on'\)[\s\S]{0,80}classList\.add\('static-on'\)/.test(js));
+
+  // --- WT-85: masaüstünde bulanıklık (kaynak 640x360, ekran 1920) ---
+  const vidKural = (cssSade.match(/\.splash-video\s*\{[^}]*\}/) || [''])[0];
+  check('WT-85 KABUL: video doğal boyutunun ÜSTÜNE büyütülmüyor',
+    /max-width:\s*min\(100%,\s*640px\)/.test(vidKural)
+      && /max-height:\s*min\(100%,\s*360px\)/.test(vidKural)
+      && !/width:\s*100%/.test(vidKural));
+  check('WT-85: küçülen video ortalanıyor (inset:0 + margin:auto)',
+    /inset:\s*0/.test(vidKural) && /margin:\s*auto/.test(vidKural));
+  check('WT-85: açığa çıkan alanı splash\'in beyaz zemini dolduruyor',
+    /\.splash\.video-on\s*\{[^}]*background:\s*#FFFFFF/.test(cssSade));
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   check('WT-37/6: splash medyası service worker listesinde',
     /splash\.mp4/.test(sw) && /splash-poster\.png/.test(sw));
