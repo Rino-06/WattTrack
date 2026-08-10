@@ -302,14 +302,15 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     { ...base, tarih: bugun + 'T12:00', socB: 40, socA: 80 },   // +40
     { ...base, tarih: bugun + 'T15:00', socB: 50, socA: 50 }    // anlamsız: eşit
   ]);
-  app().S.period = 'week';
+  app().S.period = 'month';   // WT-90: ana sayfada 'week' yok
   await app().renderDashboard();
   await sleep(300);
   // Eşit kayıt sayılsaydı ortalamalar %36,7 → %70 çıkardı; hariç tutulunca %30 → %80
   check('WT-32/4b: socB === socA olan kayıt ortalamaya girmedi',
     $('d-soc').textContent === '%30 → %80', 'd-soc=' + $('d-soc').textContent);
-  check('WT-32/4c: "ort. eklenen" değeri de gösteriliyor',
-    /50/.test($('d-soc-add').textContent), 'ek=' + $('d-soc-add').textContent);
+  // WT-91: "ort. eklenen +%N" satırı kaldırıldı — kutuda ikinci satır YOK
+  check('WT-91: "ort. eklenen" satırı ana sayfadan kaldırıldı',
+    !window.document.getElementById('d-soc-add'));
 
   // socA < socB olan bozuk eski kayıt da ortalamayı kaydırmamalı
   await app().db.sessions.add({ ...base, tarih: bugun + 'T18:00', socB: 90, socA: 10 });
@@ -1675,6 +1676,56 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 
   await A.db.sessions.clear();
   await A.db.vehicles.clear();
+}
+
+// --- WT-92: ana sayfa "Tümü" dönemiyle açılıyor · WT-93: kompakt yerleşim ---
+{
+  const doc = window.document, A = app();
+  const per = [...doc.querySelectorAll('#d-period button')].map(b => b.dataset.v);
+  check('WT-92 KABUL: dönem seçicisi Ay · Yıl · Tümü', per.join(',') === 'month,year,all',
+    per.join(','));
+  // Canlı DOM'a bakılamaz: WT-28 bloğu seçiciye tıklıyor ve `sel` sınıfını
+  // taşıyor. Açılış varsayılanı KAYNAKTAN okunur.
+  const segSrc = /<div class="seg mini d-data" id="d-period"[\s\S]*?<\/div>/.exec(html)[0];
+  check('WT-92 KABUL: "Tümü" kaynakta seçili açılıyor',
+    /data-v="all"[^>]*class="sel"|class="sel"[^>]*data-v="all"/.test(segSrc),
+    segSrc.replace(/\s+/g, ' '));
+  check('WT-92: durum varsayılanı da "all"',
+    /period:\s*'all'/.test(fs.readFileSync(path.join(ROOT, 'calc.js'), 'utf8')));
+
+  await A.db.sessions.clear();
+  A.S.dashVeh = ''; A.S.dstatType = ''; A.S.period = 'all';
+  A.S.budgetM = 5000; A.S.budgetY = 50000;   // ikisi de dolu: 'all'da yine gizli
+  const y = new Date().getFullYear();
+  await A.db.sessions.bulkAdd([
+    {tarih: `${y - 3}-03-10T10:00`, firma: 'ZES', tip: 'DC', kwh: 10, tutar: 100,
+      odenen: 100, cur: 'TRY', aracId: null},
+    {tarih: `${y}-03-10T10:00`, firma: 'ZES', tip: 'DC', kwh: 20, tutar: 200,
+      odenen: 200, cur: 'TRY', aracId: null}
+  ]);
+  await A.renderDashboard();
+  await sleep(300);
+  check('WT-92 KABUL: "Tümü" eski yılların kayıtlarını da sayıyor',
+    $('d-kwh').textContent === '30', 'd-kwh=' + $('d-kwh').textContent);
+  // WT-56'nın gerekçesi burada kapanıyor: dönem kutuları anlamsızlaşmıyor,
+  // SUSUYOR. Sessizce geçen aya kıyaslamak asıl kusur olurdu.
+  check('WT-92: "Tümü"de önceki döneme kıyas satırı BOŞ',
+    $('d-delta').textContent === '', 'd-delta=' + $('d-delta').textContent);
+  check('WT-92: "Tümü"de bütçe çubuğu gizli (kıyaslanacak hedef yok)',
+    $('d-budget').style.display === 'none', 'display=' + $('d-budget').style.display);
+  A.S.period = 'year';
+  await A.renderDashboard();
+  await sleep(300);
+  check('WT-92: Yıl seçilince bütçe çubuğu geri geliyor',
+    $('d-budget').style.display !== 'none');
+  A.S.period = 'all'; A.S.budgetM = null; A.S.budgetY = null;
+  await A.db.sessions.clear();
+
+  // WT-93: iki filtre şeridi AYNI sınıf ailesini kullanmalı — farklı sınıf
+  // farklı yükseklik demek. Yükseklik WT-25'in 44px dokunma tabanında.
+  const iki = ['d-period', 'd-dstat-type'].map(id => doc.getElementById(id).className);
+  check('WT-93 KABUL: iki filtre şeridi aynı sınıflarla (eşit yükseklik)',
+    iki[0].split(' ').sort().join() === iki[1].split(' ').sort().join(), iki.join(' || '));
 }
 
 // --- WT-40: menzil gösterimi, veri tarihi ve elle düzeltme ---

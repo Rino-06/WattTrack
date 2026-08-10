@@ -34,9 +34,14 @@ $('s-vehsel').addEventListener('change', () => { S.dashVeh = $('s-vehsel').value
 function periodFilter(all) { return inPeriod(all, S.period); }
 function prevPeriodFilter(all) {
   const now = new Date();
-  // WT-90: 'week' kolu SİLİNDİ — ana sayfada hafta seçeneği yok, S.period
-  // yalnız 'month' ya da 'year' olabiliyor (ve kaydedilmiyor, bkz.
-  // SETTING_KEYS). İstatistik sayfası bu fonksiyonu kullanmıyor.
+  // WT-90: 'week' kolu SİLİNDİ — ana sayfada hafta seçeneği yok (ve S.period
+  // kaydedilmiyor, bkz. SETTING_KEYS). İstatistik sayfası bu fonksiyonu
+  // kullanmıyor.
+  // WT-92: "Tümü" dönemin ÖNCESİ diye bir şey yok — boş küme dönüyor ki
+  // "önceki döneme göre" satırı ve tüketim kıyası kendiliğinden sussun.
+  // Buraya `all`ı unutup ay koluna düşürmek, tüm zamanları geçen ayla
+  // kıyaslayan sessiz bir kusur olurdu.
+  if (S.period === 'all') return [];
   if (S.period === 'year')
     return all.filter(r => r.tarih.slice(0, 4) === String(now.getFullYear() - 1));
   const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -105,7 +110,8 @@ async function renderDashboard() {
   // kullanıcı eksiği hiç öğrenemez.
   reportFxGaps(periodFilter(allVeh));   // WT-10
 
-  $('d-period-lbl').textContent = t(S.period === 'year' ? 'periodYear' : 'periodMonth');
+  $('d-period-lbl').textContent = t(S.period === 'all' ? 'periodAllTotal'
+    : S.period === 'year' ? 'periodYear' : 'periodMonth');
 
   // WT-13: `net` kur çevrilemeyen kayıtları dışlıyordu (amtB → 0) ama `kwh`
   // BÜTÜN kayıtları topluyordu; yurt dışı kaydı olan kullanıcıda birim fiyat
@@ -207,12 +213,8 @@ async function renderDashboard() {
     ? '%' + Math.round(socs.reduce((s, r) => s + r.socB, 0) / socs.length) +
       ' → %' + Math.round(socs.reduce((s, r) => s + r.socA, 0) / socs.length)
     : '—';
-  // WT-32/4c: kullanıcının asıl merak ettiği, iki ucun ayrı ortalaması değil
-  // şarj başına eklenen ortalama yüzde
-  $('d-soc-add').textContent = socs.length
-    ? t('avgSocAdded', {n: Math.round(
-        socs.reduce((s, r) => s + (r.socA - r.socB), 0) / socs.length)})
-    : '';
+  // WT-32/4c'nin "ort. eklenen" satırı WT-91'de KALDIRILDI: aralığın iki ucu
+  // zaten okunuyor, ikinci satır kutuyu yükseltip komşusunda boşluk açıyordu.
   // ort. şarj gücü (kWh/saat) — süre girilmiş kayıtlardan
   const powKwh = durs.reduce((s, r) => s + r.kwh, 0);
   const powMin = durs.reduce((s, r) => s + r.dur, 0);
@@ -252,8 +254,8 @@ function butceCiz(cur, all) {
   const box = $('d-budget');
   const aylik = S.budgetM > 0 ? S.budgetM : null;
   const yillik = S.budgetY > 0 ? S.budgetY : null;
-  // Dönem seçicisi ne ise ona uyan bütçe kullanılır; hafta seçiliyse
-  // aylık bütçe anlamsız olacağı için çubuk gizlenir.
+  // Dönem seçicisi ne ise ona uyan bütçe kullanılır; "Tümü" seçiliyse
+  // (WT-92) kıyaslanacak bir hedef olmadığı için çubuk gizlenir.
   const hedef = S.period === 'year' ? yillik : (S.period === 'month' ? aylik : null);
   if (!hedef) { box.style.display = 'none'; return; }
   const harcanan = cur.filter(isConv).reduce((s, r) => s + amtB(r), 0);
