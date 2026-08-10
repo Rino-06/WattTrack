@@ -11,7 +11,13 @@
 const S = {
   country: 'TR', currency: 'TRY', unit: 'km', lang: 'tr',
   advOpen: false, defaultVehicleId: null, onboarded: false,
-  period: 'all', cmp: null,   // WT-92: ana sayfa "Tümü" ile açılıyor dashVeh: '', cmpVeh: '', vehExpVeh: '', vehExpGran: 'month', vehExpFltTur: '', vehExpFltDon: '', bankCountries: null, gran: 'month', customBanks: [], theme: 'light', dstatType: '', histBadOnly: null, homeKwhPrice: null, kwhRegion: '', homeKwhAuto: false
+  // WT-92: ana sayfa "Tümü" dönemiyle açılıyor.
+  // WT-94 DERSİ: bu satır çok uzun — SATIR SONUNA `//` yorum YAZMA, arkasındaki
+  // bütün varsayılanları sessizce yutar. Yorum ayrı satırda durur.
+  period: 'all', cmp: null, dashVeh: '', cmpVeh: '', vehExpVeh: '', vehExpGran: 'month', vehExpFltTur: '', vehExpFltDon: '', bankCountries: null, gran: 'all', customBanks: [], theme: 'light', dstatType: '', histBadOnly: null, homeKwhPrice: null, kwhRegion: '', homeKwhAuto: false,
+  // WT-94: bunlar da SETTING_KEYS'te — varsayılansız bırakılırsa `undefined`
+  // olurlar ve okuyan her yer sessiz dala düşer. Boş = kapalı / hedef yok.
+  ocrOn: false, budgetM: null, budgetY: null, workKwhPrice: null, workKwhAuto: false
 };
 const $ = id => document.getElementById(id);
 

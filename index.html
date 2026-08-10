@@ -466,7 +466,11 @@ button, .chip{transition:opacity .12s, transform .12s}
 .vlist .star, .vlist .rm, .vlist .undo{min-width:32px;min-height:32px;
   display:inline-flex;align-items:center;justify-content:center}
 /* bitişik öğeler: doğrudan yükselt */
-.seg.mini button{min-height:44px}
+/* WT-96: filtre şeritleri 44px'te fazla yüksek duruyordu; kullanıcı 40px'e
+   çekilmesini istedi. WCAG 2.5.5 (AAA, 44px) artık KARŞILANMIYOR, ama
+   WCAG 2.2'nin AA ölçütü 2.5.8 (24px) rahatça sağlanıyor. Bilinçli sapma —
+   test/boot.mjs'teki WT-25 denetiminde tek istisna olarak yazılı. */
+.seg.mini button{min-height:40px}
 .mini-btn{min-height:44px}
 .details-toggle, .h2row .link{min-height:44px;display:inline-flex;align-items:center}
 /* anahtar dikeyde 27px'ti; görsel ray aynı kalır, kutu 44px olur */
@@ -744,9 +748,12 @@ nav button{min-height:48px;justify-content:center}
   <div class="lbl" id="s-gran-lbl" style="margin-top:2px">Dönem</div>
   <div class="seg" id="d-gran" role="radiogroup" aria-labelledby="s-gran-lbl" style="margin-bottom:16px">
     <button data-v="week" data-i18n="week">Hafta</button>
-    <button data-v="month" class="sel" data-i18n="month">Ay</button>
+    <button data-v="month" data-i18n="month">Ay</button>
     <button data-v="year" data-i18n="year">Yıl</button>
-    <button data-v="all" data-i18n="periodAll">Tümü</button>
+    <!-- WT-95: ana sayfayla aynı varsayılan. "Ay" ile açılınca eski bir yedeği
+         geri yükleyen kullanıcı sayfayı BOŞ görüyordu (kayıtları bu ayda
+         değil) ve verisinin gelmediğini sanıyordu. -->
+    <button data-v="all" class="sel" data-i18n="periodAll">Tümü</button>
   </div>
 
   <!-- WT-56: seçili dönemde kayıt yokken bloklar "Henüz kayıt yok" diyordu;

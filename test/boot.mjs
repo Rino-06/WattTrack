@@ -111,6 +111,30 @@ check('WT-52: sürüm version.js\'ten okundu',
   $('app-version') !== null && app().APP_VERSION === expectedVer,
   `APP_VERSION=${app().APP_VERSION} version.js=${expectedVer}`);
 
+// --- WT-94: S'in varsayılanları eksiksiz mi? ---
+// GERÇEK KUSURDAN doğdu: `period: 'all', cmp: null,   // yorum` satır sonuna
+// yazılan bir yorum, AYNI SATIRDAKİ 15 varsayılanı birden yuttu (gran, theme,
+// customBanks, dashVeh…). 745 kontrolün hiçbiri kızarmadı çünkü hepsi
+// dokundukları alanı kendisi atıyor. Varsayılanların VARLIĞI artık kilitli.
+{
+  const S = app().S;
+  const ZORUNLU = ['country','currency','unit','lang','advOpen','defaultVehicleId',
+    'onboarded','period','cmp','dashVeh','cmpVeh','vehExpVeh','vehExpGran',
+    'vehExpFltTur','vehExpFltDon','bankCountries','gran','customBanks','theme',
+    'dstatType','histBadOnly','homeKwhPrice','kwhRegion','homeKwhAuto'];
+  const eksik = ZORUNLU.filter(k => !(k in S));
+  check('WT-94: S nesnesinde bildirilen varsayılanların hepsi var',
+    eksik.length === 0, 'eksik: ' + eksik.join(', '));
+  // Ayarlardan okunan her anahtarın da bir varsayılanı olmalı; olmayan anahtar
+  // "kullanıcı hiç dokunmadıysa undefined" demek ve sessiz dala düşer.
+  const setKeys = /SETTING_KEYS = \[([\s\S]*?)\];/.exec(
+    fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8'))[1]
+    .match(/'([^']+)'/g).map(x => x.slice(1, -1));
+  const varsayilansiz = setKeys.filter(k => !(k in S));
+  check('WT-94: SETTING_KEYS\'teki her anahtarın S\'te varsayılanı var',
+    varsayilansiz.length === 0, 'varsayılansız: ' + varsayilansiz.join(', '));
+}
+
 // --- onboarding'i atla, doğrudan kayıt formunu aç ---
 await app().db.settings.put({ key: 'onboarded', value: true });
 app().S.onboarded = true;
@@ -573,13 +597,23 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     ['.details-toggle', 60, 21], ['.h2row .link', 60, 21],
     ['.vlist .star', 0, 0], ['.vlist .rm', 0, 0]
   ];
+  // WT-96: kullanıcının kararıyla TEK istisna. Ana sayfadaki iki filtre
+  // şeridi 44px'te fazla yüksek duruyordu; 40px'e çekildi. WCAG 2.5.5 (AAA)
+  // artık karşılanmıyor, WCAG 2.2 AA ölçütü 2.5.8 (24px) karşılanıyor.
+  // Listeye ekleme YAPMA — her satır bir erişilebilirlik ödünü.
+  const ISTISNA = {'.seg.mini button': 40};
   const small = [];
   for (const [sel, bw, bh] of targets) {
     const { w, h } = effective(sel, bw, bh);
-    if (w < 44 || h < 44) small.push(`${sel} ${Math.round(w)}x${Math.round(h)}`);
+    const taban = ISTISNA[sel] ?? 44;
+    if (w < taban || h < taban) small.push(`${sel} ${Math.round(w)}x${Math.round(h)} (taban ${taban})`);
   }
-  check('WT-25: küçük dokunma hedefleri 44x44\'e genişletildi',
+  check('WT-25: küçük dokunma hedefleri tabanlarına genişletildi',
     small.length === 0, small.join(' | '));
+  // İstisnanın kendisi de kilitli: 40'ın altına düşerse AA da kırılır.
+  check('WT-96: filtre şeritleri 40px tabanında (AA sınırının üstünde)',
+    num(decl('.seg.mini button'), 'min-height') === 40,
+    'min-height=' + num(decl('.seg.mini button'), 'min-height'));
 
   // Alt menüde 7 sekme korunuyor: yatayda 44px garanti edilemez,
   // dikeyde 48px garanti edilmeli (madde metni bunu böyle istiyor)
@@ -1711,8 +1745,15 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   // SUSUYOR. Sessizce geçen aya kıyaslamak asıl kusur olurdu.
   check('WT-92: "Tümü"de önceki döneme kıyas satırı BOŞ',
     $('d-delta').textContent === '', 'd-delta=' + $('d-delta').textContent);
-  check('WT-92: "Tümü"de bütçe çubuğu gizli (kıyaslanacak hedef yok)',
-    $('d-budget').style.display === 'none', 'display=' + $('d-budget').style.display);
+  // WT-97: bütçe GİRİLMİŞSE "Tümü"de çubuk yerine yönlendirme duruyor —
+  // sessizce kaybolsa kullanıcı "bütçe çalışmıyor" sanardı.
+  check('WT-97 KABUL: "Tümü"de bütçe kutusu dönem seçmeyi söylüyor',
+    $('d-budget').style.display !== 'none'
+      && /Ay|Yıl/.test($('d-budget-lbl').textContent),
+    'display=' + $('d-budget').style.display + ' lbl=' + $('d-budget-lbl').textContent);
+  check('WT-97: yönlendirmede yüzde çubuğu boş (yanlış oran gösterilmiyor)',
+    $('d-budget-bar').style.width === '0%' && $('d-budget-note').textContent === '',
+    'w=' + $('d-budget-bar').style.width);
   A.S.period = 'year';
   await A.renderDashboard();
   await sleep(300);
