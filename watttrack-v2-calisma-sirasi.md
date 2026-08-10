@@ -368,6 +368,14 @@ tarife yayımlıyor ve ticarethane meskenden ayrı. Ayarlar'a ikinci alan
 kutucuğu belirliyor. **WT-83'ün "kabul edilen sınır"ı kapandı:** onarım
 imzası artık tabloya değil `TR_KWH_2025 = 2.8076` sabitine bakıyor.
 
+**SESSİZ KUSUR (WT-87'de bulundu, düzeltildi):** Ayarlar'daki
+`set-homekwh` alanının HİÇBİR dinleyicisi yoktu — ne `change` ne `input`.
+Kullanıcı ev elektrik fiyatını oraya yazıyor, alan bir sonraki
+`renderSettings()`te `S.homeKwhPrice`tan yeniden çiziliyor ve yazdığı değer
+sessizce kayboluyordu. WT-78 "kullanıcının girdiği değer ASLA ezilmez"
+diyordu ama değer zaten hiç GİRİLEMİYORDU; tek yazma yolu "önerilen fiyatı
+kullan" düğmesiydi. `test/kwh.mjs` sonundaki blok ikisini de kilitliyor.
+
 **Yan bulgu (WT-86 içinde düzeltildi):** `formSnapshot()` onay kutusunu
 `.value` ile okuyordu — checkbox'ın değeri işaretli olsun olmasın HER ZAMAN
 `'on'`. WT-81/9'daki tuzağın aynısı: `in-missed`/`in-free` "kaydetmeden
