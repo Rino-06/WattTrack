@@ -17,6 +17,8 @@
      desnz          : değişken birim fiyat (sabit günlük ücret HARİÇ)
      elcom          : toplam tarif (şebeke + vergi dahil), H4 medyanı
      hydroquebec    : vergiler HARİÇ, 1.000 kWh/ay tüketimli kent tarifesi
+     epdkel         : vergiler DAHİL, DİLİMLİ tarife (ortalama değil) —
+                      mesken ve ticarethane AYRI (bkz. KWH_SRC künyesi)
 
    KAPSANMAYAN ÜLKELER (kaynak bulunamadı, elle girilecek):
      MC, AD, SM
@@ -34,8 +36,25 @@ const KWH_SRC = {
   eia: {ad: 'EIA 861 / Table 4',
     url: 'https://www.eia.gov/electricity/sales_revenue_price/', guncel: '2025-10-07'},
   hydroquebec: {ad: 'Hydro-Québec 2024',
-    url: 'https://www.hydroquebec.com/data/documents-donnees/pdf/comparison-electricity-prices-2024.pdf', guncel: '2024-04-01'}
+    url: 'https://www.hydroquebec.com/data/documents-donnees/pdf/comparison-electricity-prices-2024.pdf', guncel: '2024-04-01'},
+  // WT-87: Eurostat'ın TR ortalaması (2,8076) kullanıcının fiilen ödediği
+  // tarifeyi yansıtmıyordu — Eurostat "ortalama birim fiyat" veriyor, EPDK
+  // ise dilimli tarife yayımlıyor ve ticarethane meskenden ayrı.
+  // KAPSAM (iki sayı da VERGİLER DAHİL, 2026):
+  //   mesken       tek terimli / tek zamanlı / alçak gerilim, ≤240 kWh/ay
+  //                (~8 kWh/gün) dilimi → 3,24
+  //   ticarethane  ≤900 kWh dilimi → 5,464 (iki basamağa 5,46)
+  // Üstündeki dilimler daha pahalı; alan zaten Ayarlar'dan düzenlenebiliyor.
+  epdkel: {ad: 'EPDK Elektrik Tarifeleri',
+    url: 'https://www.epdk.gov.tr/Detay/Icerik/3-0-1-3/elektriktarifeler',
+    guncel: '2026-08-10'}
 };
+
+// WT-87 + WT-83: WT-81/8'in onarımı TR varsayılanına BİT BİT eşitlik arıyor.
+// O imza, kusurun yazdığı O GÜNKÜ değerdir — tablodaki güncel TR fiyatı
+// değil. Tablo güncellendiğinde onarım kırılmasın diye eski değer burada
+// DONDURULDU. SİLME: kwhFiyatOnar() buna bakıyor.
+const TR_KWH_2025 = 2.8076;
 
 /* p: kWh başına fiyat (cur cinsinden) · y: verinin ait olduğu yıl
    s: KWH_SRC anahtarı · half: yılın yalnız bir yarısı yayınlanmış
@@ -91,22 +110,29 @@ const KWH_PRICES = {
   SE: {p:2.9683, cur:'SEK', y:2025, s:'eurostat'},
   SI: {p:0.1966, cur:'EUR', y:2025, s:'eurostat'},
   SK: {p:0.187, cur:'EUR', y:2025, s:'eurostat'},
-  TR: {p:2.8076, cur:'TRY', y:2025, s:'eurostat'},
+  // WT-87: mesken (p) ve TİCARETHANE (pw) ayrı. `pw` yalnız TR'de dolu;
+  // diğer ülkelerde iş fiyatı da mesken fiyatına düşüyor (veri yok).
+  TR: {p:3.24, pw:5.46, cur:'TRY', y:2026, s:'epdkel'},
   US: {p:0.1648, cur:'USD', y:2024, s:'eia', sub:{AK:0.2482,AL:0.1518,AR:0.1232,AZ:0.1491,CA:0.3197,CO:0.1492,CT:0.2875,DC:0.1771,DE:0.1657,FL:0.1414,GA:0.1408,HI:0.4286,IA:0.134,ID:0.1152,IL:0.1587,IN:0.1477,KS:0.1415,KY:0.1279,LA:0.1173,MA:0.2935,MD:0.1786,ME:0.2429,MI:0.193,MN:0.1545,MO:0.1291,MS:0.1339,MT:0.1266,NC:0.1413,ND:0.1151,NE:0.1153,NH:0.234,NJ:0.1934,NM:0.142,NV:0.15,NY:0.2443,OH:0.1599,OK:0.1224,OR:0.147,PA:0.1777,RI:0.2865,SC:0.1423,SD:0.1286,TN:0.1242,TX:0.1494,UT:0.1222,VA:0.1441,VT:0.219,WA:0.119,WI:0.1718,WV:0.1507,WY:0.1247}},
   XK: {p:0.0822, cur:'EUR', y:2025, s:'eurostat'}
 };
 
 // Ülke (ve varsa alt bölge) için varsayılan fiyat. Bulunamazsa null.
-function defaultKwhPrice(country, region) {
+// WT-87: `tur` 'is' ise TİCARETHANE fiyatı istenir. Yalnız ülke genelinde
+// `pw` varsa farklı bir sayı döner; yoksa (ve her alt bölgede) mesken
+// fiyatına düşer — uydurma bir çarpan uygulanmıyor.
+function defaultKwhPrice(country, region, tur) {
   const c = KWH_PRICES[country];
   if (!c) return null;
   if (region && c.sub && c.sub[region] != null) {
     const v = c.sub[region];
     const p = typeof v === 'object' ? v.p : v;
-    return {p, cur: c.cur, y: c.y, s: c.s, region};
+    return {p, cur: c.cur, y: c.y, s: c.s, region, is: false};
   }
-  if (c.p == null) return null;
-  return {p: c.p, cur: c.cur, y: c.y, s: c.s, region: null};
+  const isFiyat = tur === 'is' && c.pw != null;
+  const p = isFiyat ? c.pw : c.p;
+  if (p == null) return null;
+  return {p, cur: c.cur, y: c.y, s: c.s, region: null, is: isFiyat};
 }
 
 // Ülkenin alt bölgeleri: [[kod, ad], …] ya da null.

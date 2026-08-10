@@ -126,6 +126,8 @@ check('WT-16/6: tip donutu ana sayfayla aynı `tip` alanını kullanıyor (AC=50
 // --- WT-16/B + C: form davranışı ---
 A.S.homeKwhPrice = 2.80;
 await A.saveSetting('homeKwhPrice', 2.80);
+A.S.workKwhPrice = 5.46;                       // WT-87: ticarethane tarifesi
+await A.saveSetting('workKwhPrice', 5.46);
 A.S.currency = 'TRY';
 A.S.country = 'TR';
 
@@ -160,6 +162,33 @@ check('WT-16/C: birim fiyat Ayarlar\'daki değerle önceden dolu',
   $('in-unitprice').value === '2,80', 'değer=' + $('in-unitprice').value);
 check('WT-16/C5: Ev-İş kaydında indirim bloğu gizli',
   $('wrap-disc').style.display === 'none');
+
+// --- WT-87: iş kutucuğu TİCARETHANE fiyatını getiriyor ---
+$('in-work').checked = true;
+$('in-work').dispatchEvent(new w.Event('change', { bubbles: true }));
+await sleep(200);
+check('WT-87 KABUL: "İş" işaretlenince birim fiyat ticarethane tarifesine geçti',
+  $('in-unitprice').value === '5,46', 'değer=' + $('in-unitprice').value);
+check('WT-87: iş kutucuğu ev kutucuğunu boşalttı (birbirini dışlıyorlar)',
+  $('in-work').checked && !$('in-home').checked);
+$('in-home').checked = true;
+$('in-home').dispatchEvent(new w.Event('change', { bubbles: true }));
+await sleep(200);
+check('WT-87 KABUL: "Ev" işaretlenince mesken fiyatına geri döndü',
+  $('in-unitprice').value === '2,80' && !$('in-work').checked,
+  'değer=' + $('in-unitprice').value);
+// Kullanıcı elle yazdıysa kutucuk değişse bile o değer korunmalı
+$('in-unitprice').value = '9,99';
+$('in-unitprice').dispatchEvent(new w.Event('input', { bubbles: true }));
+await sleep(150);
+$('in-work').checked = true;
+$('in-work').dispatchEvent(new w.Event('change', { bubbles: true }));
+await sleep(200);
+check('WT-87 KABUL: elle yazılan birim fiyat kutucuk değişince EZİLMİYOR',
+  $('in-unitprice').value === '9,99', 'değer=' + $('in-unitprice').value);
+// Bloğun geri kalanı ev + varsayılan fiyat bekliyor — durumu geri ver
+await A.openAdd();
+await sleep(250);
 
 // 40 kWh + 2,80 -> 112,00
 $('in-kwh').value = '40';

@@ -78,9 +78,24 @@ const setTip = v => $('in-tip').querySelectorAll('button')
 });
 // Tutar birim fiyattan mı geldi, kullanıcı elle mi yazdı?
 let amountSrc = 'manuel';
+// WT-87: kullanıcı birim fiyata dokunduysa kutucuk değişse bile o değer
+// KORUNUR — ayarlardaki varsayılan artık üstüne yazmaz.
+let unitPriceElle = false;
+// WT-87: ev şarjı MESKEN, iş şarjı TİCARETHANE tarifesiyle hesaplanır —
+// TR'de aradaki fark yaklaşık iki kat. Ayarlar'daki iki alandan hangisinin
+// geleceğini kutucuk (WT-86) belirliyor.
+const unitPriceDefault = () =>
+  (homeMode() === 'is' ? S.workKwhPrice : S.homeKwhPrice) ?? S.homeKwhPrice;
 function syncHomePricing() {
   const home = homeSelected() && !$('in-free').checked;
   $('wrap-unitprice').style.display = home ? '' : 'none';
+  // Kutucuk değişince varsayılan fiyat da değişmeli — ama YALNIZ değer hâlâ
+  // varsayılandan geliyorsa. Kullanıcı tutarı elle yazdıysa (amountSrc
+  // 'manuel') ya da birim fiyata kendi dokunduysa üstüne yazmak veri ezmektir.
+  if (home && amountSrc === 'birimFiyat' && !unitPriceElle) {
+    const d = unitPriceDefault();
+    if (d != null) $('in-unitprice').value = fmtInput(d, 2);
+  }
   // Ev-İş kaydında indirim anlamsız (WT-16/C5)
   if (!$('in-free').checked) $('wrap-disc').style.display = home ? 'none' : '';
   $('in-unitprice-lbl').textContent = t('fldUnitPrice') + ' — ' + symOf(curOfForm());
@@ -106,6 +121,7 @@ function recalcFromUnitPrice() {
 $('in-firm').addEventListener('change', () => syncHomePricing());
 $('in-unitprice').addEventListener('input', () => {
   amountSrc = 'birimFiyat';        // birim fiyata dokunmak hesabı yeniden açar
+  unitPriceElle = true;
   recalcFromUnitPrice();
   syncHomePricing();
 });
@@ -452,7 +468,10 @@ async function openAdd(id) {
   $('in-rate').value = r?.rate ? fmtInput(r.rate, 6) : '';
   // WT-16/C: birim fiyat — kayıtta varsa ondan, yoksa Ayarlar'daki değerden
   amountSrc = r ? (r.tutarKaynak || 'manuel') : 'birimFiyat';
-  $('in-unitprice').value = fmtInput(r?.birimFiyat ?? S.homeKwhPrice, 2);
+  // WT-87: kaydın kendi birim fiyatı varsa o; yoksa kutucuğa göre Ayarlar'daki
+  // mesken / ticarethane fiyatı. Her açılışta "elle dokunuldu" işareti sıfırlanır.
+  unitPriceElle = !!r?.birimFiyat;
+  $('in-unitprice').value = fmtInput(r?.birimFiyat ?? unitPriceDefault(), 2);
   $('in-free').dispatchEvent(new Event('change'));
 
   // WT-49/3: bu açılıştaki TEK sessions okuması — hem firma sayımı, hem

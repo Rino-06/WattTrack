@@ -1135,8 +1135,14 @@ nav button{min-height:48px;justify-content:center}
     </div>
   </div>
 
-  <label class="lbl" id="set-homekwh-lbl" for="set-homekwh">Ev/İş elektrik birim fiyatı (kWh başına)</label>
+  <!-- WT-87: mesken ve ticarethane tarifesi aynı değil (TR'de yaklaşık iki
+       katı fark var). Ev şarjı mesken, iş şarjı ticarethane fiyatıyla
+       hesaplanıyor; kayıt formundaki kutucuk hangisinin kullanılacağını
+       belirliyor (WT-86). -->
+  <label class="lbl" id="set-homekwh-lbl" for="set-homekwh">Ev elektrik birim fiyatı (kWh başına)</label>
   <input type="text" inputmode="decimal" id="set-homekwh" placeholder="0,00" aria-describedby="set-homekwh-d">
+  <label class="lbl" id="set-workkwh-lbl" for="set-workkwh" style="margin-top:8px">İş elektrik birim fiyatı (kWh başına)</label>
+  <input type="text" inputmode="decimal" id="set-workkwh" placeholder="0,00" aria-describedby="set-homekwh-d">
   <!-- WT-78: yalnız alt bölgesi olan ülkelerde (ABD eyaleti, Kanada ili)
        görünür; gömülü tabloda ülke geneli ortalama yoksa varsayılan ancak
        bölge seçilince doluyor. -->
@@ -1148,6 +1154,9 @@ nav button{min-height:48px;justify-content:center}
   <!-- WT-78: varsayılan nereden geldi — kaynak ve yıl açıkça yazılıyor -->
   <div style="margin-bottom:20px">
     <div class="about" id="set-kwh-src" style="display:none;margin:0 0 6px;font-size:12px"></div>
+    <!-- WT-87: iş (ticarethane) varsayılanı yalnız tabloda AYRI bir sayı
+         varsa yazılır; yoksa iki satır aynı değeri tekrarlardı. -->
+    <div class="about" id="set-kwh-src-work" style="display:none;margin:0 0 6px;font-size:12px"></div>
     <button type="button" class="details-toggle" id="btn-kwh-default" style="display:none"></button>
   </div>
 
@@ -1285,7 +1294,9 @@ nav button{min-height:48px;justify-content:center}
          ödediğini biliyor. Bu alan yalnız firma "Ev-İş" iken görünür. -->
     <div id="wrap-unitprice" style="display:none">
       <label class="lbl" id="in-unitprice-lbl" for="in-unitprice">kWh birim fiyatı</label>
-      <input type="text" inputmode="decimal" id="in-unitprice" placeholder="0,00">
+      <input type="text" inputmode="decimal" id="in-unitprice" placeholder="0,00" aria-describedby="unitprice-src">
+      <!-- WT-87: değerin NEREDEN geldiği ve nereden kalıcı değiştirileceği -->
+      <div class="about" id="unitprice-src" style="margin:5px 0 0;font-size:12px" data-i18n="unitPriceFromSettings">Varsayılan Ayarlar → Ev/İş elektrik birim fiyatı alanından geliyor; buradaki değişiklik yalnız bu kaydı etkiler.</div>
     </div>
 
     <div id="wrap-paid">

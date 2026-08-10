@@ -14,6 +14,9 @@ async function renderSettings() {
   $('app-version').textContent = APP_VERSION + ' · ' + APP_DATE;
   $('set-homekwh').value = S.homeKwhPrice != null ? fmtInput(S.homeKwhPrice, 2) : '';
   $('set-homekwh-lbl').textContent = t('homeKwhPrice') + ' — ' + sym();
+  // WT-87: iş (ticarethane) tarifesi ayrı — TR'de meskenin yaklaşık iki katı
+  $('set-workkwh').value = S.workKwhPrice != null ? fmtInput(S.workKwhPrice, 2) : '';
+  $('set-workkwh-lbl').textContent = t('workKwhPrice') + ' — ' + sym();
   // WT-45/1: bütçe isteğe bağlı (boş = kapalı)
   $('set-budget-m').value = S.budgetM > 0 ? fmtInput(S.budgetM, 0) : '';
   $('set-budget-y').value = S.budgetY > 0 ? fmtInput(S.budgetY, 0) : '';
@@ -51,14 +54,25 @@ function renderKwhDefault() {
     $('set-kwhregion').value = S.kwhRegion || '';
   }
   const d = defaultKwhPrice(S.country, S.kwhRegion);
-  const src = $('set-kwh-src'), btn = $('btn-kwh-default');
-  if (!d) { src.style.display = 'none'; btn.style.display = 'none'; return; }
+  const dw = defaultKwhPrice(S.country, S.kwhRegion, 'is');
+  const src = $('set-kwh-src'), srcW = $('set-kwh-src-work'), btn = $('btn-kwh-default');
+  if (!d) {
+    src.style.display = 'none'; srcW.style.display = 'none'; btn.style.display = 'none';
+    return;
+  }
   const k = KWH_SRC[d.s];
+  const kad = k ? k.ad : d.s;
   src.style.display = '';
   src.textContent = t('kwhSrcNote',
-    {v: fm(symOf(d.cur), fmtNum(d.p, 2)), y: d.y, s: k ? k.ad : d.s});
-  // Alan zaten bu değerdeyse düğmeyi gösterme
-  const ayni = S.homeKwhPrice != null && Math.abs(S.homeKwhPrice - d.p) < 1e-9;
+    {v: fm(symOf(d.cur), fmtNum(d.p, 2)), y: d.y, s: kad});
+  // WT-87: iş fiyatı yalnız GERÇEKTEN ayrı bir sayıysa yazılır; tabloda `pw`
+  // olmayan ülkede iki satır aynı değeri tekrarlardı.
+  srcW.style.display = dw && dw.is ? '' : 'none';
+  if (dw && dw.is) srcW.textContent = t('kwhSrcNoteWork',
+    {v: fm(symOf(dw.cur), fmtNum(dw.p, 2)), y: dw.y, s: kad});
+  // İki alan da zaten tablo değerindeyse düğmeyi gösterme
+  const esit = (a, b) => a != null && Math.abs(a - b) < 1e-9;
+  const ayni = esit(S.homeKwhPrice, d.p) && (!dw || esit(S.workKwhPrice, dw.p));
   btn.style.display = ayni ? 'none' : '';
   btn.textContent = t('kwhUseDefault', {v: fm(symOf(d.cur), fmtNum(d.p, 2))});
 }
@@ -78,14 +92,22 @@ function renderKwhDefault() {
 // `homeKwhAuto` değerin tablodan geldiğini söyler. Tablodan gelen değer ülke
 // değişince TAZELENİR, elle girilen değere ASLA dokunulmaz.
 async function kwhPriceAutofill() {
-  if (S.homeKwhPrice != null && !S.homeKwhAuto) return false;
-  const d = defaultKwhPrice(S.country, S.kwhRegion);
-  if (!d || S.homeKwhPrice === d.p) return false;
-  S.homeKwhPrice = d.p;
-  S.homeKwhAuto = true;
-  await saveSetting('homeKwhPrice', d.p);
-  await saveSetting('homeKwhAuto', true);
-  return true;
+  // WT-87: ev ve iş fiyatı AYRI alanlar, ayrı köken işaretleri. İkisi
+  // birbirinden bağımsız: kullanıcı yalnız birini elle girmişse öteki
+  // tablodan tazelenmeye devam eder.
+  let yazildi = false;
+  for (const [tur, pKey, aKey] of [['ev', 'homeKwhPrice', 'homeKwhAuto'],
+                                   ['is', 'workKwhPrice', 'workKwhAuto']]) {
+    if (S[pKey] != null && !S[aKey]) continue;
+    const d = defaultKwhPrice(S.country, S.kwhRegion, tur);
+    if (!d || S[pKey] === d.p) continue;
+    S[pKey] = d.p;
+    S[aKey] = true;
+    await saveSetting(pKey, d.p);
+    await saveSetting(aKey, true);
+    yazildi = true;
+  }
+  return yazildi;
 }
 
 // WT-83: WT-81/8'in kuyruğu. Kusur düzeltildi ama ONDAN ÖNCE kurulmuş TR dışı
@@ -103,13 +125,15 @@ async function kwhPriceAutofill() {
 // yazma olduğu için kullanıcıya ESKİ ve YENİ değer birlikte gösteriliyor
 // (isteyen eskisini geri yazabilsin).
 //
-// KABUL EDİLEN SINIR: evprices.js'te TR fiyatı ileride güncellenirse, eski
-// kurulumlar ESKİ TR değerini taşıdığı için artık eşleşmez ve onarılmazlar.
-// Onlar için Ayarlar'daki "önerilen fiyatı kullan" düğmesi duruyor.
+// ESKİ SINIR ÇÖZÜLDÜ (WT-87): "tablodaki TR fiyatı güncellenirse onarım
+// eşleşmez" sınırı, imzayı `TR_KWH_2025` sabitine bağlayarak kapatıldı —
+// aranan şey tablonun bugünkü değeri değil, kusurun O GÜN yazdığı değer.
 async function kwhFiyatOnar() {
   if (S.country === 'TR' || S.currency === 'TRY') return false;
-  const tr = defaultKwhPrice('TR', '');
-  if (!tr || S.homeKwhPrice !== tr.p) return false;
+  // WT-87: aranan imza kusurun O GÜN yazdığı değer — tablodaki GÜNCEL TR
+  // fiyatı değil. TR fiyatı 2,8076'dan 3,24'e çıktı; tabloya bakılsaydı
+  // onarım bu sürümde sessizce ölürdü.
+  if (S.homeKwhPrice !== TR_KWH_2025) return false;
   const d = defaultKwhPrice(S.country, S.kwhRegion);
   if (!d) return false;                    // tabloda yoksa (MC/AD/SM) DOKUNMA
   const eski = S.homeKwhPrice;
@@ -139,6 +163,13 @@ $('btn-kwh-default').addEventListener('click', async () => {
   S.homeKwhAuto = true;        // WT-81/8: tablo değeri — ülke değişince tazelenir
   await saveSetting('homeKwhPrice', d.p);
   await saveSetting('homeKwhAuto', true);
+  const dw = defaultKwhPrice(S.country, S.kwhRegion, 'is');   // WT-87
+  if (dw) {
+    S.workKwhPrice = dw.p;
+    S.workKwhAuto = true;
+    await saveSetting('workKwhPrice', dw.p);
+    await saveSetting('workKwhAuto', true);
+  }
   toast(t('savedLocal'));
   renderSettings();
 });
@@ -677,9 +708,13 @@ async function importBackupText(text) {
       // yedekteki ELLE girdiği fiyat, sonraki ülke değişikliğinde sessizce
       // ezilirdi. Fiyat geliyor ama işaret gelmiyorsa "elle girilmiş" sayılır
       // — yükseltmedeki tedbirli davranışın aynısı.
-      if (rows.some(r => r.key === 'homeKwhPrice')
-        && !rows.some(r => r.key === 'homeKwhAuto'))
-        rows.push({key: 'homeKwhAuto', value: false});
+      // WT-87: iş fiyatı için de aynı tedbir — v37 ve öncesinin yedeğinde
+      // `workKwhPrice` hiç yok, ama ileride elle girilmiş bir fiyat işaretsiz
+      // gelirse aynı sessiz ezilme oluşurdu.
+      for (const [pKey, aKey] of [['homeKwhPrice', 'homeKwhAuto'],
+                                  ['workKwhPrice', 'workKwhAuto']])
+        if (rows.some(r => r.key === pKey) && !rows.some(r => r.key === aKey))
+          rows.push({key: aKey, value: false});
       await db.settings.bulkPut(rows);
     }
   }));
@@ -778,6 +813,22 @@ $('set-ocr').addEventListener('change', async e => {
   }
 });
 
+
+/* ---- WT-87: ev / iş elektrik fiyatı alanları ----
+   Elle yazılan değer artık "elle" işaretleniyor (WT-81/8'in köken kalıbı):
+   ülke değişince tablodan gelen değer bu değeri EZMEZ. */
+for (const [id, pKey, aKey] of [['set-homekwh', 'homeKwhPrice', 'homeKwhAuto'],
+                                ['set-workkwh', 'workKwhPrice', 'workKwhAuto']]) {
+  bindDecimalInput(id, 2);
+  $(id).addEventListener('change', async () => {
+    const v = pf($(id).value, 2);
+    S[pKey] = isNaN(v) || v <= 0 ? null : v;
+    S[aKey] = false;
+    await saveSetting(pKey, S[pKey]);
+    await saveSetting(aKey, false);
+    renderKwhDefault();
+  });
+}
 
 /* ---- WT-45: bütçe alanları ---- */
 for (const [id, key] of [['set-budget-m', 'budgetM'], ['set-budget-y', 'budgetY']]) {
