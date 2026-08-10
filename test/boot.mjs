@@ -66,7 +66,9 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
   + `\n;window.__app = {db, S, APP_VERSION, openAdd, showScreen, pf, fmtNum,
        fmtInput, checkNum, isValidDate, localISO, renderDashboard, scanBadData,
        isConv, amtB, renderStats, applyI18n, T, LANG_NAMES, CHARGERS,
-       COUNTRIES, HOME_NAMES, PAN_EU, BANKS_BY, BANKS_DEFAULT, overlayClose,
+       COUNTRIES, HOME_NAMES, HOME_LABEL, EV_LABEL, IS_LABEL, isHomeFirm,
+       isHomeRec, mekanOfFirm, MEKAN_VALS,
+       PAN_EU, BANKS_BY, BANKS_DEFAULT, overlayClose,
        initSegments, evSummaryHTML, carSVG, seedDemoData, clearDemoData,
        syncEmptyStates, renderHistory, renderVehiclePage, backupPayload,
        offerDemoCleanup, allSessions, allVehicles, memo, renderCompare,
@@ -3310,6 +3312,27 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     typeof A.T[l][k] !== 'string' || !A.T[l][k].trim()));
   check('WT-81/4 KABUL: hiçbir anahtar hiçbir dilde BOŞ değil',
     bos.length === 0, bos.slice(0, 8).join(',') || 'tamam');
+
+  // WT-86: ev/iş etiketi İKİ yerde tanımlı — kutucuğun yazısı i18n'den,
+  // KAYDA YAZILAN firma dizgisi db.js'teki tablodan geliyor. Ayrışırlarsa
+  // kullanıcı "Ev" görüp veritabanına başka bir dizgi yazılır ve o kayıt
+  // isHomeFirm taramasının dışında kalır. Sözleşme burada kilitleniyor.
+  for (const l of diller) {
+    check('WT-86: ' + l + ' ev/iş etiketi i18n ile db.js\'te birebir aynı',
+      A.T[l].homeChipEv === A.EV_LABEL[l] && A.T[l].homeChipWork === A.IS_LABEL[l],
+      `i18n=${A.T[l].homeChipEv}/${A.T[l].homeChipWork} db=${A.EV_LABEL[l]}/${A.IS_LABEL[l]}`);
+    check('WT-86: ' + l + ' etiketleri isHomeFirm tarafından tanınıyor',
+      A.isHomeFirm(A.EV_LABEL[l]) && A.isHomeFirm(A.IS_LABEL[l]));
+    check('WT-86: ' + l + ' etiketinden türetilen mekan doğru',
+      A.mekanOfFirm(A.EV_LABEL[l]) === 'ev' && A.mekanOfFirm(A.IS_LABEL[l]) === 'is'
+        && A.mekanOfFirm('ZES') === 'firma' && A.mekanOfFirm(A.HOME_LABEL[l]) === 'evis',
+      `${A.mekanOfFirm(A.EV_LABEL[l])}/${A.mekanOfFirm(A.IS_LABEL[l])}/${A.mekanOfFirm(A.HOME_LABEL[l])}`);
+  }
+  // Eski birleşik kayıtlar ve mekansız kayıtlar hâlâ "ev" sayılmalı.
+  check('WT-86: isHomeRec eski ve yeni değerlerin hepsini tanıyor',
+    A.isHomeRec({mekan: 'ev'}) && A.isHomeRec({mekan: 'is'})
+      && A.isHomeRec({mekan: 'evis'}) && !A.isHomeRec({mekan: 'firma'})
+      && A.isHomeRec({firma: 'Ev-İş'}) && !A.isHomeRec({firma: 'ZES'}));
 
   // Ölü anahtar taraması: sözlükteki her anahtar ya kodda geçmeli ya da
   // dinamik bir önekle (exp_, rem_, spec_) üretiliyor olmalı.

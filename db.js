@@ -37,8 +37,34 @@ const HOME_LABEL = {tr: 'Ev-İş', en: 'Home/Work', de: 'Zuhause/Arbeit',
 // İngilizce'ye geçerse 'Ev-İş' değeri t('homeChip') ile eşleşmez ve kayıt
 // sessizce "Şarj firması"na kayardı. Altı dilin yeni ve eski karşılıkları
 // birlikte tanınır.
-const HOME_NAMES = new Set([...Object.values(HOME_LABEL), ...OLD_HOME_NAMES]);
+// WT-86: "Ev-İş" TEK bir seçimdi ve firma listesinin içinde kayboluyordu.
+// Artık ev ve iş AYRI işaretleniyor, dolayısıyla etiketler de ayrıldı.
+// Bu diziler EKRANDA GÖRÜNEN metni ÜRETİR; i18n.js'teki homeChipEv /
+// homeChipWork anahtarları birebir aynı olmak ZORUNDA (boot.mjs sınıyor).
+const EV_LABEL = {tr: 'Ev', en: 'Home', de: 'Zuhause',
+  fr: 'Domicile', es: 'Casa', it: 'Casa'};
+const IS_LABEL = {tr: 'İş', en: 'Work', de: 'Arbeit',
+  fr: 'Travail', es: 'Trabajo', it: 'Lavoro'};
+const HOME_NAMES = new Set([...Object.values(HOME_LABEL), ...OLD_HOME_NAMES,
+  ...Object.values(EV_LABEL), ...Object.values(IS_LABEL)]);
 const isHomeFirm = f => HOME_NAMES.has(f);
+
+// WT-86: `mekan` alanının değer kümesi GENİŞLEDİ: 'ev' | 'is' | 'firma'.
+// Eski 'evis' okunmaya devam ediyor — o kayıtlar gerçekten belirsiz (kullanıcı
+// ev mi iş mi olduğunu söylememişti), geriye dönük tahmin yürütmek veri
+// UYDURMAK olurdu, o yüzden migration YAZILMADI.
+// Yeni alan eklenmedi, var olan boyut genişledi; `mekan` zaten indeksli,
+// Dexie sürümü artmıyor.
+const isHomeRec = r => (r.mekan ? r.mekan !== 'firma' : isHomeFirm(r.firma));
+const MEKAN_VALS = ['ev', 'is', 'firma', 'evis'];
+// Firma DİZGİSİNDEN mekan türet — yalnız `mekan` sütunu OLMAYAN kaynaklarda
+// (CSV içe aktarma, eski yedek). Birleşik eski etiket 'evis'te bırakılır.
+const mekanOfFirm = f => {
+  if (!isHomeFirm(f)) return 'firma';
+  if (Object.values(IS_LABEL).includes(f)) return 'is';
+  if (Object.values(HOME_LABEL).includes(f)) return 'evis';
+  return 'ev';
+};
 db.version(3).stores({
   sessions: '++id, tarih, firma, tip, aracId, mekan',
   vehicles: '++id, ad',

@@ -131,12 +131,29 @@ A.S.country = 'TR';
 
 await A.openAdd();
 await sleep(250);
-// DC varsayılan geliyor; AC'ye bas
+// WT-86: seçim artık drop-down'ın DIŞINDA iki ayrı kutucukta ve yeni kayıt
+// "Ev" işaretli açılıyor (eskiden liste en çok kullanılan firmayla geliyor,
+// ev/iş seçimi listenin içinde farkedilmiyordu).
+check('WT-86 KABUL: yeni kayıt "Ev" kutucuğu işaretli açılıyor',
+  $('in-home').checked && !$('in-work').checked,
+  `ev=${$('in-home').checked} iş=${$('in-work').checked}`);
+check('WT-86 KABUL: kutucuk işaretliyken firma listesi kapalı',
+  $('in-firm').disabled === true);
+check('WT-86: firma listesinde ev/iş satırı YOK (seçim kutucuklarda)',
+  [...$('in-firm').options].filter(o => A.isHomeFirm(o.value)).length === 0,
+  'ev satırları: ' + [...$('in-firm').options].filter(o => A.isHomeFirm(o.value)).map(o => o.value).join(', '));
+// Kutucuğu boşalt: liste geri gelmeli
+$('in-home').checked = false;
+$('in-home').dispatchEvent(new w.Event('change', { bubbles: true }));
+await sleep(150);
+check('WT-86 KABUL: kutucuk boşalınca firma listesi geri açılıyor',
+  $('in-firm').disabled === false && $('wrap-unitprice').style.display === 'none');
+// WT-16/B: AC'ye basınca ev kutucuğu kendiliğinden işaretlenmeli
 const acBtn = [...$('in-tip').querySelectorAll('button')].find(b => b.dataset.v === 'AC');
 acBtn.click();
 await sleep(200);
-check('WT-16/B KABUL: AC seçilince firma otomatik "Ev-İş" geldi',
-  $('in-firm').value === 'Ev-İş', 'firma=' + $('in-firm').value);
+check('WT-16/B KABUL: AC seçilince ev kutucuğu otomatik işaretlendi',
+  $('in-home').checked === true, 'ev=' + $('in-home').checked);
 check('WT-16/C KABUL: kWh fiyatı alanı açıldı',
   $('wrap-unitprice').style.display !== 'none');
 check('WT-16/C: birim fiyat Ayarlar\'daki değerle önceden dolu',
@@ -169,8 +186,11 @@ check('WT-16/C KABUL: tutarın üzerine yazılan 100 kaydedildi',
   saved && saved.tutar === 100, 'tutar=' + (saved && saved.tutar));
 check('WT-16/C4: hangi yöntem kullanıldığı kayıtta saklandı',
   saved && saved.tutarKaynak === 'manuel', 'tutarKaynak=' + (saved && saved.tutarKaynak));
-check('WT-16/1: yeni kayıtta mekan=evis',
-  saved && saved.mekan === 'evis', 'mekan=' + (saved && saved.mekan));
+// WT-86: mekan artık ev ve işi AYIRIYOR — 'evis' yalnız eski kayıtlarda kalır
+check('WT-16/1 + WT-86: yeni kayıtta mekan=ev',
+  saved && saved.mekan === 'ev', 'mekan=' + (saved && saved.mekan));
+check('WT-86: firma dizgisi kullanıcının dilinde yazıldı',
+  saved && saved.firma === 'Ev' && A.isHomeFirm(saved.firma), 'firma=' + (saved && saved.firma));
 
 // DC seç -> alan kaybolmalı
 await A.openAdd();
@@ -183,8 +203,9 @@ await sleep(200);
 check('WT-16/C KABUL: DC seçilince kWh fiyatı alanı kayboldu',
   $('wrap-unitprice').style.display === 'none',
   'display=' + $('wrap-unitprice').style.display);
-check('WT-16/B: DC seçilince firma listesi Ev-İş\'ten çıktı',
-  $('in-firm').value !== 'Ev-İş', 'firma=' + $('in-firm').value);
+check('WT-16/B + WT-86: DC seçilince kutucuklar boşaldı, liste geri geldi',
+  !$('in-home').checked && !$('in-work').checked && $('in-firm').disabled === false,
+  `ev=${$('in-home').checked} iş=${$('in-work').checked} kapalı=${$('in-firm').disabled}`);
 
 // ---------- Ev-İş kimliği DİLE BAĞLI OLMAMALI ----------
 // Kullanıcı kayıtları Türkçe girip sonra İngilizce'ye geçerse 'Ev-İş' değeri
@@ -210,23 +231,30 @@ check('WT-16/B: DC seçilince firma listesi Ev-İş\'ten çıktı',
   await sleep(300);
 
   check('dil değişince eski Ev-İş kaydı yine ev olarak tanınıyor',
-    A.isHomeFirm($('in-firm').value), 'firma seçili=' + $('in-firm').value);
+    $('in-home').checked && !$('in-work').checked,
+    `ev=${$('in-home').checked} iş=${$('in-work').checked}`);
   check('KUSUR DÜZELDİ: kWh birim fiyatı alanı hâlâ açık',
     $('wrap-unitprice').style.display !== 'none',
     'display=' + $('wrap-unitprice').style.display);
   check('KUSUR DÜZELDİ: indirim bloğu hâlâ gizli',
     $('wrap-disc').style.display === 'none',
     'display=' + $('wrap-disc').style.display);
-  check('firma listesinde iki ayrı "ev" satırı yok',
-    [...$('in-firm').options].filter(o => A.isHomeFirm(o.value)).length === 1,
+  // WT-86: listede artık HİÇ ev/iş satırı yok — hangi dilde kaydedilmiş
+  // olursa olsun eleniyorlar, yoksa kutucukların kopyası gibi görünürlerdi.
+  check('firma listesinde hiç "ev" satırı yok (WT-86)',
+    [...$('in-firm').options].filter(o => A.isHomeFirm(o.value)).length === 0,
     'ev satırları: ' + [...$('in-firm').options].filter(o => A.isHomeFirm(o.value)).map(o => o.value).join(', '));
 
   // hiçbir şey değiştirmeden yeniden kaydet
   $('btn-save').click();
   await sleep(450);
   const after = await A.db.sessions.get(hid);
-  check('KUSUR DÜZELDİ: yeniden kaydedince mekan evis kaldı (firmaya kaymadı)',
-    after.mekan === 'evis', 'mekan=' + after.mekan);
+  // WT-86: eski birleşik kayıt yeniden kaydedilince AYRIŞIYOR — kullanıcı
+  // kaydı zaten açmış durumda ve kutucuk hangisi olduğunu gösteriyor.
+  // Korunan asıl değişmez: mekan 'firma'ya KAYMIYOR (dile bağlı kusur).
+  check('KUSUR DÜZELDİ: yeniden kaydedince ev kimliği korundu (firmaya kaymadı)',
+    after.mekan === 'ev' && A.isHomeFirm(after.firma),
+    `mekan=${after.mekan} firma=${after.firma}`);
   A.S.lang = 'tr';
   A.applyI18n();
 }
