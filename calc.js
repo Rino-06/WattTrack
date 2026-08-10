@@ -11,7 +11,7 @@
 const S = {
   country: 'TR', currency: 'TRY', unit: 'km', lang: 'tr',
   advOpen: false, defaultVehicleId: null, onboarded: false,
-  period: 'year', cmp: null, dashVeh: '', cmpVeh: '', vehExpVeh: '', vehExpGran: 'month', vehExpFltTur: '', vehExpFltDon: '', bankCountries: null, gran: 'month', customBanks: [], theme: 'light', dstatType: '', histBadOnly: null, homeKwhPrice: null, kwhRegion: '', homeKwhAuto: false
+  period: 'all', cmp: null,   // WT-92: ana sayfa "Tümü" ile açılıyor dashVeh: '', cmpVeh: '', vehExpVeh: '', vehExpGran: 'month', vehExpFltTur: '', vehExpFltDon: '', bankCountries: null, gran: 'month', customBanks: [], theme: 'light', dstatType: '', histBadOnly: null, homeKwhPrice: null, kwhRegion: '', homeKwhAuto: false
 };
 const $ = id => document.getElementById(id);
 

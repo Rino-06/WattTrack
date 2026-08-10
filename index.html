@@ -109,14 +109,14 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .page{display:none}
 .page.active{display:block}
 
-.hero{background:linear-gradient(150deg,#FFFFFF 30%,#EAF6EE 100%);border-radius:20px;padding:20px;margin-bottom:12px;box-shadow:var(--shadow)}
+.hero{background:linear-gradient(150deg,#FFFFFF 30%,#EAF6EE 100%);border-radius:20px;padding:15px 18px;margin-bottom:10px;box-shadow:var(--shadow)}
 .hero .k{font-size:12px;color:var(--muted);margin-bottom:4px}
 .hero .v{font-size:29px;font-weight:700;letter-spacing:-.5px}
 .hero .v.gross{color:var(--muted)}
 .hero2{display:flex;align-items:stretch;gap:14px}
 .hero2>div:not(.hero-sep){flex:1;min-width:0}
 .hero-sep{width:1px;background:var(--track);flex:none}
-.hero .delta{font-size:12px;font-weight:600;margin-top:6px;min-height:16px}
+.hero .delta{font-size:12px;font-weight:600;margin-top:4px;min-height:0}
 /* ============ WT-34: RENK SÖZLÜĞÜ ============
    Bu dört anlam dışında değer boyamayın; yeni bir kutu eklerken buradan seçin.
      yeşil  var(--accent-dark) → EV tarafı / tasarruf / olumlu
@@ -135,8 +135,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .legend .li{display:flex;align-items:center;gap:8px}
 .legend .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
 .legend .lv{margin-left:auto;font-weight:700}
-.mb-lg{margin-bottom:20px}
-.dstat{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.mb-lg{margin-bottom:14px}
+.dstat{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .dstat .tile .v{font-size:15px}
 .toplist{background:var(--card);border-radius:16px;padding:6px 16px;box-shadow:var(--shadow);margin-bottom:14px}
 .toplist .tl{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--circle);font-size:13.5px}
@@ -162,11 +162,11 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .chart-card svg{width:100%;height:170px;display:block}
 .vlist .cam{width:30px;height:30px;border-radius:8px;background:var(--chip);color:var(--accent-text);font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .vlist .undo{color:var(--accent);font-size:12.5px;font-weight:700}
-.tiles{display:flex;gap:10px;margin-bottom:10px}
-.tile{flex:1;background:var(--card);border-radius:16px;padding:13px 14px;box-shadow:var(--shadow);min-width:0}
-.tile .k{font-size:12px;color:var(--muted2);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tiles{display:flex;gap:8px;margin-bottom:8px}
+.tile{flex:1;background:var(--card);border-radius:16px;padding:9px 12px;box-shadow:var(--shadow);min-width:0}
+.tile .k{font-size:12px;color:var(--muted2);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile .v{font-size:16px;font-weight:600}
-.tile .yd{font-size:12px;font-weight:600;margin-top:3px;min-height:15px}
+.tile .yd{font-size:12px;font-weight:600;margin-top:2px;min-height:0}
 /* WT-73/Kıyasla 3: Kıyasla etiketleri parantezli ve uzun ("EV toplam (şarj +
    sabit gider)"); nowrap+ellipsis parantezi kesip taşma hissi veriyordu.
    splitParenLabels() parantezli kısmı <span class="paren"> içine alır, burada
@@ -237,7 +237,7 @@ h1,h2{font-size:inherit;font-weight:inherit}
 .dec-pair .sep{font-size:20px;font-weight:800;color:var(--muted);line-height:1}
 .seg button{flex:1;text-align:center;padding:10px 6px;border-radius:10px;font-size:13px;font-weight:600;background:var(--card);color:var(--muted);border:1px solid var(--border)}
 .seg button.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
-.seg.mini button{padding:7px 4px;font-size:12px;border-radius:9px}
+.seg.mini button{padding:6px 4px;font-size:13.5px;border-radius:9px}
 
 .monthbars{display:flex;align-items:flex-end;gap:10px;height:130px;background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
 .mb{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;min-width:0}
@@ -293,7 +293,7 @@ h1,h2{font-size:inherit;font-weight:inherit}
 .form-err{color:var(--red);font-size:13px;font-weight:600;display:none}
 /* WT-14: kapsam rozeti / notu — bir bloğun dönem seçicisine bağlı olup
    olmadığını görünür kılar */
-.scope-note{font-size:11.5px;color:var(--muted2);margin:-6px 0 12px;line-height:1.35}
+.scope-note{font-size:11.5px;color:var(--muted2);margin:-4px 0 8px;line-height:1.35}
 .scope-badge{display:inline-block;font-size:10.5px;font-weight:700;color:var(--muted);
   background:var(--circle);border-radius:100px;padding:2px 8px;vertical-align:middle}
 /* WT-09: seçim diyaloğu (araç silme, kayıt taşıma) */
@@ -617,15 +617,19 @@ nav button{min-height:48px;justify-content:center}
   <!-- WT-90: "Hafta" kaldırıldı — ana sayfadaki kutuların çoğu (bütçe, önceki
        döneme göre değişim) haftalık pencerede anlamsız kalıyordu. İstatistik
        sayfasının kendi seçicisinde (d-gran) duruyor. -->
-  <div class="seg mini d-data" id="d-period" data-i18n-aria="ariaPeriod" style="margin-bottom:12px">
+  <div class="seg mini d-data" id="d-period" data-i18n-aria="ariaPeriod" style="margin-bottom:8px">
     <button data-v="month" data-i18n="month">Ay</button>
-    <button data-v="year" class="sel" data-i18n="year">Yıl</button>
+    <button data-v="year" data-i18n="year">Yıl</button>
+    <!-- WT-92: "Tümü" geri geldi ve VARSAYILAN. WT-56'nın gerekçesi
+         (önceki döneme kıyas anlamsızlaşır) prevPeriodFilter'ın boş küme
+         dönmesiyle karşılandı: kıyas satırı ve bütçe çubuğu susuyor. -->
+    <button data-v="all" class="sel" data-i18n="periodAll">Tümü</button>
   </div>
   <!-- WT-90: AC/DC filtresi detay kutularının içindeydi ve YALNIZ onları
        süzüyordu. Artık dönem seçicisinin hemen altında ve sayfanın TAMAMINI
        süzüyor (araç km sayacı kutuları hariç — onlar şarj kaydından değil
        aracın sayacından geliyor). -->
-  <div class="seg mini d-data" id="d-dstat-type" data-i18n-aria="ariaTypeFilter" style="margin-bottom:12px">
+  <div class="seg mini d-data" id="d-dstat-type" data-i18n-aria="ariaTypeFilter" style="margin-bottom:10px">
     <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
     <button data-v="DC">DC</button>
     <button data-v="AC">AC</button>
@@ -695,16 +699,21 @@ nav button{min-height:48px;justify-content:center}
 
   <!-- WT-33: başlık, filtre ve değerleri tek hücrede tutan sarmalayıcı -->
   <div id="d-dstat-wrap" class="d-data">
-    <div class="h2row" style="margin-top:0">
+    <!-- WT-93: filtre yukarı taşınınca bu satırda yalnız dönem rozeti kaldı;
+         tam boy başlık boşluğu gereksizdi -->
+    <div class="h2row" style="margin-top:0;margin-bottom:6px">
       <!-- WT-70: "Detay istatistikler" ibaresi kaldırıldı; dönem rozeti
            kaldı çünkü kutuların hangi dönemi gösterdiğini söylüyor. -->
       <h2 class="h2"><span class="scope-badge" id="d-dstat-scope"></span></h2>
     </div>
     <div class="dstat">
       <div class="tile"><div class="k" data-i18n="avgDuration">Ort. şarj süresi</div><div class="v" id="d-dur">—</div></div>
-      <div class="tile"><div class="k" data-i18n="avgSocRange">Ort. şarj aralığı</div><div class="v" id="d-soc">—</div><div class="yd" id="d-soc-add"></div></div>
+      <!-- WT-91: "ort. eklenen +%N" satırı KALDIRILDI — aralığın kendisi
+           (%30 → %80) zaten aynı bilgiyi taşıyor, ikinci satır hem kutuyu
+           yükseltiyor hem komşu kutuda boşluk bırakıyordu. -->
+      <div class="tile"><div class="k" data-i18n="avgSocRange">Ort. şarj aralığı</div><div class="v" id="d-soc">—</div></div>
     </div>
-    <div class="tiles" style="margin-bottom:20px">
+    <div class="tiles" style="margin-bottom:14px">
       <div class="tile"><div class="k" data-i18n="chargePower">Ort. şarj gücü</div><div class="v" id="d-power">—</div></div>
       <!-- WT-41/1: kendi geçmişiyle karşılaştırılır; WLTP ile KARŞILAŞTIRILMAZ -->
       <div class="tile"><div class="k" data-i18n="avgCons">Ortalama tüketim</div><div class="v" id="d-cons">—</div><div class="yd" id="d-cons-d"></div></div>
