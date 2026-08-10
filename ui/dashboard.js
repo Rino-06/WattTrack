@@ -257,19 +257,10 @@ function butceCiz(cur, all) {
   // Dönem seçicisi ne ise ona uyan bütçe kullanılır; "Tümü" seçiliyse
   // (WT-92) kıyaslanacak bir hedef olmadığı için çubuk gizlenir.
   const hedef = S.period === 'year' ? yillik : (S.period === 'month' ? aylik : null);
-  // WT-97: "Tümü" (WT-92'den beri VARSAYILAN) ile kıyaslanacak bir hedef yok.
-  // Bütçe GİRİLMİŞ olmasına rağmen çubuğun sessizce kaybolması kullanıcıyı
-  // "bütçe çalışmıyor" sanmaya götürür — bunun yerine nereye bakacağını söyle.
-  if (!hedef) {
-    const girilmis = aylik || yillik;
-    box.style.display = girilmis && S.period === 'all' ? '' : 'none';
-    if (girilmis && S.period === 'all') {
-      $('d-budget-lbl').textContent = t('budgetPickPeriod');
-      $('d-budget-bar').style.width = '0%';
-      $('d-budget-note').textContent = '';
-    }
-    return;
-  }
+  // WT-97 GERİ ALINDI (WT-99): "Tümü"de çubuğun yerine yönlendirme yazısı
+  // konmuştu; kullanıcı onu istemedi. Bilgi ana sayfadan Ayarlar'daki bütçe
+  // alanlarının altına taşındı — orası zaten değeri girdiği yer.
+  if (!hedef) { box.style.display = 'none'; return; }
   const harcanan = cur.filter(isConv).reduce((s, r) => s + amtB(r), 0);
   const pct = Math.round(harcanan / hedef * 100);
   box.style.display = '';

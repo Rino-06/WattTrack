@@ -734,6 +734,11 @@ async function importBackupText(text) {
     applyI18n();
     applyTheme();
   }
+  // WT-98: yedekteki kayıtların aracı yoksa (araç sonradan eklenmiş bir
+  // cihazdan geliyorsa) kullanıcı bunu ancak ikinci aracı eklediğinde fark
+  // ederdi. İçeri alır almaz söyle — applyI18n yalnız ayarlar da geri
+  // yüklendiyse koşuyor, buraya ayrıca yazılması o yüzden gerekli.
+  if (typeof scanUnassigned === 'function') await scanUnassigned();
   toast(dupes.length ? t('importPartial', {n: fresh.length, d: dupes.length}) : t('imported'));
   showScreen('dashboard');
 }

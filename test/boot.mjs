@@ -82,7 +82,8 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
        parcaliOku, parcaliYaz,
        KWH_PRICES, KWH_SRC, defaultKwhPrice, kwhRegions, kwhPriceAutofill,
        FUEL_HIST, FUEL_HIST_SRC, fuelHistMerge,
-       renderSettings, barChartHTML, fetchRate, fetchTable, FX_TIMEOUT};`;
+       renderSettings, barChartHTML, fetchRate, fetchTable, FX_TIMEOUT,
+       scanUnassigned, scanOrphans};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -1745,15 +1746,12 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   // SUSUYOR. Sessizce geçen aya kıyaslamak asıl kusur olurdu.
   check('WT-92: "Tümü"de önceki döneme kıyas satırı BOŞ',
     $('d-delta').textContent === '', 'd-delta=' + $('d-delta').textContent);
-  // WT-97: bütçe GİRİLMİŞSE "Tümü"de çubuk yerine yönlendirme duruyor —
-  // sessizce kaybolsa kullanıcı "bütçe çalışmıyor" sanardı.
-  check('WT-97 KABUL: "Tümü"de bütçe kutusu dönem seçmeyi söylüyor',
-    $('d-budget').style.display !== 'none'
-      && /Ay|Yıl/.test($('d-budget-lbl').textContent),
-    'display=' + $('d-budget').style.display + ' lbl=' + $('d-budget-lbl').textContent);
-  check('WT-97: yönlendirmede yüzde çubuğu boş (yanlış oran gösterilmiyor)',
-    $('d-budget-bar').style.width === '0%' && $('d-budget-note').textContent === '',
-    'w=' + $('d-budget-bar').style.width);
+  // WT-99 (WT-97 geri alındı): "Tümü"de çubuk hiç görünmez. Nerede göründüğü
+  // Ayarlar'da, bütçe alanlarının hemen altında yazılı.
+  check('WT-99 KABUL: "Tümü"de bütçe çubuğu tamamen gizli',
+    $('d-budget').style.display === 'none', 'display=' + $('d-budget').style.display);
+  check('WT-99: bütçenin nerede göründüğü Ayarlar\'da yazılı',
+    !!doc.querySelector('#page-settings [data-i18n="budgetWhere"]'));
   A.S.period = 'year';
   await A.renderDashboard();
   await sleep(300);
@@ -1767,6 +1765,56 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const iki = ['d-period', 'd-dstat-type'].map(id => doc.getElementById(id).className);
   check('WT-93 KABUL: iki filtre şeridi aynı sınıflarla (eşit yükseklik)',
     iki[0].split(' ').sort().join() === iki[1].split(' ').sort().join(), iki.join(' || '));
+}
+
+// --- WT-98: aracı olmayan şarj kayıtları bildiriliyor ve tek dokunuşla bağlanıyor ---
+{
+  const doc = window.document, A = app();
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  const y = new Date().getFullYear();
+  await A.db.sessions.bulkAdd([
+    {tarih: `${y}-03-10T10:00`, firma: 'ZES', tip: 'DC', kwh: 30, tutar: 300,
+      odenen: 300, cur: 'TRY', mesafeKm: 150, aracId: null},
+    {tarih: `${y}-03-12T10:00`, firma: 'ZES', tip: 'DC', kwh: 20, tutar: 200,
+      odenen: 200, cur: 'TRY', mesafeKm: 100, aracId: null}
+  ]);
+  A.invalidateCache();
+
+  // Araç YOKKEN uyarı çıkmamalı: bağlanacak bir şey yok, gürültü olur.
+  await A.scanUnassigned();
+  await sleep(200);
+  const strip = () => [...doc.querySelectorAll('#d-warnings .warn-strip')]
+    .map(e => e.textContent).join(' | ');
+  check('WT-98: araç yokken araçsız kayıt uyarısı ÇIKMIYOR',
+    !/araca bağlı değil/.test(strip()), strip().slice(0, 120));
+
+  const vid = await A.db.vehicles.add({ad: 'Tesla Model Y', kmStart: 1000, kmNow: 2000});
+  A.invalidateCache();
+  await A.scanUnassigned();
+  await sleep(200);
+  check('WT-98 KABUL: araç eklenince "2 kayıt hiçbir araca bağlı değil" uyarısı çıkıyor',
+    /2/.test(strip()) && /araca bağlı değil/.test(strip()), strip().slice(0, 160));
+
+  // Bağlama işini doğrudan koştur (dialog jsdom'da elle sürülemiyor):
+  // uyarının vaat ettiği sonuç kayıtlarda gerçekleşiyor mu?
+  await A.db.transaction('rw', A.db.sessions, async () => {
+    for (const r of (await A.allSessions()).filter(r => r.aracId == null))
+      await A.db.sessions.update(r.id, {aracId: vid});
+  });
+  A.invalidateCache();
+  await A.scanUnassigned();
+  await sleep(200);
+  check('WT-98 KABUL: kayıtlar bağlandıktan sonra uyarı kayboluyor',
+    !/araca bağlı değil/.test(strip()), strip().slice(0, 120));
+  check('WT-98: bağlanan kayıtlar gerçekten araca yazıldı',
+    (await A.allSessions()).every(r => r.aracId === vid),
+    JSON.stringify((await A.allSessions()).map(r => r.aracId)));
+
+  await A.db.sessions.clear();
+  await A.db.vehicles.clear();
+  A.invalidateCache();
+  await A.scanUnassigned();
 }
 
 // --- WT-40: menzil gösterimi, veri tarihi ve elle düzeltme ---

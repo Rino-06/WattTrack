@@ -7,3 +7,6 @@ node_modules/
 # bundle zip). _snapshot/i18n-dictionary.js zaten WT-50'de SİLİNECEK olan
 # dosyanın kopyası; ikinci bir bayat kopyayı izlemek o maddeye ters düşer.
 _snapshot/
+
+# Kişisel yedek dosyaları — ASLA depoya girmemeli (kayıt tarihleri, tutarlar, konumlar)
+watttrack-yedek*.json
