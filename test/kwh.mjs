@@ -65,7 +65,7 @@ async function boot() {
     + `\n;window.__app = {db, S, t, finishOnboarding, kwhPriceAutofill,
          defaultKwhPrice, renderSettings, saveSetting, backupPayload,
          importBackupText, loadSettings, kwhFiyatOnar, kwhRegions,
-         renderDashboard};`;
+         TR_KWH_2025, renderDashboard};`;
   window.eval(bundle);
   await new Promise(r => setTimeout(r, 1200));
   return window;
@@ -130,8 +130,12 @@ await A.saveSetting('homeKwhAuto', false);
 A.S.country = 'ES';
 await A.saveSetting('country', 'ES');
 const degistiMi = await A.kwhPriceAutofill();
+// WT-87: dönüş değeri artık ev + iş fiyatını birlikte kapsıyor; iş fiyatı
+// hâlâ tablodan geldiği için ülke değişince tazelenir. Sınanan değişmez
+// ELLE girilen ev fiyatının korunması.
 check('WT-81/8 KABUL: elle girilen fiyat ülke değişse de EZİLMİYOR (WT-78)',
-  degistiMi === false && A.S.homeKwhPrice === 0.1234, 'homeKwhPrice=' + A.S.homeKwhPrice);
+  A.S.homeKwhPrice === 0.1234 && A.S.homeKwhAuto === false,
+  `homeKwhPrice=${A.S.homeKwhPrice} auto=${A.S.homeKwhAuto} dönüş=${degistiMi}`);
 
 // ---- Mevcut kurulumlar: işaretsiz değer elle girilmiş sayılır (tedbirli) ----
 A.S.homeKwhPrice = 2.8076;
@@ -179,7 +183,21 @@ check('WT-81/8 KABUL: eski yedekten gelen fiyat ülke değişince EZİLMİYOR',
 // ============================================================
 // Asıl sınav POZİTİF durum değil, DOKUNMAMASI gereken durumlar: bu geri
 // alınamaz bir yazma, yanlış tetiklenirse kullanıcının kendi verisini bozar.
-const TR = A.defaultKwhPrice('TR', '').p;
+// WT-87: onarımın aradığı imza TABLODAKİ güncel TR fiyatı DEĞİL, kusurun o
+// gün yazdığı dondurulmuş değer. Tablo 2,8076 → 3,24 olarak güncellendi;
+// imza tabloya bağlı kalsaydı onarım bu sürümde sessizce ölürdü.
+const TR = A.TR_KWH_2025;
+check('WT-87: onarım imzası tablodan AYRIŞTI (dondurulmuş değer kullanılıyor)',
+  TR === 2.8076 && A.defaultKwhPrice('TR', '').p !== TR,
+  `imza=${TR} tablo=${A.defaultKwhPrice('TR', '').p}`);
+check('WT-87 KABUL: TR mesken 3,24 · ticarethane 5,46',
+  A.defaultKwhPrice('TR', '').p === 3.24
+    && A.defaultKwhPrice('TR', '', 'is').p === 5.46
+    && A.defaultKwhPrice('TR', '', 'is').is === true,
+  `mesken=${A.defaultKwhPrice('TR', '').p} iş=${A.defaultKwhPrice('TR', '', 'is').p}`);
+check('WT-87: tabloda pw olmayan ülkede iş fiyatı meskene düşüyor (uydurma çarpan yok)',
+  A.defaultKwhPrice('DE', '', 'is').p === A.defaultKwhPrice('DE', '').p
+    && A.defaultKwhPrice('DE', '', 'is').is === false);
 
 // Onarımı çağırmadan önce cihazı "kusurlu kurulum" hâline getiren yardımcı
 const kur = async (country, currency, fiyat) => {

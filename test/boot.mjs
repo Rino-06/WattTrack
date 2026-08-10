@@ -2999,11 +2999,18 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const degisti = await A.kwhPriceAutofill();
   check('WT-78 KABUL: kullanıcının girdiği değer ASLA ezilmiyor',
     degisti === false && A.S.homeKwhPrice === 9.99, 'değer=' + A.S.homeKwhPrice);
-  // Ülke değişse bile elle girilen değer korunur (asıl WT-78 değişmezi)
+  // Ülke değişse bile elle girilen değer korunur (asıl WT-78 değişmezi).
+  // WT-87: dönüş değeri artık İKİ alanı birden kapsıyor (ev + iş) — iş fiyatı
+  // hâlâ tablodan geldiği için ülke değişince o tazelenir ve `true` döner.
+  // Sınanan değişmez ELLE GİRİLEN EV FİYATININ korunması; dönüş değeri değil.
   A.S.country = 'DE';
-  const degisti2 = await A.kwhPriceAutofill();
+  await A.kwhPriceAutofill();
   check('WT-78 KABUL: ülke değişse de elle girilen değer korunuyor',
-    degisti2 === false && A.S.homeKwhPrice === 9.99, 'değer=' + A.S.homeKwhPrice);
+    A.S.homeKwhPrice === 9.99 && A.S.homeKwhAuto === false,
+    `değer=${A.S.homeKwhPrice} auto=${A.S.homeKwhAuto}`);
+  check('WT-87: elle girilen ev fiyatı iş fiyatının tazelenmesini ENGELLEMİYOR',
+    A.S.workKwhPrice === A.defaultKwhPrice('DE', '', 'is').p,
+    `iş=${A.S.workKwhPrice}`);
   A.S.country = 'TR';
 
   // --- ayarlar arayüzü ---
