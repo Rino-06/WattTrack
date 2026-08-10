@@ -521,3 +521,73 @@ sayfada beliren ilerleme çubuğu (WT-45). Bütçe girilmemişse zaten görünm�
 - **WT-93:** gerçek telefonda filtre şeritlerinin yazısı taşıyor mu (altı
   dilde "Tümü/Alle/Tout" + "DC/AC"), kutular hâlâ rahat basılabiliyor mu.
 - **WT-92:** çok kayıtlı cihazda "Tümü" ile ana sayfanın açılış hızı.
+
+---
+
+# Faz 14 (10.08.2026, v41) — acil düzeltme + kullanıcı verisi teşhisi
+
+| No | Başlık | Durum |
+|---|---|---|
+| WT-94 | v40'ta S varsayılanlarının 15'i yok olmuştu | ✅ ACİL |
+| WT-95 | İstatistik de "Tümü" ile açılsın | ✅ |
+| WT-96 | Filtre şeritleri 44 → 40px | ✅ |
+| WT-97 | Bütçe girilmişken "Tümü"de sessizce kaybolmasın | ✅ |
+
+**WT-94 — BU DEPODA ÇIKAN EN SESSİZ KUSUR.** WT-92'de `calc.js`'in `S`
+tanımına satır SONUNA `// WT-92: …` yorumu yazıldı. O satır ~300 karakter
+uzunluğunda ve `//` arkasındaki HER ŞEYİ yorum yapıyor: 15 varsayılan
+(dashVeh, cmpVeh, vehExpVeh, vehExpGran, vehExpFltTur, vehExpFltDon,
+bankCountries, **gran**, customBanks, theme, dstatType, histBadOnly,
+homeKwhPrice, kwhRegion, homeKwhAuto) bir anda kayboldu ve v40 olarak
+YAYINLANDI.
+
+Görünür sonucu: `S.gran` undefined → `inPeriod(all, undefined)` son dala
+düşüyor → İstatistik sayfası dönem seçicisinden bağımsız olarak HER ZAMAN
+içinde bulunulan ayı gösteriyordu.
+
+**745 kontrolün hiçbiri kızarmadı.** Sebebi yapısal: her test bloğu
+dokunduğu `S` alanını kendisi atıyor (`A.S.period = …`), dolayısıyla
+varsayılanın var olup olmadığını hiçbiri sınamıyordu. Yeni `WT-94` bloğu
+iki değişmez kilitliyor: (1) bildirilen varsayılanların hepsi `S`'te var,
+(2) `SETTING_KEYS`'teki her anahtarın bir varsayılanı var. İkincisi
+`ocrOn`, `budgetM`, `budgetY`, `workKwhPrice`, `workKwhAuto`'nun zaten
+eksik olduğunu ortaya çıkardı — eklendi.
+
+**KURAL:** `calc.js`'teki `S` tanımı gibi UZUN tek satırlara satır sonu
+yorumu YAZMA. Yorum ayrı satırda durur. (`watttrack-grep-app-js-tuzagi`
+hatırlatması aynı kökten: bu depoda uzun satırlar araçları yanıltıyor.)
+
+**WT-95 —** `S.gran` varsayılanı `'month'` → `'all'`, `d-gran`'da `sel`
+"Tümü"ye taşındı. WT-56 "Tümü"yü İstatistik'e zaten eklemişti ama
+varsayılan Ay kalmıştı; kullanıcının şikayetinin ikinci yarısı buydu.
+
+**WT-96 — WT-25'in TEK istisnası.** `.seg.mini button` `min-height`
+44 → 40px, kullanıcının açık kararı. WCAG 2.5.5 (AAA, 44px) artık
+karşılanmıyor; WCAG 2.2 AA ölçütü 2.5.8 (24px) karşılanıyor.
+`test/boot.mjs`'te `ISTISNA` haritası olarak yazılı ve 40'ın altına
+düşmesi ayrıca kilitli. **Listeye yeni satır eklemek yeni bir ödün demek.**
+
+**WT-97 —** "Tümü" varsayılan olunca bütçe çubuğu (WT-45) hep gizli
+kalıyordu; bütçesini girmiş kullanıcı "çalışmıyor" sanardı. Artık kutu
+duruyor, yüzdesi boş ve "üstten Ay ya da Yıl seç" diyor. Yeni anahtar
+`budgetPickPeriod` (altı dil).
+
+## Kullanıcının yedeğinin teşhisi (kod kusuru DEĞİL)
+
+`watttrack-yedek-2026-08-10.json` jsdom koşumuna gerçekten yüklendi.
+28 şarj, 1 araç, 2 gider, 13 ayar — **hepsi eksiksiz içeri girdi**
+(ana sayfa ₺10.555 / 1.172 kWh / 28 şarj, Geçmiş 28 satır, Aracım
+₺14.055, Kıyasla 6.717 km). Görünmeyen tek yer İstatistik'ti; sebebi
+WT-94 + WT-95, veri değil.
+
+**Yedekte kalıcı bir veri özelliği:** 28 kaydın 23'ünde `aracId: null`
+(27 Haziran 2026'dan önce girilenler — araç sonradan eklenmiş). Şu an
+zararsız: tek araç olduğu için ana sayfa/istatistik araç filtresi devre
+dışı. **İkinci araç eklendiği gün** o 23 kayıt araç seçilince kaybolur.
+Toplu bağlama aracı YOK — gerekirse ayrı bir iş kalemi.
+
+## Elle test borcu
+
+- **WT-96:** 40px'e inen filtre şeritleri gerçek telefonda rahat
+  basılabiliyor mu (asıl gerekçe buydu, jsdom ölçemez).
+- **WT-97:** Ayarlar'a bütçe girip ana sayfada "Tümü" → "Ay" geçişi.
