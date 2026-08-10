@@ -614,10 +614,21 @@ nav button{min-height:48px;justify-content:center}
   <!-- WT-36/1: hiç kayıt yokken .d-data öğeleri gizlenir, buraya boş durum basılır -->
   <div id="d-empty"></div>
 
+  <!-- WT-90: "Hafta" kaldırıldı — ana sayfadaki kutuların çoğu (bütçe, önceki
+       döneme göre değişim) haftalık pencerede anlamsız kalıyordu. İstatistik
+       sayfasının kendi seçicisinde (d-gran) duruyor. -->
   <div class="seg mini d-data" id="d-period" data-i18n-aria="ariaPeriod" style="margin-bottom:12px">
-    <button data-v="week" data-i18n="week">Hafta</button>
     <button data-v="month" data-i18n="month">Ay</button>
     <button data-v="year" class="sel" data-i18n="year">Yıl</button>
+  </div>
+  <!-- WT-90: AC/DC filtresi detay kutularının içindeydi ve YALNIZ onları
+       süzüyordu. Artık dönem seçicisinin hemen altında ve sayfanın TAMAMINI
+       süzüyor (araç km sayacı kutuları hariç — onlar şarj kaydından değil
+       aracın sayacından geliyor). -->
+  <div class="seg mini d-data" id="d-dstat-type" data-i18n-aria="ariaTypeFilter" style="margin-bottom:12px">
+    <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
+    <button data-v="DC">DC</button>
+    <button data-v="AC">AC</button>
   </div>
 
   <div class="hero d-data">
@@ -688,11 +699,6 @@ nav button{min-height:48px;justify-content:center}
       <!-- WT-70: "Detay istatistikler" ibaresi kaldırıldı; dönem rozeti
            kaldı çünkü kutuların hangi dönemi gösterdiğini söylüyor. -->
       <h2 class="h2"><span class="scope-badge" id="d-dstat-scope"></span></h2>
-      <div class="seg mini" id="d-dstat-type" data-i18n-aria="ariaTypeFilter" style="width:170px">
-        <button data-v="" class="sel" data-i18n="viewAll">Tümü</button>
-        <button data-v="DC">DC</button>
-        <button data-v="AC">AC</button>
-      </div>
     </div>
     <div class="dstat">
       <div class="tile"><div class="k" data-i18n="avgDuration">Ort. şarj süresi</div><div class="v" id="d-dur">—</div></div>
