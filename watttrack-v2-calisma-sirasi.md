@@ -591,3 +591,49 @@ Toplu bağlama aracı YOK — gerekirse ayrı bir iş kalemi.
 - **WT-96:** 40px'e inen filtre şeritleri gerçek telefonda rahat
   basılabiliyor mu (asıl gerekçe buydu, jsdom ölçemez).
 - **WT-97:** Ayarlar'a bütçe girip ana sayfada "Tümü" → "Ay" geçişi.
+
+---
+
+# Faz 15 (10.08.2026, v42) — araçsız kayıtlar
+
+| No | Başlık | Durum |
+|---|---|---|
+| WT-98 | Aracı olmayan şarj kayıtları bildirilsin ve bağlanabilsin | ✅ |
+| WT-99 | Ana sayfadaki bütçe yönlendirme yazısı kaldırılsın | ✅ |
+
+**WT-99 — WT-97 GERİ ALINDI.** "Tümü" seçiliyken bütçe çubuğunun yerine
+"Ay ya da Yıl seç" yazısı konmuştu; kullanıcı kaldırılmasını istedi.
+Çubuk artık "Tümü"de tamamen gizli (WT-45'in özgün davranışı). Bilgi
+Ayarlar'a, bütçe alanlarının hemen altına taşındı — **açıklamanın yeri
+değerin girildiği yer, çubuğun yeri değil.** `budgetPickPeriod` ölü
+anahtar olarak altı sözlükten silindi, yerine `budgetWhere`.
+
+**WT-98 — SESSİZ VERİ TUZAĞI.** `aracId == null` olan şarj kayıtları,
+cihazda araç VARKEN hiçbir yerde bildirilmiyordu. Tek araçta görünmez:
+araç filtresi devre dışı olduğu için ana sayfa/istatistik toplamları
+doğru çıkıyor. **İkinci araç eklendiği gün** araç seçilince o kayıtlar
+kayboluyor. Kullanıcının kendi yedeğinde 28 kaydın 23'ü böyleydi (aracı
+27.06.2026'da eklemiş, öncesi bağsız).
+
+`scanUnassigned()` (ui/vehicle.js) uyarı şeridi basıyor, tek dokunuşla
+seçilen araca bağlıyor ve `tureMesafe()` ile odo zincirini yeniden
+kuruyor. Koştuğu üç yer: açılış + dil değişimi (`applyI18n`) ve
+**`importBackupText` sonu** — ayarlar geri yüklenmediğinde `applyI18n`
+çalışmıyor, yedekten gelen kayıtlar o yüzden ayrıca taranıyor.
+
+**Neden otomatik atamıyor:** giderlerde `migrateExpenseVehicles()` bunu
+otomatik yapıyor, şarjda YAPMIYORUZ — iki araçlı kullanıcıda hangi araca
+gideceği bilinemez. Öksüz kayıt akışıyla (`scanOrphans`, WT-09/C) aynı
+kalıp: söyle, düzeltmeyi kullanıcı yapsın.
+
+**Kullanıcının verisi (depo dışında):** araç `Standard RWD` yazıyordu,
+gerçekte 2025 **Premium RWD** — EV_DB'deki donanımla eşitlendi (84 kWh,
+250 kW DC, 622 km). 23 kayıt + 2 gider araca bağlandı. Doğrulama:
+28 kayıt, araçsız 0, araç filtresi seçiliyken de ₺10.555 / 1.172 kWh.
+`.gitignore`'a `watttrack-yedek*.json` eklendi.
+
+## Elle test borcu
+
+- **WT-98:** gerçek cihazda uyarı şeridinin "Bir araca ata" düğmesi ve
+  geri alınamazlığı (bağlama toastUndo KULLANMIYOR — bilinçli, ⇄ ile
+  geri alınabilir).
