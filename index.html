@@ -277,6 +277,17 @@ h1,h2{font-size:inherit;font-weight:inherit}
 .crow .veh-chip::after{content:none}
 .row2{display:flex;gap:10px}
 .row2>div{flex:1;min-width:0}
+/* WT-86: firma listesi + ev/iş kutucukları aynı satırda. Dar ekranda
+   kutucuklar alta sarar; select hiçbir zaman 150px'in altına inmez.
+   WT-25: her kutucuk 44px dokunma hedefi. */
+.firm-row{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.firm-row select{flex:1 1 150px;min-width:0}
+.cbx{display:flex;align-items:center;gap:7px;flex:none;cursor:pointer;
+  min-height:44px;padding:0 12px;border-radius:12px;
+  border:1px solid var(--border);background:var(--card);
+  font-size:13px;font-weight:600;white-space:nowrap;user-select:none}
+.cbx input{width:18px;height:18px;flex:none;padding:0;margin:0;accent-color:var(--accent);cursor:pointer}
+.cbx.on{border-color:var(--accent);background:var(--chip);color:var(--accent-text)}
 .calcline{display:flex;justify-content:space-between;align-items:center;margin-top:10px;background:var(--pill);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--accent-text);font-weight:600}
 .calcline b{font-size:16px;color:var(--accent-dark)}
 .form-err{color:var(--red);font-size:13px;font-weight:600;display:none}
@@ -1233,10 +1244,19 @@ nav button{min-height:48px;justify-content:center}
       </div>
     </div>
 
+    <!-- WT-86: ev/iş seçimi drop-down'ın İÇİNDEYDİ ve en çok kullanılan firma
+         (TR'de Trugo) seçili geldiği için farkedilmiyordu. Artık aynı satırda
+         ama listenin DIŞINDA, iki AYRI kutucuk. Biri işaretliyken firma
+         listesi kapanır; ikisi de boşken liste geri gelir. -->
     <div>
       <label class="lbl" data-i18n="company" for="in-firm">Ev-İş ya da Şarj Firması</label>
-      <select id="in-firm"></select>
+      <div class="firm-row">
+        <select id="in-firm"></select>
+        <label class="cbx" id="lbl-home"><input type="checkbox" id="in-home"><span data-i18n="homeChipEv">Ev</span></label>
+        <label class="cbx" id="lbl-work"><input type="checkbox" id="in-work"><span data-i18n="homeChipWork">İş</span></label>
+      </div>
       <input type="text" id="in-firm-other" maxlength="40" style="display:none;margin-top:8px" placeholder="">
+      <div class="about" style="margin:6px 0 0;font-size:12px" data-i18n="homeWorkD">Ev ya da iş şarjı — AC. İşaretlersen firma listesi kapanır.</div>
     </div>
 
     <div class="row2">

@@ -541,12 +541,19 @@ const WATCHED = {
   // ondalığı değiştiren kullanıcıya "kaydetmeden çıkıyorsun" sorulmazdı
   'page-add': ['in-date', 'in-kwh', 'in-kwh-dec', 'in-amount', 'in-amount-dec',
                'in-disc-val', 'in-disc-val-dec', 'in-dist', 'in-odo',
-               'in-missed', 'in-unitprice',
+               'in-missed', 'in-free', 'in-home', 'in-work', 'in-unitprice',
                'in-loc', 'in-note', 'in-rate', 'in-socb', 'in-soca',
                'in-dur-h', 'in-dur-m'],
   'page-expense': ['in-exp-date', 'in-exp-amount', 'in-exp-note', 'in-exp-altad']
 };
-const formSnapshot = id => (WATCHED[id] || []).map(f => $(f)?.value ?? '').join(' ');
+// WT-86: onay kutusunun `.value`si HER ZAMAN 'on' — işaretli olsun olmasın
+// (WT-81/9'da aynı tuzağa düşülmüştü). Anlık görüntüyü değerden almak
+// in-missed'i de sessizce izlenmez yapıyordu; artık `checked` okunuyor.
+const formSnapshot = id => (WATCHED[id] || []).map(f => {
+  const el = $(f);
+  if (!el) return '';
+  return el.type === 'checkbox' ? (el.checked ? '1' : '0') : (el.value ?? '');
+}).join(' ');
 // openAdd/openExpense sonunda çağrılır — "temiz" durumu buradan sabitlenir
 function markFormClean(id) {
   const el = $(id);

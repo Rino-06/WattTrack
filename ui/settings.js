@@ -461,8 +461,9 @@ function csvRowToRec(cols, map, vehId) {
     firma,
     // WT-16: mekan boyutu CSV'de yoksa firmadan TÜRETİLİR. Atlanırsa
     // ev şarjları donutta ve Ev-İş hesabında yanlış sınıflanır.
-    mekan: al('mekan') === 'evis' || al('mekan') === 'firma'
-      ? al('mekan') : (isHomeFirm(firma) ? 'evis' : 'firma'),
+    // WT-86: değer kümesi 'ev' | 'is' | 'firma' (+ eski 'evis') — kendi
+    // dışa aktardığımız CSV gidiş-dönüş bozulmasın diye hepsi kabul ediliyor.
+    mekan: MEKAN_VALS.includes(al('mekan')) ? al('mekan') : mekanOfFirm(firma),
     kwh: k.value,
     odenen: free ? 0 : (o.value ?? 0),
     free,

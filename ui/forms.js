@@ -34,26 +34,48 @@ $('in-free').addEventListener('change', () => {
 $('in-tip').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   $('in-tip').querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b));
-  // WT-16/B: AC seçilirse firma otomatik "Ev-İş" gelsin (kullanıcı değiştirebilir).
-  // DC seçilirse liste mevcut davranışına döner (en çok kullanılan firma).
-  if (b.dataset.v === 'AC' && !homeSelected()) selectHomeFirm(true);
-  else if (b.dataset.v === 'DC' && homeSelected()) selectHomeFirm(false);
+  // WT-16/B: AC seçilirse ev kutucuğu otomatik işaretlensin (değiştirilebilir).
+  // DC seçilirse kutucuklar boşalır, firma listesi geri gelir.
+  // WT-86: eskiden bu iş drop-down'daki "Ev-İş" satırını seçiyordu.
+  if (b.dataset.v === 'AC' && !homeSelected()) setHomeMode('ev');
+  else if (b.dataset.v === 'DC' && homeSelected()) setHomeMode('');
   syncHomePricing();
 });
 
 // ---------- WT-16/C: Ev-İş şarjında tutarı kWh fiyatından hesapla ----------
-const homeSelected = () => isHomeFirm($('in-firm').value);
-function selectHomeFirm(on) {
-  const sel = $('in-firm');
-  if (on) {
-    const opt = [...sel.options].find(o => isHomeFirm(o.value));
-    if (opt) sel.value = opt.value;
-  } else {
-    const first = [...sel.options].find(o => !isHomeFirm(o.value) && o.value !== '__other');
-    if (first) sel.value = first.value;
-  }
-  $('in-firm-other').style.display = sel.value === '__other' ? '' : 'none';
+// ---------- WT-86: ev/iş seçimi drop-down DIŞINDA, iki AYRI kutucukta ----------
+// '' = firma listesi geçerli · 'ev' · 'is'
+const homeMode = () => $('in-home').checked ? 'ev' : ($('in-work').checked ? 'is' : '');
+const homeSelected = () => homeMode() !== '';
+// Tek giriş noktası: iki kutucuk BİRBİRİNİ dışlar ve firma listesi kapanır.
+function setHomeMode(m) {
+  $('in-home').checked = m === 'ev';
+  $('in-work').checked = m === 'is';
+  $('lbl-home').classList.toggle('on', m === 'ev');
+  $('lbl-work').classList.toggle('on', m === 'is');
+  const kapali = m !== '';
+  // Kapatmak SİLMEK değil: liste seçili değerini koruyor, kutucuk boşalınca
+  // kullanıcı kaldığı yerden devam ediyor.
+  $('in-firm').disabled = kapali;
+  $('in-firm').style.opacity = kapali ? '.5' : '';
+  $('in-firm-other').style.display =
+    !kapali && $('in-firm').value === '__other' ? '' : 'none';
 }
+// Kayda yazılacak firma DİZGİSİ. i18n değil db.js'teki tablodan geliyor —
+// depolanan değerin kaynağı tek olsun (bkz. EV_LABEL / IS_LABEL).
+const homeFirmName = m => (m === 'is' ? IS_LABEL : EV_LABEL)[S.lang] ||
+  (m === 'is' ? IS_LABEL : EV_LABEL).tr;
+// Ev/iş şarjı pratikte AC'dir (kullanıcı isterse DC'ye çevirebilir).
+const setTip = v => $('in-tip').querySelectorAll('button')
+  .forEach(b => b.classList.toggle('sel', b.dataset.v === v));
+[['in-home', 'ev'], ['in-work', 'is']].forEach(([id, m]) => {
+  $(id).addEventListener('change', () => {
+    const acik = $(id).checked;
+    setHomeMode(acik ? m : '');
+    if (acik) setTip('AC');
+    syncHomePricing();
+  });
+});
 // Tutar birim fiyattan mı geldi, kullanıcı elle mi yazdı?
 let amountSrc = 'manuel';
 function syncHomePricing() {
@@ -282,27 +304,31 @@ async function nearbyStations(lat, lon) {
   }
 }
 
+// WT-86: ev/iş etiketleri artık BU LİSTEDE YOK — seçimleri yanındaki
+// kutucuklarda. Hangi dilde kaydedilmiş olursa olsun eleniyorlar, yoksa eski
+// kayıtlardan gelen "Ev-İş"/"Home/Work" satırları listede kutucukların
+// kopyası olarak görünürdü.
 function fillFirmSelect(code, current, usedCounts) {
   const used = Object.entries(usedCounts)
-    .sort((a, b) => b[1] - a[1]).map(e => e[0]);
-  const home = t('homeChip');
-  // Başka bir dilde kaydedilmiş ev etiketleri mevcut dile indirgenir; aksi
-  // halde listede iki ayrı "ev" satırı görünürdü.
-  const norm = f => isHomeFirm(f) ? home : f;
-  const list = [...new Set([home, ...used.map(norm), ...chargersFor(code).map(norm)])];
+    .sort((a, b) => b[1] - a[1]).map(e => e[0]).filter(f => !isHomeFirm(f));
+  const list = [...new Set([...used, ...chargersFor(code).filter(f => !isHomeFirm(f))])];
   const opts = list.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('') +
     `<option value="__other">${t('other')}</option>`;
   $('in-firm').innerHTML = opts;
-  const cur2 = current ? norm(current) : current;
-  if (cur2 && list.includes(cur2)) {
-    $('in-firm').value = cur2;
+  // Ev/iş kaydı düzenleniyorsa firma listesine hiç dokunulmaz: seçim
+  // kutucuklarda, liste de zaten kapalı (setHomeMode).
+  if (current && isHomeFirm(current)) {
+    $('in-firm').value = list[0] || '__other';
+    $('in-firm-other').style.display = 'none';
+  } else if (current && list.includes(current)) {
+    $('in-firm').value = current;
     $('in-firm-other').style.display = 'none';
   } else if (current) {
     $('in-firm').value = '__other';
     $('in-firm-other').value = current;
     $('in-firm-other').style.display = '';
   } else {
-    $('in-firm').value = used[0] || list[1] || home;
+    $('in-firm').value = used[0] || list[0] || '__other';
     $('in-firm-other').style.display = 'none';
   }
 }
@@ -386,6 +412,20 @@ async function openAdd(id) {
   $('in-date').value = r ? r.tarih.slice(0, 10) : localISO();
   $('in-tip').querySelectorAll('button').forEach(b =>
     b.classList.toggle('sel', b.dataset.v === (r?.tip || 'DC')));
+
+  // WT-86: ev/iş kutucukları. YENİ kayıt "Ev" işaretli açılır — kullanıcının
+  // şikayeti buydu: liste en çok kullanılan firmayla (TR'de Trugo) açılıyor,
+  // ev/iş seçimi listenin içinde farkedilmiyordu. Kutucuğu boşaltmak tek
+  // dokunuş, liste olduğu gibi geri geliyor.
+  // Düzenlemede eski 'evis' kayıtları "Ev"e düşüyor: o etiket ev mi iş mi
+  // olduğunu HİÇ söylemiyordu, kullanıcı kaydı zaten açmışken düzeltebilir.
+  // TİP ayrı bir boyut (WT-16): burada tipe DOKUNULMUYOR, WT-47'nin önerisi
+  // geçerli kalıyor. Tip yalnız kullanıcı kutucuğa BASINCA AC'ye çekiliyor.
+  setHomeMode(r
+    ? (r.mekan === 'is' ? 'is'
+      : (r.mekan === 'ev' || r.mekan === 'evis' || (!r.mekan && isHomeFirm(r.firma)))
+        ? 'ev' : '')
+    : 'ev');
 
   // kWh: tek alan (WT-03)
   parcaliYaz('in-kwh', r?.kwh ?? null);
@@ -518,8 +558,12 @@ async function openAdd(id) {
 }
 
 $('btn-save').addEventListener('click', async () => {
+  // WT-86: kutucuk işaretliyse firma listesine HİÇ bakılmaz — liste kapalı,
+  // içindeki değer kullanıcının seçimi değil, sadece son duruma bakıyor.
+  const mekan = homeMode() || 'firma';
   const firmSel = $('in-firm').value;
-  const firma = firmSel === '__other' ? $('in-firm-other').value.trim() : firmSel;
+  const firma = mekan !== 'firma' ? homeFirmName(mekan)
+    : (firmSel === '__other' ? $('in-firm-other').value.trim() : firmSel);
   const free = $('in-free').checked;
   // Hatalı alan "Gelişmiş" bloğunun içindeyse blok kapalıyken focus() hiçbir
   // şey yapmaz ve kullanıcı neyi düzelteceğini göremez — önce bloğu aç.
@@ -596,7 +640,7 @@ $('btn-save').addEventListener('click', async () => {
     tarih: $('in-date').value + 'T12:00',
     tip: $('in-tip').querySelector('.sel').dataset.v,
     firma, kwh: Math.round(kwh * 100) / 100,
-    mekan: isHomeFirm(firma) ? 'evis' : 'firma',            // WT-16/1 (dilden bağımsız)
+    mekan,                                    // WT-16/1 + WT-86 (dilden bağımsız)
     birimFiyat: homeSelected() && amountSrc === 'birimFiyat'
       ? (pf($('in-unitprice').value) || null) : null,
     tutarKaynak: homeSelected() ? amountSrc : 'manuel',      // WT-16/C4

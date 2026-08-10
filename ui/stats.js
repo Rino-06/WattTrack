@@ -162,7 +162,10 @@ async function renderStats() {
     {name: 'AC', kwh: sumKwh(cur.filter(r => r.tip !== 'DC')), col: '#1B5FAA'}
   ].filter(x => x.kwh > 0));
   // Şarj YERİ: `mekan` alanından. Eski kayıtlarda mekan yoksa firma adına düş.
-  const isHome = r => (r.mekan ? r.mekan === 'evis' : isHomeFirm(r.firma));
+  // WT-86: mekan artık 'ev' | 'is' | 'firma' (+ eski 'evis'). Donut ikisini
+  // BİRLİKTE gösteriyor — eski 'evis' kayıtları ev mi iş mi olduğunu
+  // söylemiyor, üç dilime bölmek o kayıtları uydurma bir dilime atardı.
+  const isHome = isHomeRec;
   drawDonut('d-donut2', 'd-donut2-legend', t('placeSplit'), [
     {name: t('homeChip'), kwh: sumKwh(cur.filter(isHome)), col: '#7DC855'},
     {name: t('placeFirm'), kwh: sumKwh(cur.filter(r => !isHome(r))), col: '#1B5FAA'}
