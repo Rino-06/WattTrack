@@ -637,3 +637,99 @@ gerçekte 2025 **Premium RWD** — EV_DB'deki donanımla eşitlendi (84 kWh,
 - **WT-98:** gerçek cihazda uyarı şeridinin "Bir araca ata" düğmesi ve
   geri alınamazlığı (bağlama toastUndo KULLANMIYOR — bilinçli, ⇄ ile
   geri alınabilir).
+
+---
+
+# Faz 16 (11.08.2026, v43) — örnek veri seti yenilendi
+
+| No | Başlık | Durum |
+|---|---|---|
+| WT-100 | Örnek veri seti genişletildi, yeni alanların hepsi dolduruluyor | ✅ |
+
+**WT-100 — ÖRNEK VERİ GERİDE KALMIŞTI.** `seedDemoData()` WT-36'da yazıldı
+(10 şarj + 1 araç + 3 gider) ve o günden sonra eklenen alanların HİÇBİRİNİ
+yazmadı: `mekan` (WT-16/WT-86), `odo` (WT-19), `free`, `atlanan`, `banka`,
+`loc`, `not`, `indirimTip`/`indirimDeger`, `birimFiyat`, `tutarKaynak`,
+`ulke`, `kayipPct` (WT-42). Giderlerde dokuz türden üçü vardı, hatırlatma
+alanları (WT-44) yoktu ve **şemada olmayan** bir `yillik` alanı yazılıyordu.
+Sonuç: örnek veri yüklenince İstatistik'in banka/lokasyon/kayıp/yer-donutu
+kutuları, Aracım'ın "Yaklaşanlar" paneli ve Kıyasla sayfası boş kalıyordu.
+Kullanıcının şikayeti buydu.
+
+**Yeni set:** 36 şarj · 3 araç · 10 gider, 18 aya yayılı.
+- **3 araç:** iki etkin + bir **arşivlenmiş** (arşiv filtresi ve Kıyasla'daki
+  "arşivlileri dahil et" kutusu ancak böyle görünüyor). Hepsi katalog biçimli
+  (`brand`/`model`/`trim`/`batt`) — `batt` olmadan WT-42 kayıp paneli çalışmaz
+  ve markasız araç ⚙ düzenleme düğmesini hiç almaz.
+- **İki farklı mesafe provenansı:** 1. araç `odo` zinciriyle (mesafe
+  türetiliyor, WT-19), 2. araç yalnız elle mesafeyle (WT-58'in "başlangıç
+  sayacı + sürüş" kolu). Doğrulandı: `odoNowOf` kaynakları sırasıyla
+  `records` / `dist` / `manual` çıkıyor.
+- **kWh SoC'den türetiliyor:** `batt × (socA−socB)/100 × (1+kayıp)`. Elle
+  yazılan kWh ile SoC'nin tutmaması kayıp analizini anlamsız yapardı. Bir
+  kayıt %26 kayıpla duruyor ki satır uyarısı (KAYIP_UYARI) de görünsün.
+- **Dokuz gider türünün hepsi**, üçünde tekrarlayan hatırlatma. Vadesi geçmiş
+  hatırlatma BİLEREK yok: `tekrarOner()` açılışta onay kutusu açardı.
+
+**PARA BİRİMİ — asıl karar.** Tutarlar sabit ₺ rakamı değil, kullanıcının ev
+elektrik fiyatının (WT-78) katı. Eski set 8–10 ₺/kWh ve 22.000 ₺ duvar
+ünitesini € cihazlarda da aynen yazıyordu. Katsayılar Türkiye oranlarına göre
+seçildi (DC ≈ mesken tarifesinin 3–4 katı); mesken elektriğin pahalı olduğu
+ülkelerde örnek DC fiyatı bir miktar yüksek kalıyor. Ülke bazlı DC tarife
+tablosu OLMADIĞI için uydurulmadı.
+
+**Bu tasarımın dayandığı varsayım YANLIŞTI, düzeltildi.** `homeKwhPrice`
+tablodan geldiğinde (`homeKwhAuto`) **ülkenin** para biriminde saklanıyor —
+Ayarlar onu WT-83'te zaten `symOf(d.cur)` ile gösteriyor — ve `S.currency`
+ile aynı olmak zorunda değil. Ülkesi DE, para birimi TRY olan kullanıcıda ilk
+sürüm € ölçeğiyle ₺ tutar üretiyordu: her rakam ~7 kat küçük. `demoKwhOlcek()`
+artık üç kademeli: (1) elle girilmiş fiyat — o zaten `S.currency`'de, çünkü
+Ayarlar'daki etiket `sym()` kullanıyor; (2) ülkenin tablo fiyatı, YALNIZ
+`d.cur === S.currency` ise; (3) aynı para birimini kullanan ilk ülkenin mesken
+fiyatı. Seçilebilir 20 para biriminin hepsi `KWH_PRICES`'ta var (CAD yalnız
+alt bölgelerde), yani son çare pratikte erişilmez. Üç kademe de boot.mjs'te
+sınanıyor: DE/EUR → 1.350 € kasko, DE/TRY → 11.340 ₺, elle girilen değer
+olduğu gibi.
+
+**Kıyasla ayarı (`S.cmp`).** Sayfa `S.cmp` olmadan tamamen gizli. Yakıt fiyatı
+UYDURULMUYOR: yalnız gömülü fiyat geçmişi olan ülkelerde (WT-77 — bugün
+sadece TR) son ayın motorin fiyatı alınıyor. Geçmişi olmayan ülkede Kıyasla
+boş durumda kalır; ₺ ölçeğindeki bir sayıyı € diye göstermek boş ekrandan
+kötüdür. ICE sabit gideri örnek giderlerden türetiliyor (×1,6) — para birimi
+böylece kendiliğinden tutuyor. Ayarın örnek veriyle geldiği `demoCmp`
+anahtarıyla işaretleniyor; `clearDemoData()` **yalnız kendi yazdığını** geri
+alıyor, kullanıcının kendi ayarına dokunmuyor (test bunu ayrıca sınıyor).
+
+**Bütçe BİLEREK tohumlanmadı.** Çubuk zaten varsayılan "Tümü" döneminde gizli
+(WT-99); görünmesi için kullanıcının Ay/Yıl'a geçmesi gerekiyor. Görünmeyecek
+bir ayarı yedeğe sızdırmanın anlamı yok.
+
+**`fuelPrices` tablosuna örnek satır YAZILMADI.** TR'de gömülü EPDK geçmişi
+(WT-77) zaten 108 satır veriyor; `fiyatBul` başka ülkede `S.cmp.price`'a
+düşüyor. Yazsaydık `demoCounts` / `clearDemoData` / `backupPayload` üçünün de
+genişletilmesi gerekirdi — üçünden biri unutulursa sahte fiyatlar kullanıcının
+gerçek yedeğine kalıcı olarak sızardı. Kazancı yok, riski var.
+
+**`soket` / `istGuc` / `istasyonId` de yazılmadı.** `db.js`'in yorumu bu üç
+alanı vaat ediyor ama `ui/forms.js` kayda hiç koymuyor — OCR onları yalnız
+`sonuc.alanlar` içinde üretiyor. Uygulamanın okumadığı alanı örnek veride
+doldurmak veri uydurmak olurdu. (Yorum ile kod arasındaki bu fark ayrı bir iş
+kalemi.)
+
+**Testler:** boot.mjs'e 30 kabul eklendi. Sayılar setin kendi tablolarından
+okunuyor (`DEMO_SESS`/`DEMO_VEH`/`DEMO_EXP`), sabit sayı yazmak seti her
+büyüttüğümüzde bakım borcu doğuruyordu. Her kabul bir EKRAN KUTUSUNA karşılık
+geliyor — **yeni alan eklenirken oraya da bir satır eklenmeli.**
+
+**Yan kusur (aynı commit'te düzeltildi):** `syncEmptyStates()` Kıyasla'nın boş
+durumunu FORM ALANLARINDAN okuyor, o alanları `renderCompare()` dolduruyor.
+Örnek veri yüklendikten sonra ikisi ters sırada çağrıldığı için Kıyasla'da hem
+sonuçlar hem "yakıt fiyatı gir" yazısı birlikte görünüyordu.
+
+## Elle test borcu
+
+- **WT-100:** gerçek cihazda örnek veriyi yükleyip beş sekmenin de dolduğunu
+  görmek (jsdom `display:none` dışında görsel bir şey ölçmüyor).
+- **WT-100:** TR dışı bir cihazda Kıyasla'nın boş durumda kalması ve oradaki
+  yönlendirmenin anlaşılır olması. (Tutarların ölçeği artık testte —
+  yukarıdaki para birimi maddesi.)

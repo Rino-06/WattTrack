@@ -70,6 +70,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
        isHomeRec, mekanOfFirm, MEKAN_VALS,
        PAN_EU, BANKS_BY, BANKS_DEFAULT, overlayClose,
        initSegments, evSummaryHTML, carSVG, seedDemoData, clearDemoData,
+       DEMO_VEH, DEMO_SESS, DEMO_EXP, EXP_TYPES,
        syncEmptyStates, renderHistory, renderVehiclePage, backupPayload,
        offerDemoCleanup, allSessions, allVehicles, memo, renderCompare,
        invalidateCache, allExpenses, allFuelPrices, searchEV, openEvSpecs,
@@ -2041,12 +2042,80 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const s1 = await app().db.sessions.toArray();
   const v1 = await app().db.vehicles.toArray();
   const e1 = await app().db.expenses.toArray();
-  check('WT-36/2: 10 örnek şarj + 1 araç + 3 gider üretildi',
-    s1.filter(r => r.demo).length === 10 && v1.filter(r => r.demo).length === 1
-      && e1.filter(r => r.demo).length === 3,
-    `şarj=${s1.filter(r => r.demo).length} araç=${v1.filter(r => r.demo).length} gider=${e1.filter(r => r.demo).length}`);
+  const dS = s1.filter(r => r.demo), dV = v1.filter(r => r.demo), dE = e1.filter(r => r.demo);
+  // WT-100: sayılar setin KENDİ tablolarından okunuyor — sabit sayı yazmak,
+  // set büyüdüğünde testi tek satırlık bir bakım borcuna çeviriyordu.
+  const bekS = app().DEMO_SESS.reduce((s, x) => s + x.list.length, 0);
+  check('WT-36/2 · WT-100: setteki her şarj, araç ve gider üretildi',
+    dS.length === bekS && dV.length === app().DEMO_VEH.length
+      && dE.length === app().DEMO_EXP.length,
+    `şarj=${dS.length}/${bekS} araç=${dV.length} gider=${dE.length}`);
   check('WT-36/3a: üretilen her kayıt demo:true işaretli',
     s1.filter(r => r.firma !== 'GERÇEK').every(r => r.demo === true));
+
+  // --- WT-100: yeni alanların hepsi gerçekten dolu mu? ---
+  // Bu bloğun tamamı "örnek veri yüklendi ama kutular boş" şikayetinin
+  // tekrarını engellemek için var: her kabul bir EKRAN KUTUSUNA karşılık
+  // geliyor. Yeni alan eklenirken buraya da bir satır eklenmeli.
+  const dolu = (ad, f) => check('WT-100: ' + ad, dS.some(f) || dE.some(f));
+  dolu('Ev şarjı var (İstatistik yer donutu)', r => r.mekan === 'ev');
+  dolu('İş şarjı var (İstatistik yer donutu)', r => r.mekan === 'is');
+  dolu('firma şarjı var', r => r.mekan === 'firma');
+  dolu('ücretsiz şarj var (ana sayfa "ücretsiz" kutusu)', r => r.free === true);
+  dolu('atlanan şarj var (WT-20)', r => r.atlanan === true);
+  dolu('banka var (İstatistik banka listesi)', r => r.banka);
+  dolu('lokasyon var (İstatistik lokasyon listesi)', r => r.loc);
+  dolu('not var', r => r.not);
+  dolu('süre var (ana sayfa süre/güç kutuları)', r => r.dur > 0);
+  dolu('sayaç değeri var (WT-19 odo zinciri)', r => r.odo != null);
+  dolu('elle girilen mesafe var (odo YOK)', r => r.odo == null && r.mesafeKm > 0);
+  dolu('şarj kaybı hesaplanmış (WT-42)', r => r.kayipPct != null);
+  dolu('%20 üstü kayıp var (satır uyarısı)', r => r.kayipPct > 20);
+  dolu('yüzdesel indirim var', r => r.indirimTip === 'percent' && r.indirimDeger > 0);
+  dolu('ev/iş kaydında birim fiyat var', r => r.birimFiyat > 0 && r.tutarKaynak === 'birimFiyat');
+  dolu('ülke kodu yazılı', r => !!r.ulke);
+  dolu('hatırlatmalı gider var (Aracım yaklaşanlar paneli)',
+    r => r.sonrakiTarih || r.sonrakiKm);
+  check('WT-100: şemada olmayan `yillik` alanı artık yazılmıyor',
+    !dE.some(r => 'yillik' in r));
+  check('WT-100: dokuz gider türünün hepsi temsil ediliyor',
+    app().EXP_TYPES.every(k => dE.some(r => r.tur === k)),
+    'eksik=' + app().EXP_TYPES.filter(k => !dE.some(r => r.tur === k)).join(','));
+  check('WT-100: arşivlenmiş araç da var (arşiv filtresi görünsün)',
+    dV.some(v => v.archived === true));
+  check('WT-100: her araçta batarya var (WT-42 kayıp paneli buna bağlı)',
+    dV.every(v => v.batt > 0));
+  check('WT-100: her şarj bir araca bağlı (WT-98 uyarısı çıkmasın)',
+    dS.every(r => r.aracId != null));
+  check('WT-100: türetilen mesafelerin hiçbiri negatif değil (odo artan)',
+    dS.every(r => r.mesafeKm == null || r.mesafeKm > 0),
+    'negatif=' + dS.filter(r => r.mesafeKm != null && r.mesafeKm <= 0).length);
+  check('WT-100: kayıtlar en az 12 aya yayılıyor (aylık grafikler dolsun)',
+    new Set(dS.map(r => r.tarih.slice(0, 7))).size >= 12,
+    'ay=' + new Set(dS.map(r => r.tarih.slice(0, 7))).size);
+  // Kuralın KOPYASINI değil, uygulamanın KENDİ tarayıcısını çalıştır:
+  // testte yeniden yazılan bir koşul, kural değişince sessizce ayrışır.
+  await app().scanBadData();
+  await app().scanUnassigned();
+  await sleep(200);
+  // Şeritlerin hepsi d-warnings'e basılıyor (setWarning varsayılan hedefi).
+  // Bu blokta aracı olmayan bir GERÇEK kayıt var, yani 'novehicle' şeridi
+  // BEKLENİYOR; aranan şey badData şeridinin çıkmaması. Metni sözlükten
+  // üretiliyor — testte kuralın kopyasını tutmak, kural değişince ayrışır.
+  const seritler = [...$('d-warnings').querySelectorAll('.warn-strip')]
+    .map(e => e.querySelector('.msg').textContent.trim());
+  const badKalibi = app().T[app().S.lang].badDataFound.replace('{n}', '').trim();
+  check('WT-100: örnek veri sınır dışı değer üretmiyor (scanBadData sussun)',
+    !seritler.some(m => m.includes(badKalibi)),
+    seritler.join(' | ').slice(0, 140) || 'şerit yok');
+  check('WT-100: hepsi çevrilebilir para biriminde (reportFxGaps sussun)',
+    dS.every(r => app().isConv(r)) && dE.every(r => app().isConv(r)));
+  check('WT-100: Kıyasla ayarı tohumlandı ve işaretlendi',
+    !!app().S.cmp && app().S.cmp.price > 0 && app().S.cmp.cons > 0
+      && app().S.cmp.icefix > 0 && !!(await app().db.settings.get('demoCmp')),
+    JSON.stringify(app().S.cmp));
+  check('WT-100: vadesi GEÇMİŞ tekrarlayan hatırlatma yok (açılışta onay sormasın)',
+    !dE.some(r => r.tekrar && r.sonrakiTarih && r.sonrakiTarih < app().localISO()));
   check('WT-36/3b KABUL: örnek veri şeridi görünür',
     $('demo-bar').classList.contains('on'));
   check('WT-36/3b: şerit kapatma düğmesi YOK, yalnız silme var',
@@ -2075,6 +2144,71 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     s2.length === 1 && s2[0].firma === 'GERÇEK', 'kalan=' + s2.map(r => r.firma).join(','));
   check('WT-36/3b: temizlikten sonra şerit kayboldu',
     !$('demo-bar').classList.contains('on'));
+  check('WT-100: örnek veriyle gelen Kıyasla ayarı da geri alındı',
+    !app().S.cmp && !(await app().db.settings.get('cmp'))
+      && !(await app().db.settings.get('demoCmp')));
+  check('WT-100: silinen örnek araç varsayılan olarak kalmadı',
+    !app().S.defaultVehicleId
+      || !!(await app().db.vehicles.get(app().S.defaultVehicleId)),
+    'varsayılan=' + app().S.defaultVehicleId);
+
+  // --- WT-100: kullanıcının KENDİ Kıyasla ayarına dokunulmuyor ---
+  const kendi = {fuel: 'petrol', price: 55, cons: 7.2, icefix: 0, prorate: true};
+  app().S.cmp = kendi;
+  await app().db.settings.put({key: 'cmp', value: kendi});
+  await app().seedDemoData();
+  await sleep(300);
+  check('WT-100: var olan Kıyasla ayarı EZİLMEDİ',
+    app().S.cmp.price === 55 && !(await app().db.settings.get('demoCmp')),
+    JSON.stringify(app().S.cmp));
+  await app().clearDemoData();
+  await sleep(300);
+  check('WT-100: temizlik kullanıcının kendi ayarını SİLMEDİ',
+    (await app().db.settings.get('cmp'))?.value?.price === 55);
+  await app().db.settings.delete('cmp');
+  app().S.cmp = null;
+
+  // --- WT-100: TR dışı ülke + uyuşmayan para birimi ---
+  // Tutarların ÖLÇEĞİ ev elektrik fiyatı. `homeKwhPrice` tablodan geldiğinde
+  // ÜLKENİN para biriminde saklanıyor; ülke DE ama para birimi TRY olan
+  // kullanıcıda € ölçeğiyle ₺ tutar üretmek her rakamı ~7 kat küçültürdü.
+  {
+    const A = app();
+    const eski = {c: A.S.country, k: A.S.currency, p: A.S.homeKwhPrice, a: A.S.homeKwhAuto};
+    const olcek = async (country, currency, p, auto) => {
+      A.S.country = country; A.S.currency = currency;
+      A.S.homeKwhPrice = p; A.S.homeKwhAuto = auto;
+      A.S.kwhRegion = '';
+      await A.db.sessions.filter(r => r.demo === true).delete();
+      await A.db.vehicles.filter(r => r.demo === true).delete();
+      await A.db.expenses.filter(r => r.demo === true).delete();
+      await A.seedDemoData();
+      await sleep(250);
+      const e = (await A.allExpenses()).filter(r => r.demo && r.tur === 'insurance');
+      return e[0]?.tutar ?? null;
+    };
+    // DE/EUR: 0,3852 €/kWh × 3500 → ~1.350 € yıllık kasko. Makul.
+    const de = await olcek('DE', 'EUR', 0.3852, true);
+    check('WT-100: DE/EUR ölçeği makul (yıllık kasko 500–3.000 €)',
+      de > 500 && de < 3000, 'kasko=' + de);
+    // DE ülkesi + TRY para birimi: ölçek TRY'ye düşmeli, € değerine DEĞİL.
+    const karisik = await olcek('DE', 'TRY', 0.3852, true);
+    check('WT-100: ülke/para birimi uyuşmayınca ölçek para birimine göre seçiliyor',
+      karisik > 3000, 'kasko=' + karisik + ' (€ ölçeği kalsaydı ~1.350 olurdu)');
+    // Elle girilmiş fiyat zaten S.currency'de (Ayarlar etiketi sym() kullanıyor)
+    const elle = await olcek('DE', 'TRY', 4.5, false);
+    check('WT-100: elle girilen fiyat olduğu gibi ölçek kabul ediliyor',
+      elle === Math.round(4.5 * 3500 / 10) * 10, 'kasko=' + elle);
+
+    await A.db.sessions.filter(r => r.demo === true).delete();
+    await A.db.vehicles.filter(r => r.demo === true).delete();
+    await A.db.expenses.filter(r => r.demo === true).delete();
+    await A.db.settings.delete('cmp');
+    await A.db.settings.delete('demoCmp');
+    A.S.cmp = null;
+    A.S.country = eski.c; A.S.currency = eski.k;
+    A.S.homeKwhPrice = eski.p; A.S.homeKwhAuto = eski.a;
+  }
 
   // --- 3d: gerçek kayıt varken otomatik sorup temizliyor mu? ---
   await app().seedDemoData();

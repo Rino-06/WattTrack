@@ -804,40 +804,290 @@ async function syncEmptyStates() {
   $('demo-bar').classList.toggle('on', await demoActive());
 }
 
-// WT-36/2: 10 şarj kaydı + 1 araç + 3 gider
+// ============================================================
+// WT-100 · ÖRNEK VERİ SETİ
+// ============================================================
+// WT-36'nın seti 10 şarj + 1 araç + 3 giderdi ve o günden sonra eklenen
+// alanların HİÇBİRİNİ yazmıyordu: `mekan` (WT-16/WT-86 Ev-İş boyutu), `odo`
+// (WT-19 sayaç zinciri), `free`, `atlanan`, `banka`, `loc`, `not`,
+// `indirimTip`/`indirimDeger`, `birimFiyat`, `tutarKaynak`, `ulke`, `kayipPct`
+// (WT-42). Giderlerde dokuz türden yalnız üçü vardı, hatırlatma alanları
+// (WT-44) hiç yoktu ve ŞEMADA OLMAYAN bir `yillik` alanı yazılıyordu.
+// Sonuç: örnek veri yüklenince İstatistik'in banka/lokasyon/kayıp kutuları,
+// Aracım'ın yaklaşan hatırlatmalar paneli ve Kıyasla sayfası boş kalıyordu.
+//
+// PARA BİRİMİ: tutarlar sabit ₺ rakamı DEĞİL, kullanıcının ev elektrik
+// fiyatının (WT-78) KATI olarak üretiliyor. Sabit rakamlar €/£ cihazlarda
+// saçma görünüyordu (22.000 €'luk duvar ünitesi gibi).
+// SINIRI: katsayılar TÜRKİYE oranlarına göre seçildi (DC fiyatı mesken
+// tarifesinin ~3-4 katı). Mesken elektriğin görece pahalı olduğu ülkelerde
+// (DE, DK) örnek DC fiyatı gerçeğin bir miktar üstünde kalır. Ülke bazlı DC
+// tarife tablosu OLMADIĞI için uydurulmadı; sabit ₺ rakamından her hâlükârda
+// daha doğru ve örnek verinin sahte olduğu zaten şeritte yazılı.
+//
+// KURAL: şarj/araç/gider kaydına yeni bir alan eklendiğinde BU SET DE
+// güncellenir. Yoksa örnek veri bir kez daha geride kalır.
+
+// İki etkin + bir arşivlenmiş araç. Arşivli olan, araç listesindeki arşiv
+// filtresini ve Kıyasla'daki "arşivlileri dahil et" kutusunu görünür kılıyor.
+// Marka bilerek 'Demo': kullanıcı bunu gerçek bir araç sanmasın.
+const DEMO_VEH = [
+  {brand: 'Demo', model: 'EV 60', trim: 'Long Range', y1: 2024, y2: 0,
+   batt: 60, arch: 400, dc: 150, ac: 11, range: 450, body: 'suv',
+   kmStart: 10000, kmNow: 13500},
+  {brand: 'Demo', model: 'e-City 40', trim: 'Comfort', y1: 2022, y2: 0,
+   batt: 40, arch: 400, dc: 50, ac: 7.4, range: 300, body: 'hatch',
+   kmStart: 52000},
+  {brand: 'Demo', model: 'eVan 77', trim: 'Cargo', y1: 2020, y2: 2023,
+   batt: 77, arch: 400, dc: 125, ac: 11, range: 330, body: 'van',
+   kmStart: 80000, kmNow: 82000, archived: true}
+];
+
+// Şarj kayıtları ARACA GÖRE gruplu ve ESKİDEN YENİYE sıralı — `odo` zinciri
+// (WT-19) ancak artan sırada kurulabilir.
+//   g   bugünden kaç gün önce          h   saat (HH:MM)
+//   t   tip ('DC'|'AC')                m   mekan ('firma'|'ev'|'is')
+//   f   firma (yalnız m='firma' iken)  b/a SoC önce / sonra
+//   kay şarj kaybı oranı (WT-42)       pk  birim fiyat = ev kWh fiyatı × pk
+//   km  bu şarja kadar sürülen mesafe  ind indirim yüzdesi · bk indirimi veren banka
+//   lo  lokasyon · dur dakika · sayac  bu kayıt odo zincirine girsin mi
+// kWh SoC ARALIĞINDAN türetiliyor: elle yazılan kWh ile SoC'nin birbirini
+// tutmaması kayıp analizini (WT-42) anlamsız yapardı.
+const DEMO_SESS = [
+  {v: 0, list: [
+    {g: 425, h: '18:20', t: 'DC', m: 'firma', f: 'ZES', b: 18, a: 85, kay: .09, pk: 2.55, km: 225, ind: 10, bk: 'Demo Bank', lo: 'Ankara', dur: 44},
+    {g: 398, h: '08:10', t: 'AC', m: 'ev', b: 42, a: 100, kay: .05, pk: 0.78, km: 190, dur: 420},
+    {g: 362, h: '19:05', t: 'DC', m: 'firma', f: 'Eşarj', b: 22, a: 80, kay: .10, pk: 2.62, sayac: true, lo: 'Eskişehir', dur: 38},
+    {g: 330, h: '12:40', t: 'DC', m: 'firma', f: 'Voltrun', b: 25, a: 80, kay: .08, pk: 2.70, km: 205, ind: 15, bk: 'Demo Bank', lo: 'Bolu', dur: 33, sayac: true},
+    {g: 296, h: '09:15', t: 'AC', m: 'is', b: 35, a: 90, kay: .04, pk: 0.68, km: 200, dur: 300, sayac: true},
+    {g: 265, h: '21:30', t: 'DC', m: 'firma', f: 'Trugo', b: 15, a: 70, kay: .12, pk: 2.80, km: 210, lo: 'İzmir', dur: 36, sayac: true},
+    {g: 238, h: '07:50', t: 'AC', m: 'ev', b: 48, a: 100, kay: .05, pk: 0.83, km: 180, dur: 400, sayac: true},
+    {g: 210, h: '14:20', t: 'DC', m: 'firma', f: 'Sharz', b: 20, a: 85, kay: .09, pk: 2.92, km: 230, ind: 20, bk: 'Demo Bank', lo: 'Bursa', dur: 41, sayac: true},
+    {g: 182, h: '17:10', t: 'DC', m: 'firma', f: 'ZES', b: 28, a: 78, kay: .26, pk: 3.00, km: 180, ind: 10, bk: 'Demo Bank', lo: 'Ankara', dur: 31, sayac: true, notKey: 'demoNote'},
+    {g: 158, h: '08:35', t: 'AC', m: 'is', b: 40, a: 95, kay: .04, pk: 0.74, km: 195, dur: 320, sayac: true},
+    {g: 140, h: '20:45', t: 'DC', m: 'firma', f: 'Eşarj', b: 18, a: 80, kay: .11, pk: 3.12, km: 215, lo: 'Konya', dur: 39, sayac: true},
+    {g: 122, h: '11:00', t: 'DC', m: 'firma', f: 'Voltrun', b: 30, a: 80, kay: .08, pk: 3.20, km: 175, ind: 15, bk: 'Demo Bank', lo: 'Afyon', dur: 29, sayac: true},
+    {g: 104, h: '07:40', t: 'AC', m: 'ev', b: 45, a: 100, kay: .05, pk: 0.90, km: 185, dur: 390, sayac: true},
+    {g: 88, h: '16:25', t: 'DC', m: 'firma', f: 'Trugo', b: 22, a: 82, kay: .09, pk: 3.30, km: 220, lo: 'Denizli', dur: 37, sayac: true},
+    {g: 72, h: '09:50', t: 'AC', m: 'is', b: 38, a: 92, kay: .04, pk: 0.80, km: 190, dur: 310, sayac: true},
+    {g: 58, h: '19:30', t: 'DC', m: 'firma', f: 'ZES', b: 16, a: 76, kay: .10, pk: 3.42, km: 225, ind: 20, bk: 'Demo Bank', lo: 'Ankara', dur: 35, sayac: true},
+    {g: 45, h: '13:15', t: 'AC', m: 'firma', f: 'Voltrun', b: 25, a: 70, kay: .07, pk: 2.20, km: 160, lo: 'Kütahya', dur: 26, sayac: true},
+    {g: 34, h: '08:05', t: 'AC', m: 'ev', b: 50, a: 100, kay: .05, pk: 0.95, km: 175, dur: 360, sayac: true},
+    {g: 26, h: '18:40', t: 'DC', m: 'firma', f: 'Eşarj', b: 20, a: 80, kay: .09, pk: 3.60, km: 205, ind: 10, bk: 'Demo Bank', lo: 'Balıkesir', dur: 34, sayac: true},
+    {g: 19, h: '10:20', t: 'DC', m: 'firma', f: 'Voltrun', b: 30, a: 85, kay: .08, pk: 3.70, km: 190, lo: 'Manisa', dur: 30, free: true, sayac: true},
+    {g: 12, h: '09:30', t: 'AC', m: 'is', b: 42, a: 95, kay: .04, pk: 0.88, km: 180, dur: 300, sayac: true},
+    {g: 8, h: '20:10', t: 'DC', m: 'firma', f: 'Trugo', b: 18, a: 78, kay: .09, pk: 3.80, km: 200, ind: 15, bk: 'Demo Bank', lo: 'İzmir', dur: 33, sayac: true},
+    {g: 5, h: '07:55', t: 'AC', m: 'ev', b: 55, a: 100, kay: .05, pk: 1.00, km: 150, dur: 330, sayac: true},
+    {g: 2, h: '17:45', t: 'DC', m: 'firma', f: 'ZES', b: 24, a: 80, kay: .08, pk: 3.95, km: 210, ind: 10, bk: 'Demo Bank', lo: 'Ankara', dur: 32, sayac: true}
+  ]},
+  // İkinci araçta HİÇ sayaç değeri yok: mesafe kullanıcının girdiğidir.
+  // WT-58'in "başlangıç sayacı + sürülen mesafe" kolu ancak böyle görünür.
+  {v: 1, list: [
+    {g: 270, h: '18:00', t: 'DC', m: 'firma', f: 'ZES', b: 25, a: 80, kay: .09, pk: 2.75, km: 140, lo: 'Ankara', dur: 28},
+    {g: 225, h: '09:20', t: 'AC', m: 'ev', b: 40, a: 100, kay: .05, pk: 0.85, km: 130, dur: 300},
+    {g: 180, h: '19:40', t: 'DC', m: 'firma', f: 'Eşarj', b: 20, a: 75, kay: .10, pk: 2.95, km: 135, ind: 10, bk: 'Demo Bank', lo: 'Kırıkkale', dur: 26},
+    {g: 140, h: '12:10', t: 'DC', m: 'firma', f: 'Voltrun', b: 30, a: 85, kay: .08, pk: 3.10, km: 130, lo: 'Çorum', dur: 25},
+    {g: 100, h: '08:30', t: 'AC', m: 'is', b: 35, a: 95, kay: .04, pk: 0.78, km: 125, dur: 280},
+    // Atlanan kayıt: 300 km'ye karşılık 23 kWh — aradaki bir şarj girilmemiş.
+    // İşareti VAR ama sayılar da tutarlı; yoksa örnek veri yanlış şey öğretir.
+    {g: 65, h: '21:00', t: 'DC', m: 'firma', f: 'Trugo', b: 18, a: 70, kay: .11, pk: 3.35, km: 300, lo: 'Samsun', dur: 24, atl: true},
+    {g: 30, h: '07:45', t: 'AC', m: 'ev', b: 45, a: 100, kay: .05, pk: 0.96, km: 120, dur: 270},
+    {g: 6, h: '16:50', t: 'DC', m: 'firma', f: 'Sharz', b: 22, a: 78, kay: .09, pk: 3.75, km: 135, ind: 20, bk: 'Demo Bank', lo: 'Yozgat', dur: 23}
+  ]},
+  {v: 2, list: [
+    {g: 560, h: '10:00', t: 'DC', m: 'firma', f: 'ZES', b: 20, a: 80, kay: .11, pk: 2.30, km: 280, lo: 'Ankara', dur: 48},
+    {g: 525, h: '08:20', t: 'AC', m: 'ev', b: 40, a: 100, kay: .05, pk: 0.72, km: 260, dur: 480},
+    {g: 495, h: '15:30', t: 'DC', m: 'firma', f: 'Eşarj', b: 25, a: 85, kay: .10, pk: 2.38, km: 270, ind: 10, bk: 'Demo Bank', lo: 'Kayseri', dur: 45},
+    {g: 468, h: '19:15', t: 'DC', m: 'firma', f: 'Voltrun', b: 18, a: 75, kay: .09, pk: 2.45, km: 265, lo: 'Sivas', dur: 44}
+  ]}
+];
+
+// Dokuz gider türünün TAMAMI temsil ediliyor (EXP_TYPES, db.js).
+//   v tutar aracın DEMO_VEH'teki sırası · pk tutar = ev kWh fiyatı × pk
+//   int hatırlatma aralığı (REM_ARALIK) · km hatırlatma sayaç aralığı (REM_KM)
+//   nextKm sonraki bakım sayacı — aracın GÜNCEL sayacının ÜSTÜNDE olmalı,
+//   yoksa tekrarOner() açılışta onay kutusu açar.
+const DEMO_EXP = [
+  {v: 0, tur: 'tax', pk: 1150, g: 340, int: '1yil', tekrar: true},
+  {v: 0, tur: 'insurance', pk: 3500, g: 352, int: '1yil', tekrar: true},
+  {v: 0, tur: 'maintenance', pk: 870, g: 110, int: '1yil', km: 15000, nextKm: 26000, tekrar: true},
+  {v: 0, tur: 'tire', pk: 5000, g: 280, km: 10000, nextKm: 21000},
+  {v: 0, tur: 'parking', pk: 320, g: 24},
+  {v: 0, tur: 'equipment', pk: 4500, g: 415},
+  {v: 1, tur: 'inspection', pk: 410, g: 70, int: '2yil', tekrar: true},
+  {v: 1, tur: 'repair', pk: 1530, g: 45},
+  {v: 1, tur: 'other', pk: 570, g: 30, altKey: 'demoExpOther'},
+  {v: 2, tur: 'insurance', pk: 2600, g: 520}
+];
+
+// Ev elektrik fiyatı = tüm tutarların ÖLÇEĞİ.
+// ÖLÇEK, S.currency İLE AYNI PARA BİRİMİNDE OLMAK ZORUNDA. `homeKwhPrice`
+// tablodan geldiğinde (homeKwhAuto) ÜLKENİN para biriminde saklanıyor —
+// Ayarlar onu WT-83'te symOf(d.cur) ile gösteriyor — ve kullanıcının seçtiği
+// para biriminden farklı olabiliyor (ülkesi DE, para birimi TRY olan biri).
+// Yanlış para birimindeki bir ölçek bütün tutarları katbekat şişirirdi.
+// Elle girilen fiyat S.currency'dedir: Ayarlar'daki etiket sym() kullanıyor.
+function demoKwhOlcek() {
+  const d = defaultKwhPrice(S.country, S.kwhRegion);
+  if (S.homeKwhPrice > 0 && (!S.homeKwhAuto || (d && d.cur === S.currency)))
+    return S.homeKwhPrice;
+  if (d && d.cur === S.currency && d.p > 0) return d.p;
+  // Ülkenin para birimi tutmuyor: AYNI para birimini kullanan ilk ülkenin
+  // mesken fiyatına düşülüyor. Seçilebilir 20 para biriminin hepsi tabloda
+  // var (CAD yalnız alt bölgelerde), yani son çare pratikte erişilmez.
+  for (const kod of Object.keys(KWH_PRICES)) {
+    const c = KWH_PRICES[kod];
+    if (c.cur !== S.currency) continue;
+    if (c.p > 0) return c.p;
+    for (const bolge of Object.keys(c.sub || {})) {
+      const x = defaultKwhPrice(kod, bolge);
+      if (x && x.p > 0) return x.p;
+    }
+  }
+  return TR_KWH_2025;
+}
+
+// Tek şarj kaydı. kwh = batarya × SoC farkı × (1 + kayıp).
+function demoSarjRec(veh, vid, o, P, tarih, odo) {
+  const beklenen = veh.batt * (o.a - o.b) / 100;
+  const kwh = Math.round(beklenen * (1 + o.kay) * 10) / 10;
+  const evis = o.m !== 'firma';
+  const birim = Math.round(P * o.pk * 100) / 100;
+  const free = o.free === true;
+  const brut = free ? 0 : Math.round(kwh * birim * 100) / 100;
+  const indYuz = free ? 0 : (o.ind || 0);
+  const net = free ? 0 : Math.round(netFromGross(brut, 'percent', indYuz) * 100) / 100;
+  const rec = {
+    tarih: tarih + 'T' + o.h,
+    tip: o.t,
+    firma: evis ? homeFirmName(o.m) : o.f,
+    mekan: o.m,
+    kwh,
+    birimFiyat: evis ? birim : null,
+    tutarKaynak: evis ? 'birimFiyat' : 'manuel',
+    tutar: brut,
+    odenen: net,
+    indirim: Math.round((brut - net) * 100) / 100,
+    free,
+    indirimTip: indYuz > 0 ? 'percent' : 'none',
+    indirimDeger: indYuz,
+    banka: o.bk || '',
+    mesafeKm: odo == null ? (o.km ?? null) : null,
+    odo,
+    atlanan: o.atl === true,
+    dur: o.dur ?? null,
+    loc: o.lo || '',
+    socB: o.b, socA: o.a,
+    ulke: S.country, cur: S.currency,
+    rate: null, rateBase: null,
+    aracId: vid,
+    not: o.notKey ? t(o.notKey) : '',
+    demo: true
+  };
+  rec.kayipPct = kayipHesapla(rec, veh)?.pct ?? null;
+  return rec;
+}
+
+// Kıyasla sayfası S.cmp OLMADAN tamamen gizli (ui/compare.js). Yakıt fiyatı
+// UYDURULMUYOR: yalnız gömülü geçmişi olan ülkelerde (WT-77, bugün TR) o
+// ülkenin son ayının motorin fiyatı alınıyor. Geçmişi olmayan ülkede Kıyasla
+// boş durumda kalır — ₺ ölçeğinde bir sayıyı € diye göstermek boş ekrandan
+// daha kötü olurdu. Ayarın örnek veriyle geldiği `demoCmp` ile işaretleniyor;
+// clearDemoData() yalnız KENDİ yazdığını geri alıyor.
+async function demoCmpSeed(icefix) {
+  if (S.cmp) return;
+  const g = FUEL_HIST[S.country];
+  if (!g) return;
+  const i = g.tur.indexOf('diesel');
+  if (i < 0) return;
+  const aylar = Object.keys(g.m).sort();
+  const fiyat = g.m[aylar[aylar.length - 1]][i];
+  if (!(fiyat > 0)) return;
+  S.cmp = {fuel: 'diesel', price: fiyat, cons: 6.5, icefix, prorate: true};
+  await saveSetting('cmp', S.cmp);
+  await saveSetting('demoCmp', true);
+}
+
 async function seedDemoData() {
-  if (!confirm(t('demoWarn'))) return;
+  const nSarj = DEMO_SESS.reduce((s, x) => s + x.list.length, 0);
+  if (!confirm(t('demoWarn', {n: nSarj + DEMO_EXP.length + DEMO_VEH.length}))) return;
   const bugun = new Date();
   const gun = n => { const d = new Date(bugun); d.setDate(d.getDate() - n); return localISO(d); };
-  const vid = await db.vehicles.add({
-    ad: t('demoCarName'), brand: 'Demo', model: 'EV 60', body: 'suv',
-    batt: 60, dc: 150, ac: 11, arch: 400, range: 450,
-    kmStart: 10000, kmNow: 14200, demo: true
-  });
-  const FIRMA = ['ZES', 'Eşarj', 'Voltrun', 'Trugo', 'Sharz'];
+  const P = demoKwhOlcek();
+  const para = k => Math.round(P * k / 10) * 10;
+
+  const vid = [];
+  for (const v of DEMO_VEH)
+    vid.push(await db.vehicles.add({...v, ad: t('demoCarName'),
+      evVeriTarih: EV_DB_TARIH, demo: true}));
+
   const kayitlar = [];
-  for (let i = 0; i < 10; i++) {
-    const kwh = 18 + (i % 5) * 6;                 // 18–42 kWh
-    const birim = 8 + (i % 3);                    // 8–10 birim fiyat
-    const ind = i % 4 === 0 ? Math.round(kwh * birim * 0.1) : 0;
-    kayitlar.push({
-      tarih: gun(3 * i) + 'T' + (9 + (i % 8)) + ':30', firma: FIRMA[i % FIRMA.length],
-      tip: i % 3 === 0 ? 'AC' : 'DC', kwh, tutar: kwh * birim + ind,
-      odenen: kwh * birim, indirim: ind, cur: S.currency || 'TRY', rate: 1,
-      dur: 25 + (i % 4) * 15, socB: 20 + (i % 3) * 10, socA: 75 + (i % 3) * 5,
-      mesafeKm: 180 + (i % 5) * 40, aracId: vid, demo: true
-    });
+  for (const grup of DEMO_SESS) {
+    const veh = DEMO_VEH[grup.v];
+    // İlk sayaçlı kayıtta kıyas noktası yok; tureMesafe onun mesafesini null
+    // yapar. Zincir bu yüzden kmStart'ın 800 km üstünden başlıyor: araç
+    // ilk şarjdan önce de yol yapmıştı.
+    let odo = veh.kmStart + 800;
+    let ilkSayac = true;
+    for (const o of grup.list) {
+      let deger = null;
+      if (o.sayac) {
+        if (!ilkSayac) odo += o.km;
+        ilkSayac = false;
+        deger = odo;
+      }
+      kayitlar.push(demoSarjRec(veh, vid[grup.v], o, P, gun(o.g), deger));
+    }
   }
   await db.sessions.bulkAdd(kayitlar);
-  await db.expenses.bulkAdd([
-    {aracId: vid, tur: 'tax', tutar: 2400, tarih: gun(120), yillik: true, demo: true},
-    {aracId: vid, tur: 'insurance', tutar: 8600, tarih: gun(200), yillik: true, demo: true},
-    {aracId: vid, tur: 'maintenance', tutar: 1900, tarih: gun(45), demo: true}
-  ]);
+
+  const giderler = DEMO_EXP.map(e => {
+    const tarih = gun(e.g);
+    const araGun = REM_ARALIK.find(([k]) => k === e.int)?.[1] || null;
+    let sonraki = null;
+    if (araGun) {
+      const d = new Date(tarih);
+      d.setDate(d.getDate() + araGun);
+      sonraki = localISO(d);
+    }
+    return {
+      tarih, tur: e.tur,
+      altAd: e.altKey ? t(e.altKey) : '',
+      tutar: para(e.pk), cur: S.currency,
+      aracId: vid[e.v], not: '',
+      hatirlatmaAraligi: e.int || null,
+      hatirlatmaKm: e.km || null,
+      sonrakiTarih: sonraki,
+      sonrakiKm: e.nextKm ?? null,
+      tekrar: e.tekrar === true,
+      demo: true
+    };
+  });
+  await db.expenses.bulkAdd(giderler);
+
+  // ICE'nin yıllık sabit gideri: aracın kendi yıllık kalemlerinin 1,6 katı.
+  // Sabit bir rakam yazmak yerine buradan türetiliyor ki para birimi tutsun.
+  const yillik = giderler
+    .filter(e => ['tax', 'insurance', 'maintenance', 'inspection'].includes(e.tur))
+    .reduce((s, e) => s + e.tutar, 0);
+  await demoCmpSeed(Math.round(yillik * 1.6 / 10) * 10);
+
+  // Varsayılan araç YOKSA ilk örnek araca ayarlanır; kullanıcının kendi
+  // seçimi varsa DOKUNULMAZ.
+  if (S.defaultVehicleId == null) {
+    S.defaultVehicleId = vid[0];
+    await saveSetting('defaultVehicleId', vid[0]);
+  }
+
   toast(t('demoAdded'));
-  await tureMesafe(vid);
+  for (const id of vid) await tureMesafe(id);
   showScreen('dashboard');
   renderDashboard();
+  // syncEmptyStates() Kıyasla'nın boş durumunu FORM ALANLARINDAN okuyor; o
+  // alanları renderCompare() dolduruyor. Sıra ters olursa örnek veri yüklenmiş
+  // Kıyasla sayfasında hem sonuçlar hem "yakıt fiyatı gir" yazısı birlikte
+  // görünüyordu.
+  await renderCompare();
   await syncEmptyStates();
 }
 
@@ -848,8 +1098,18 @@ async function clearDemoData({ask = false} = {}) {
   await db.sessions.filter(isDemo).delete();
   await db.expenses.filter(isDemo).delete();
   await db.vehicles.filter(isDemo).delete();
-  if (S.defaultVehicleId && !(await db.vehicles.get(S.defaultVehicleId)))
+  if (S.defaultVehicleId && !(await db.vehicles.get(S.defaultVehicleId))) {
+    S.defaultVehicleId = null;
     await saveSetting('defaultVehicleId', null);
+  }
+  // WT-100: Kıyasla ayarı örnek veriyle BİRLİKTE geldiyse onunla gider.
+  // İşaret yoksa kullanıcının kendi girdiği değerdir — dokunulmaz.
+  if (await db.settings.get('demoCmp')) {
+    S.cmp = null;
+    await db.settings.delete('cmp');
+    await db.settings.delete('demoCmp');
+    renderCompare();
+  }
   toast(t('demoCleared'));
   renderDashboard();
   renderVehiclePage();
