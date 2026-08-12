@@ -409,3 +409,27 @@ function applyI18n() {
     $('adv-fields').classList.contains('open') ? t('advancedHide') : t('advanced');
   document.documentElement.lang = S.lang;
 }
+
+/* ---- guessCountryFromLocale() — onboarding varsayılanı için ülke tahmini ---- */
+// Onboarding henüz tamamlanmamış kurulumlarda tarayıcının dil/bölge ayarından
+// (konum izni İSTEMEDEN) muhtemel ülkeyi tahmin eder. COUNTRIES'te her satırın
+// kendi varsayılan dili var ve o dil desteklenmiyorsa zaten 'en' — yani
+// Polonya/Bulgaristan gibi çevirisi olmayan ülkeler otomatik İngilizce'ye
+// düşer, ayrı bir dal gerekmez.
+function guessCountryFromLocale() {
+  const codes = new Set(COUNTRIES.map(c => c[0]));
+  const tags = (navigator.languages && navigator.languages.length
+    ? navigator.languages : [navigator.language]).filter(Boolean);
+  for (const tag of tags) {
+    const region = tag.split('-')[1];
+    if (region && codes.has(region.toUpperCase())) return region.toUpperCase();
+  }
+  // Bölge etiketi yoksa (yalnız "tr", "es" gibi) desteklenen dillerin
+  // ilk temsilci ülkesine düş.
+  const langFallback = {tr: 'TR', de: 'DE', fr: 'FR', es: 'ES', it: 'IT'};
+  for (const tag of tags) {
+    const lang = tag.split('-')[0].toLowerCase();
+    if (langFallback[lang]) return langFallback[lang];
+  }
+  return null;
+}

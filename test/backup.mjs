@@ -37,6 +37,8 @@ async function boot() {
     configurable: true,
     value: { register: () => Promise.reject(new Error('no sw')), addEventListener() {} }
   });
+  Object.defineProperty(window.navigator, 'language', { configurable: true, value: 'tr-TR' });
+  Object.defineProperty(window.navigator, 'languages', { configurable: true, value: ['tr-TR'] });
   window.scrollTo = () => {};
   window.HTMLElement.prototype.scrollIntoView = () => {};
   window.URL.createObjectURL = () => 'blob:test';

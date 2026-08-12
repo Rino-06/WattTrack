@@ -32,6 +32,8 @@ w.fetch = () => Promise.reject(new Error('offline'));
 Object.defineProperty(w.navigator, 'serviceWorker', {
   configurable: true, value: { register: () => Promise.reject(new Error('x')), addEventListener() {} }
 });
+Object.defineProperty(w.navigator, 'language', { configurable: true, value: 'tr-TR' });
+Object.defineProperty(w.navigator, 'languages', { configurable: true, value: ['tr-TR'] });
 w.scrollTo = () => {};
 w.HTMLElement.prototype.scrollIntoView = () => {};
 w.URL.createObjectURL = () => 'blob:test';

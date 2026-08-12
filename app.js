@@ -83,6 +83,14 @@ async function loadSettings() {
 
 (async function init() {
   await loadSettings();
+  if (!S.onboarded) {
+    const guessed = guessCountryFromLocale();
+    const c = guessed && COUNTRIES.find(x => x[0] === guessed);
+    if (c) {
+      S.country = c[0]; S.currency = c[3]; S.unit = c[5];
+      S.lang = LANG_NAMES[c[6]] ? c[6] : 'en';
+    }
+  }
   // WT-83: WT-81/8'den ÖNCE kurulmuş TR dışı cihazlarda kalan yanlış fiyatı
   // onar. Autofill'den ÖNCE koşuyor: onarım değeri kendi yazıp homeKwhAuto'yu
   // işaretlediği için autofill'in `S.homeKwhPrice === d.p` kısa devresi onu
