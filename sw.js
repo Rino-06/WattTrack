@@ -31,7 +31,8 @@ const ASSETS = [
   './evprices.js',
   './logo.png',
   './nav-plus.png',
-  './privacy.html'
+  './privacy.html',
+  './kilavuz.html'
 ];
 // WT-37/6: açılış videosu ve poster'ı. AYRI listede çünkü addAll() tek dosya
 // eksikse TÜM kurulumu reddediyor — video repoya konmadan önce bu, service

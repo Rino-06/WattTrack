@@ -41,6 +41,11 @@ Object.defineProperty(window.navigator, 'serviceWorker', {
   configurable: true,
   value: { register: () => Promise.reject(new Error('no sw in test')), addEventListener() {} }
 });
+// jsdom varsayılan olarak 'en-US' bildirir; testler baştan beri TR/tr
+// varsayımıyla yazıldı — konum tahminini (guessCountryFromLocale) burada
+// gerçek bir Türkiye kullanıcısına sabitleyip test determinizmini koru.
+Object.defineProperty(window.navigator, 'language', { configurable: true, value: 'tr-TR' });
+Object.defineProperty(window.navigator, 'languages', { configurable: true, value: ['tr-TR'] });
 window.scrollTo = () => {};
 window.HTMLElement.prototype.scrollIntoView = () => {};
 window.URL.createObjectURL = () => 'blob:test';

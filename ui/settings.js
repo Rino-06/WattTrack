@@ -183,11 +183,13 @@ let obEv = null;
 function initOnboarding() {
   $('ob-country').innerHTML = COUNTRIES.map(c =>
     `<option value="${c[0]}">${c[1]} ${c[2]}</option>`).join('');
-  $('ob-country').value = 'TR';
+  $('ob-country').value = S.country;
   const curs = [...new Set(COUNTRIES.map(x => x[3]))].sort();
   $('ob-currency').innerHTML = curs.map(k =>
     `<option value="${k}">${k} (${symOf(k)})</option>`).join('');
-  $('ob-currency').value = 'TRY';
+  $('ob-currency').value = S.currency;
+  $('ob-unit').querySelectorAll('button').forEach(b =>
+    b.classList.toggle('sel', b.dataset.v === S.unit));
   $('ob-lang').innerHTML = Object.keys(LANG_NAMES).map(k =>
     `<option value="${k}">${LANG_NAMES[k]}</option>`).join('');
   $('ob-lang').value = S.lang;
