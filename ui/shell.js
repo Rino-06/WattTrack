@@ -215,18 +215,6 @@ document.addEventListener('click', e => {
   const img = e.target.closest?.('.ev-summary img.carphoto');
   if (img) openPhotoView(img);
 });
-// WT-39/7: Geçmiş'teki ataç ikonu kaydın ekran görüntüsünü tam ekran açar.
-// Blob önbelleğe alınmıyor (WT-49/5) — tek kayıt okunuyor.
-document.addEventListener('click', async e => {
-  const b = e.target.closest?.('[data-shot]');
-  if (!b) return;
-  e.stopPropagation();
-  const r = await db.sessions.get(+b.dataset.shot);
-  if (!r?.ekranGor) return;
-  $('photo-view-img').src = photoSrc(r.ekranGor);
-  $('photo-view-img').alt = t('ocrAttach');
-  overlayOpen('photo-view');
-});
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
   const img = e.target.closest?.('.ev-summary img.carphoto');
@@ -715,6 +703,30 @@ async function migrateExpenseVehicles() {
     for (const e of orphan) await db.expenses.update(e.id, {aracId: target.id});
   }));
   if (w.ok) toast(t('expOrphanFix', {n: orphan.length}));
+}
+
+// Şarj kaybı yüzdesi kayda YAZILDIĞI ANDA hesaplanıp saklanıyor. Formülün
+// paydası "beklenen kWh"ten "faturalanan kWh"e çevrildiğinde eski kayıtlar
+// eski paydayla hesaplanmış değeri taşımaya devam ederdi; aynı grafikte iki
+// farklı ölçüt karışırdı. Bu onarım kayıtlı değeri GÜNCEL formülle yeniden
+// üretir. Girdi aynıysa çıktı da aynı olduğu için tekrar tekrar koşması
+// zararsız; yalnız DEĞİŞEN kayıtlar yazılıyor.
+async function kayipYenidenHesapla() {
+  const all = await allSessions();
+  const aday = all.filter(r => r.socB != null && r.socA != null && r.aracId != null);
+  if (!aday.length) return;
+  const vs = new Map((await allVehicles()).map(v => [v.id, v]));
+  const upd = [];
+  for (const r of aday) {
+    const k = kayipHesapla(r, vs.get(r.aracId));
+    const yeni = k ? k.pct : null;
+    if ((r.kayipPct ?? null) !== yeni) upd.push([r.id, yeni]);
+  }
+  if (!upd.length) return;
+  await safeWrite(() => db.transaction('rw', db.sessions, async () => {
+    for (const [id, pct] of upd) await db.sessions.update(id, {kayipPct: pct});
+  }));
+  invalidateCache();
 }
 
 // Sınır dışı socB/socA/dur/kwh değerlerini tara. Otomatik silme yok.

@@ -61,7 +61,7 @@ window.HTMLMediaElement.prototype.play = function () {
 // Dört dosya tarayıcıda AYNI global kapsamı paylaşıyor; ayrı ayrı eval
 // edilirse const/let bildirimleri birbirini görmez. Tek eval'de birleştir.
 // WT-50: uygulama kodu 12 klasik script'e bölündü; index.html'deki sıra.
-const APP_FILES = ['db.js', 'calc.js', 'i18n.js', 'ocr.js', 'ui/shell.js', 'ui/dashboard.js',
+const APP_FILES = ['db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js',
   'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js',
   'ui/settings.js', 'app.js'];
 const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP_FILES]
@@ -82,7 +82,6 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
        EV_DB, EV_DB_TARIH, openFuelHist, openExpense, yaklasanlar,
        renderYaklasanlar, tekrarOner,
        csvPayload, parseCSV, csvAutoMap, csvRowToRec, csvSig, CSV_FIELDS, savingsOf,
-       paylasilanGorseliAl, paylasimKutusunuBosalt, ocrDosyaIsle,
        reverseGeo, nearbyStations,
        openCsvImport, importFileText, importBackupText, overlayOpen,
        parcaliOku, parcaliYaz,
@@ -305,9 +304,9 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     durYear !== durWeek, `yıl=${durYear} hafta=${durWeek}`);
   check('WT-14/A: ort. şarj aralığı da daraldı',
     socYear !== socWeek, `yıl=${socYear} hafta=${socWeek}`);
-  check('WT-14/A: detay bloğu kapsam rozeti taşıyor',
-    $('d-dstat-scope').textContent.trim() !== '',
-    'rozet=' + JSON.stringify($('d-dstat-scope').textContent));
+  // Dönem rozeti KALDIRILDI (kullanıcı isteği): dönem seçicisi sayfanın en
+  // üstünde ve bu kutular onunla aynı dönemi gösteriyor; rozet tekrardı.
+  check('detay bloğunun dönem rozeti kaldırıldı', !$('d-dstat-scope'));
   // WT-14'te "kasıtlı tüm-zamanlar olan yıllık blok da rozetli" diye bir kontrol
   // vardı; WT-32 o bloğu tamamen kaldırdı. Dönem seçicisine uymayan tek sayı
   // kalmadığı için kontrol, bloğun geri gelmediğini doğrulamaya dönüştü.
@@ -371,9 +370,11 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await app().db.sessions.update(r.id, { mesafeKm: 250 });
   await app().renderDashboard();
   await sleep(350);
-  check('WT-14/B: kayıt mesafesi varken kaynak "kayıtlar" diyor',
-    $('d-dist-scope').textContent.trim() !== '' &&
-      !/tüm zamanlar/i.test($('d-dist-scope').textContent),
+  // Olağan durumda not YAZILMIYOR (kullanıcı isteği): mesafenin kayıtlardan
+  // geldiği varsayılan. Not YALNIZ yedek kaynağa düşüldüğünde çıkıyor —
+  // yukarıdaki sayaç senaryosu onu zaten sınıyor.
+  check('mesafe kayıtlardan gelirken açıklama satırı boş',
+    $('d-dist-scope').textContent.trim() === '',
     'not=' + JSON.stringify($('d-dist-scope').textContent));
 }
 
@@ -399,7 +400,6 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await sleep(350);
   const firmsYear = $('d-firms').textContent;
   const donutYear = $('d-donut-legend').textContent;
-  const banksYear = $('d-banks').textContent;
   const locsYear = $('d-locs').textContent;
 
   app().S.gran = 'week';
@@ -414,8 +414,8 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-15 KABUL: "Hafta" seçince donut daraldı',
     donutYear !== donutWeek && !donutWeek.includes('DC'),
     `yıl=${donutYear.trim().slice(0, 40)} hafta=${donutWeek.trim().slice(0, 40)}`);
-  check('WT-15: bankalar da daraldı',
-    banksYear.includes('BankaY') && !$('d-banks').textContent.includes('BankaY'));
+  check('Bankalar bölümü İstatistik sayfasından kaldırıldı (kullanıcı isteği)',
+    !$('d-banks'));
   check('WT-15: lokasyonlar da daraldı',
     locsYear.includes('İzmir') && !$('d-locs').textContent.includes('İzmir'));
   // WT-72: gün dağılımı grafiği kullanıcı isteğiyle KALDIRILDI. WT-15'in
@@ -1005,9 +1005,9 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const pk = doc.getElementById('d-perkm-wrap'), ds = doc.getElementById('d-dstat-wrap');
   check('WT-33: 1 km kutuları ve kaynak notu aynı hücrede',
     !!pk && !!pk.querySelector('#d-1km') && !!pk.querySelector('#d-dist-scope'));
-  check('WT-33: detay başlığı ve değerleri aynı hücrede',
-    !!ds && !!ds.querySelector('#d-dstat-scope') && !!ds.querySelector('#d-dur')
-      && !!ds.querySelector('#d-power'));
+  check('WT-33: detay kutuları tek hücrede duruyor',
+    !!ds && !!ds.querySelector('#d-dur') && !!ds.querySelector('#d-power')
+      && !!ds.querySelector('#d-cons'));
   // WT-90: AC/DC filtresi artık sayfanın TAMAMINI süzüyor — dönem
   // seçicisinin hemen altında, tam genişlikte ve boş durumda gizlenen
   // .d-data ailesinde olmalı (yoksa "henüz kayıt yok" ekranında öksüz kalır).
@@ -1285,15 +1285,16 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       'kayıt=' + (await A.allSessions()).length);
   }
 
-  // WT-46/7: ekran görüntüsü olan kayıtta ataç
+  // Ekran görüntüsü özelliği (OCR ile birlikte) KALDIRILDI: eski kayıtta blob
+  // kalmış olsa bile Geçmiş'e ataç ikonu çizilmemeli.
   await A.db.sessions.clear();
   await A.db.sessions.add({tarih: `${y}-05-03T10:00`, firma: 'ZES', tip: 'DC',
     kwh: 5, tutar: 50, odenen: 50, cur: 'TRY', aracId: v1,
     ekranGor: new window.Blob(['x'], {type: 'image/jpeg'})});
   await A.renderHistory();
   await sleep(300);
-  check('WT-46/7: ekran görüntüsü olan kayıtta ataç ikonu (WT-39)',
-    /📎/.test($('h-groups').innerHTML));
+  check('ekran görüntüsü kaldırıldı: eski kayıtta bile ataç ikonu yok',
+    !/📎/.test($('h-groups').innerHTML));
 
   // WT-46/3: tek araçlı kullanıcıda rozet BİLGİ TAŞIMIYOR, çizilmemeli
   await A.db.vehicles.delete(v2);
@@ -1542,10 +1543,10 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   A.S.defaultVehicleId = vid;
   A.S.period = 'year'; A.S.dashVeh = '';
   const y = new Date().getFullYear();
-  // 60 kWh × %70 = 42 beklenen, 45,5 faturalanmış -> %8,3
+  // 60 kWh × %70 = 42 beklenen, 45,5 faturalanmış -> %7,7
   const id1 = await A.db.sessions.add({tarih: `${y}-04-01T10:00`, firma: 'ZES',
     tip: 'DC', kwh: 45.5, tutar: 500, odenen: 500, cur: 'TRY',
-    socB: 20, socA: 90, aracId: vid, kayipPct: 8.3});
+    socB: 20, socA: 90, aracId: vid, kayipPct: 7.7});
   // %20'yi aşan sapma -> satırda uyarı
   await A.db.sessions.add({tarih: `${y}-04-02T10:00`, firma: 'Sapan', tip: 'DC',
     kwh: 45, tutar: 500, odenen: 500, cur: 'TRY', socB: 0, socA: 50,
@@ -1555,7 +1556,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await sleep(300);
   check('WT-42/2: kayıt detayında kayıp satırı yazılı',
     $('in-loss').style.display !== 'none' && /42/.test($('in-loss').textContent)
-      && /45,5/.test($('in-loss').textContent) && /8,3/.test($('in-loss').textContent),
+      && /45,5/.test($('in-loss').textContent) && /7,7/.test($('in-loss').textContent),
     $('in-loss').textContent);
   await A.overlayClose('page-add', {force: true});
 
@@ -1586,7 +1587,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await sleep(500);
   const kayit = (await A.db.sessions.toArray())[0];
   check('WT-42/1 KABUL: kayıt kaydedilirken kayipPct hesaplanıp saklandı',
-    kayit && Math.abs(kayit.kayipPct - 8.3) < 0.2, 'kayipPct=' + kayit?.kayipPct);
+    kayit && Math.abs(kayit.kayipPct - 7.7) < 0.2, 'kayipPct=' + kayit?.kayipPct);
 }
 
 // --- WT-41: kWh/100km verimlilik metriği ---
@@ -1693,8 +1694,9 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-90 KABUL: araç km sayacı kutuları filtreden ETKİLENMİYOR',
     $('d-odo-total').textContent === hepsi.odo && /2\.000/.test($('d-odo-total').textContent),
     'önce=' + hepsi.odo + ' sonra=' + $('d-odo-total').textContent);
-  check('WT-90: rozet seçili tipi de yazıyor',
-    /DC/.test($('d-dstat-scope').textContent), 'rozet=' + $('d-dstat-scope').textContent);
+  // Rozet kaldırıldı (kullanıcı isteği); seçili tipin etkisi zaten yukarıdaki
+  // dört kabul kontrolüyle (kayıt sayısı, birim fiyat, km maliyeti) kanıtlı.
+  check('WT-90: dönem/tip rozeti artık yok', !$('d-dstat-scope'));
 
   // Filtre açıkken sayaç yedeği KULLANILMAZ: pay süzülü, payda değil olurdu.
   await A.db.sessions.clear();
@@ -1752,13 +1754,24 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   // SUSUYOR. Sessizce geçen aya kıyaslamak asıl kusur olurdu.
   check('WT-92: "Tümü"de önceki döneme kıyas satırı BOŞ',
     $('d-delta').textContent === '', 'd-delta=' + $('d-delta').textContent);
-  // WT-99 (WT-97 geri alındı): "Tümü"de çubuk hiç görünmez. Nerede göründüğü
-  // Ayarlar'da, bütçe alanlarının hemen altında yazılı.
-  check('WT-99 KABUL: "Tümü"de bütçe çubuğu tamamen gizli',
+  // Kullanıcı isteği: "Tümü"de de çubuk görünüyor ve YILLIK bütçeyi ölçüt
+  // alıyor (tüm zamanların harcaması tek yıllık bütçeyle kıyaslansa çubuk
+  // ikinci yıldan sonra kalıcı olarak taşardı — ölçüt içinde bulunulan yıl).
+  A.S.budgetY = 20000;
+  await A.renderDashboard();
+  await sleep(250);
+  check('KABUL: "Tümü" seçiliyken bütçe çubuğu yıllık ölçütle görünüyor',
+    $('d-budget').style.display !== 'none'
+      && /20\.000/.test($('d-budget-lbl').textContent),
+    'display=' + $('d-budget').style.display + ' · ' + $('d-budget-lbl').textContent);
+  A.S.budgetY = null;
+  await A.renderDashboard();
+  await sleep(200);
+  check('bütçe girilmemişse "Tümü"de de çubuk gizli',
     $('d-budget').style.display === 'none', 'display=' + $('d-budget').style.display);
   check('WT-99: bütçenin nerede göründüğü Ayarlar\'da yazılı',
     !!doc.querySelector('#page-settings [data-i18n="budgetWhere"]'));
-  A.S.period = 'year';
+  A.S.period = 'year'; A.S.budgetY = 20000;
   await A.renderDashboard();
   await sleep(300);
   check('WT-92: Yıl seçilince bütçe çubuğu geri geliyor',
@@ -2475,136 +2488,15 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   A.S.defaultVehicleId = null;
 }
 
-// --- WT-53: manifest sadeleştirme + share_target'ın WT-39'a bağlanması ---
+// --- Manifest sadeleştirme (WT-53) ---
 {
   const mf = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
   const kalkan = ['protocol_handlers', 'note_taking', 'scope_extensions',
     'edge_side_panel', 'display_override'];
-  check('WT-53: kullanılmayan manifest alanları kaldırıldı',
-    kalkan.every(k => !(k in mf)), kalkan.filter(k => k in mf).join(', '));
-  const kalan = ['id', 'name', 'short_name', 'description', 'start_url', 'scope',
-    'display', 'orientation', 'background_color', 'theme_color', 'lang', 'dir',
-    'categories', 'icons', 'screenshots', 'shortcuts', 'file_handlers',
-    'share_target', 'related_applications'];
-  check('WT-53: maddedeki kalması gereken 19 alanın hepsi duruyor',
-    kalan.every(k => k in mf), kalan.filter(k => !(k in mf)).join(', '));
-  check('WT-53: maddede adı geçmeyen fazladan alan kalmadı',
-    Object.keys(mf).every(k => kalan.includes(k)),
-    Object.keys(mf).filter(k => !kalan.includes(k)).join(', '));
-
-  // share_target: dosya alabilmesi için POST + multipart ŞART. GET biçimi
-  // yalnız metin taşır, ekran görüntüsü paylaşılamaz.
-  const st = mf.share_target;
-  check('WT-53: share_target dosya alabilmek için POST + multipart',
-    st.method === 'POST' && st.enctype === 'multipart/form-data',
-    st.method + ' / ' + st.enctype);
-  check('WT-53: share_target görsel dosyası kabul ediyor (WT-39 bağlantısı)',
-    Array.isArray(st.params.files) && st.params.files[0].name === 'screenshot'
-      && st.params.files[0].accept.some(a => /image\//.test(a)),
-    JSON.stringify(st.params.files));
-  check('WT-53: paylaşım POST\'u service worker\'ın yakalayacağı adrese gidiyor',
-    /share-target/.test(st.action), st.action);
-  // WT-48 CSV'yi içe aktarılabilir yaptı; dosya eşleştirici de kabul etmeli
-  check('WT-53: file_handlers .json VE .csv kabul ediyor',
-    JSON.stringify(mf.file_handlers[0].accept).includes('.csv') &&
-      JSON.stringify(mf.file_handlers[0].accept).includes('.json'),
-    JSON.stringify(mf.file_handlers[0].accept));
-
-  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  check('WT-53: service worker paylaşım POST\'unu yakalıyor',
-    /method === 'POST'/.test(sw) && /share-target/.test(sw));
-  check('WT-53: dosya Cache API\'ye bırakılıp sayfaya GET ile dönülüyor',
-    /Response\.redirect/.test(sw) && /caches\.open\(SHARE_CACHE\)/.test(sw));
-  check('WT-53: paylaşım kutusu activate temizliğinden MUAF',
-    /k !== CACHE && k !== SHARE_CACHE/.test(sw));
-
-  // Uygulama tarafı: kutudan alıp WT-39 yoluna veriyor ve kutuyu boşaltıyor
-  const appjs = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
-  check('WT-53: açılışta paylaşılan görsel OCR yoluna veriliyor',
-    /ocrDosyaIsle/.test(appjs) && /share.*===.*'shot'|'shot'/.test(appjs));
-  check('WT-53: kutu okunduktan sonra boşaltılıyor (görsel yapışıp kalmasın)',
-    /c\.delete\('\.\/__paylasilan__'\)/.test(appjs));
-  check('WT-53: onboarding yolunda da kutu boşaltan dal var',
-    /!S\.onboarded && q\.get\('share'\) === 'shot'\) paylasimKutusunuBosalt\(\)/
-      .test(appjs));
-  // OCR saniyeler sürüyor; await edilirse splash o kadar ekranda kalırdı
-  check('WT-53: paylaşım OCR\'ı splash\'ı bekletmiyor (await YOK)',
-    /\n\s*paylasilanGorseliAl\(\);/.test(appjs)
-      && !/await paylasilanGorseliAl\(\)/.test(appjs));
-
-  // OCR başarısız olsa bile paylaşılan görsel kayda iliştirilmeli
-  const forms = fs.readFileSync(path.join(ROOT, 'ui/forms.js'), 'utf8');
-  const fn = forms.slice(forms.indexOf('async function ocrDosyaIsle'));
-  check('WT-53: görsel OCR\'DAN ÖNCE iliştiriliyor (OCR hatası görseli yutmasın)',
-    fn.indexOf('resizePhoto') < fn.indexOf('ocrOku') && fn.indexOf('resizePhoto') > -1);
-}
-
-// --- WT-53/WT-39: paylaşılan görselin uçtan uca akışı ---
-{
-  const A = app();
-  await A.db.sessions.clear();
-  await A.db.vehicles.clear();
-  await A.db.vehicles.add({ad: 'Kia EV6', batt: 77});
-  // Service worker'ın bıraktığı kutuyu taklit et
-  const kutu = new Map();
-  window.caches = {
-    open: async () => ({
-      match: async u => kutu.get(u),
-      delete: async u => kutu.delete(u),
-      put: async (u, r) => kutu.set(u, r)
-    })
-  };
-  const blob = new window.Blob(['ekran-goruntusu'], {type: 'image/jpeg'});
-  kutu.set('./__paylasilan__', {blob: async () => blob});
-
-  // jsdom'da görüntü ÇÖZÜCÜ yok: resizePhoto'nun canvas/Image yolu ne
-  // resolve ne reject ediyor, sonsuza kadar bekliyor. İkisi de tarayıcı
-  // yeteneği; burada sınanan şey WT-53'ün TESİSATI (kutudan alma, OCR
-  // yoluna verme, kutuyu boşaltma).
-  const orjResize = window.resizePhoto;
-  const orjOku = window.ocrOku;
-  const errBefore = errors.length;
-  let verilenDosya = null;
-  window.resizePhoto = async f => { verilenDosya = f; return f; };
-  // OCR'ı KASITLI olarak düşürüyoruz: görsel yine de iliştirilmeli
-  window.ocrOku = async () => { throw new Error('vendor yok (test)'); };
-
-  await A.openAdd();
-  await sleep(200);
-  await A.paylasilanGorseliAl();
-  await sleep(400);
-  check('WT-53 KABUL: paylaşılan görsel forma iliştirildi',
-    $('ocr-shot-wrap').style.display !== 'none' && !!$('ocr-shot').src,
-    'src=' + ($('ocr-shot').src || '').slice(0, 24));
-  check('WT-53: OCR ÇÖKSE BİLE görsel iliştirilmiş durumda',
-    verilenDosya && verilenDosya.type === 'image/jpeg'
-      && !!A.T[A.S.lang]          // fallback'in testi taşımadığını doğrula
-      && $('ocr-status').textContent === A.T[A.S.lang].ocrFailed,
-    'dosya=' + (verilenDosya && verilenDosya.type) + ' durum=' + $('ocr-status').textContent);
-  check('WT-53: OCR satırı paylaşım yolunda görünür yapıldı',
-    $('ocr-row').style.display !== 'none');
-  check('WT-53 KABUL: kutu boşaltıldı (ikinci açılışta yapışmıyor)',
-    !kutu.has('./__paylasilan__'), 'kalan=' + kutu.size);
-
-  // Onboarding sırasında paylaşım: form AÇILMAZ ama kutu yine de boşalmalı.
-  // Kutu sürümden bağımsız olduğu için kendiliğinden temizlenmiyor; burada
-  // bırakılsa aylar sonraki ilk paylaşımda bayat görsel olarak geri gelirdi.
-  kutu.set('./__paylasilan__', {blob: async () => blob});
-  await A.paylasimKutusunuBosalt();
-  check('WT-53: onboarding yolunda da kutu boşaltılıyor (bayat görsel kalmıyor)',
-    !kutu.has('./__paylasilan__'), 'kalan=' + kutu.size);
-
-  await A.overlayClose('page-add', {force: true});
-  window.resizePhoto = orjResize; window.ocrOku = orjOku;
-  delete window.caches;
-  await A.db.vehicles.clear();
-
-  // OCR'ı bilerek düşürdük; uygulamanın bastığı console.error BEKLENEN.
-  // Harness her console.error'ı hata sayıyor — yalnız bu birini, tam
-  // beklediğimiz metin olduğunu doğrulayarak listeden düşürüyoruz.
-  const beklenen = errors.splice(errBefore).filter(e => !/vendor yok \(test\)/.test(e));
-  check('WT-53: yalnız KASITLI OCR hatası oluştu, başka konsol hatası yok',
-    beklenen.length === 0, beklenen.slice(0, 3).join(' | '));
+  const fazla = kalkan.filter(k => k in mf);
+  check('manifest: tarayıcı desteği olmayan alanlar yok', fazla.length === 0, fazla.join(','));
+  check('manifest: ekran görüntüsü paylaşımı kaldırıldı (OCR ile birlikte)',
+    !('share_target' in mf));
 }
 
 // --- WT-54: OpenChargeMap sessiz hatası + Nominatim önbelleği ---
@@ -3704,7 +3596,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 
   // Ölü anahtar taraması: sözlükteki her anahtar ya kodda geçmeli ya da
   // dinamik bir önekle (exp_, rem_, spec_) üretiliyor olmalı.
-  const kaynak = ['index.html', 'app.js', 'calc.js', 'db.js', 'ocr.js',
+  const kaynak = ['index.html', 'app.js', 'calc.js', 'db.js',
     'evprices.js', 'evdata.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js',
     'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js',
     'ui/forms.js', 'ui/settings.js']
@@ -3764,7 +3656,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       for (const c of sel.matchAll(/\.([A-Za-z][\w-]*)/g)) siniflar.add(c[1]);
   // Kullanım: stil bloğu DIŞINDAKİ işaretleme + bütün betikler
   const kullanim = html.slice(0, i) + html.slice(j)
-    + ['app.js', 'calc.js', 'db.js', 'ocr.js', 'evprices.js', 'i18n.js',
+    + ['app.js', 'calc.js', 'db.js', 'evprices.js', 'i18n.js',
        'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js',
        'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js']
       .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');

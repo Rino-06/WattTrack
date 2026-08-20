@@ -298,12 +298,8 @@ async function backupPayload() {
   return {
     app: 'WattTrack', version: SCHEMA_VERSION, appVersion: APP_VERSION,
     exportedAt: new Date().toISOString(),
-    // WT-49/5: `ekranGorVar` bir ÖNBELLEK artefaktı, veri değil — yedeğe
-    // girerse geri yüklemede görselsiz bir ataç ikonu çıkar. Ekran
-    // görüntüleri yedeğe HİÇ girmiyor: JSON.stringify bir Blob'u `{}` yapar,
-    // yani zaten aktarılamıyorlardı; artık sessizce bozuk çıkmıyorlar.
     sessions: (await allSessions()).filter(r => !isDemo(r))
-      .map(({ekranGorVar, ...r}) => r),
+      .map(({ekranGorVar, ekranGor, ocrSablon, ...r}) => r),
     vehicles: (await allVehicles()).filter(r => !isDemo(r)),
     expenses: (await allExpenses()).filter(r => !isDemo(r)),
     settings: await db.settings.toArray()
@@ -341,7 +337,7 @@ async function csvPayload() {
     lines.push([
       r.tarih.slice(0, 10), r.tarih.slice(11, 16), r.ulke || '', r.cur || '',
       r.rate ? num(r.rate) : '',
-      safe(r.firma), r.mekan || '', r.tip || '', r.free ? 1 : 0, num(r.kwh),
+      safe(r.firma), r.mekan || '', tipOf(r), r.free ? 1 : 0, num(r.kwh),
       num(r.odenen), num(amtB(r)), num(sav), num(r.odenen + sav),
       r.kwh ? num(r.odenen / r.kwh) : '', safe(r.banka),
       r.mesafeKm ? num(r.mesafeKm) : '', r.odo ?? '',
@@ -633,12 +629,19 @@ async function importBackupText(text) {
   const sig = r => [r.tarih, r.firma, r.kwh, r.odenen, r.cur || ''].join('|');
   const existing = new Set((await allSessions()).map(sig));
   const fresh = [], dupes = [];
-  // WT-49/5: eski yedeklerde `ekranGor` bir Blob değil, JSON.stringify'ın
-  // ürettiği boş nesne (`{}`) — truthy olduğu için geri yüklemede kırık bir
-  // ataç ikonu doğuruyordu. Blob olmayan görsel alanı ve önbellek artefaktı
-  // `ekranGorVar` içeri alınmıyor.
-  const temizle = ({id, ekranGorVar, ekranGor, ...r}) =>
-    ekranGor instanceof Blob ? {...r, ekranGor} : r;
+  // Ekran görüntüsü alanları artık okunmuyor: özellik kaldırıldı, eski
+  // yedeklerdeki artıklar içeri alınmıyor.
+  // Yedek DIŞARIDAN gelen veridir: `tip` ve `mekan` alanlarının bilinen bir
+  // değer taşıdığı GARANTİ DEĞİL (eski sürüm yedeği, elle düzenlenmiş dosya,
+  // başka uygulamadan göç). Okuma tarafı artık savunmalı (tipOf / isHomeRec)
+  // ama bozuk değeri veritabanına yazmak yeni kusur üretir — girişte
+  // normalleştiriliyor.
+  const temizle = ({id, ekranGorVar, ekranGor, ocrSablon, ...r}) => {
+    const rec = {...r};
+    rec.tip = tipOf(rec);
+    if (!MEKAN_VALS.includes(rec.mekan)) rec.mekan = mekanOfFirm(rec.firma);
+    return rec;
+  };
   data.sessions.forEach(s => {
     const r = temizle(s);
     (existing.has(sig(r)) ? dupes : fresh).push({...r, _oldVeh: r.aracId});
@@ -788,37 +791,9 @@ $('btn-wipe').addEventListener('click', async () => {
 });
 
 
-/* ---- WT-39/BÖLÜM 2: OCR anahtarı ---- */
 // Kütüphane uygulama paketinde değil; anahtar açılınca indirilir ve Cache
 // API'ye yazılır (çevrimdışı çalışsın). Kapatılınca worker terminate edilir
 // ve önbelleği silme seçeneği sunulur.
-async function ocrAyarSync() {
-  const varMi = await ocrVarMi();
-  $('set-ocr').checked = S.ocrOn === true && varMi;
-  $('set-ocr').disabled = !varMi;
-  if (!varMi) { $('ocr-size-note').textContent = t('ocrMissing'); return; }
-  const b = await ocrIndirmeBoyutu();
-  $('ocr-size-note').textContent = b
-    ? t('ocrSize', {mb: fmtNum(b / 1048576, 1)}) : t('ocrSizeUnknown');
-}
-$('set-ocr').addEventListener('change', async e => {
-  if (e.target.checked) {
-    const b = await ocrIndirmeBoyutu();
-    if (b && !confirm(t('ocrDownloadAsk', {mb: fmtNum(b / 1048576, 1)}))) {
-      e.target.checked = false;
-      return;
-    }
-    S.ocrOn = true;
-    await saveSetting('ocrOn', true);
-    await ocrOnbellekle();
-    toast(t('savedLocal'));
-  } else {
-    S.ocrOn = false;
-    await saveSetting('ocrOn', false);
-    await ocrKapat();
-    if (confirm(t('ocrClearCacheAsk'))) await ocrOnbellekSil();
-  }
-});
 
 
 /* ---- WT-87: ev / iş elektrik fiyatı alanları ----

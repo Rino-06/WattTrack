@@ -158,8 +158,8 @@ async function renderStats() {
   const sumKwh = list => list.reduce((s, r) => s + r.kwh, 0);
   // Şarj TİPİ: yalnız `tip` alanından — ana sayfadaki DC/AC filtresiyle aynı kaynak
   drawDonut('d-donut', 'd-donut-legend', t('typeSplit'), [
-    {name: 'DC', kwh: sumKwh(cur.filter(r => r.tip === 'DC')), col: '#16A34A'},
-    {name: 'AC', kwh: sumKwh(cur.filter(r => r.tip !== 'DC')), col: '#1B5FAA'}
+    {name: 'DC', kwh: sumKwh(cur.filter(r => tipOf(r) === 'DC')), col: '#16A34A'},
+    {name: 'AC', kwh: sumKwh(cur.filter(r => tipOf(r) === 'AC')), col: '#1B5FAA'}
   ].filter(x => x.kwh > 0));
   // Şarj YERİ: `mekan` alanından. Eski kayıtlarda mekan yoksa firma adına düş.
   // WT-86: mekan artık 'ev' | 'is' | 'firma' (+ eski 'evis'). Donut ikisini
@@ -170,19 +170,6 @@ async function renderStats() {
     {name: t('homeChip'), kwh: sumKwh(cur.filter(isHome)), col: '#7DC855'},
     {name: t('placeFirm'), kwh: sumKwh(cur.filter(r => !isHome(r))), col: '#1B5FAA'}
   ].filter(x => x.kwh > 0));
-
-  // en çok kazandıran bankalar
-  const bB = {};
-  cur.forEach(r => { if (r.banka) {
-    (bB[r.banka] ||= {sav: 0, n: 0});
-    bB[r.banka].sav += savB(r); bB[r.banka].n++;
-  }});
-  const banksTop = Object.entries(bB).sort((a, b) => b[1].sav - a[1].sav).slice(0, 5);
-  $('d-banks').innerHTML = banksTop.length ? banksTop.map(([name, x], i) =>
-    `<div class="tl"><span class="rank">${i + 1}</span>
-      <span class="tn">${esc(name)}<div class="ts">${x.n} ${t('sessions')}</div></span>
-      <span class="tv" style="color:var(--accent-dark)">−${money(x.sav)}</span></div>`).join('')
-    : `<div class="tl" style="color:var(--faint)">${t(bosMetin)}</div>`;
 
   // en çok lokasyonlar
   const bL = {};
@@ -264,14 +251,12 @@ function rowHTML(r, withDelete) {
     <div class="avatar" style="background:${colorFor(r.firma)}">${esc(r.firma.charAt(0).toUpperCase())}</div>
     <div class="mid">
       <div class="name">${esc(r.firma)}${vehChip(r)}</div>
-      <div class="sub">${shortDate(r.tarih)} · ${r.kwh} kWh · ${r.tip || 'DC'}${r.mesafeKm ? ' · ' + Math.round(distDisp(r.mesafeKm)) + ' ' + S.unit : ''}${rowCons(r)}${r.atlanan ? ` · <span title="${esc(t('missedTag'))}" aria-label="${esc(t('missedTag'))}">⚠︎</span>` : ''}${r.kayipPct != null && Math.abs(r.kayipPct) > KAYIP_UYARI ? ` · <span title="${esc(t('lossWarn', {p: fmtNum(Math.abs(r.kayipPct), 1)}))}" aria-label="${esc(t('lossWarn', {p: fmtNum(Math.abs(r.kayipPct), 1)}))}">⚡</span>` : ''}</div>
+      <div class="sub">${shortDate(r.tarih)} · ${r.kwh} kWh · ${tipOf(r)}${r.mesafeKm ? ' · ' + Math.round(distDisp(r.mesafeKm)) + ' ' + S.unit : ''}${rowCons(r)}${r.atlanan ? ` · <span title="${esc(t('missedTag'))}" aria-label="${esc(t('missedTag'))}">⚠︎</span>` : ''}${r.kayipPct != null && Math.abs(r.kayipPct) > KAYIP_UYARI ? ` · <span title="${esc(t('lossWarn', {p: fmtNum(Math.abs(r.kayipPct), 1)}))}" aria-label="${esc(t('lossWarn', {p: fmtNum(Math.abs(r.kayipPct), 1)}))}">⚡</span>` : ''}</div>
     </div>
     <div class="right">
       <div class="amt">${r.free ? '<span class="free-tag">' + t('free') + '</span>' : fm(cs, fmtNum(r.odenen, 0))}</div>
       <div class="sav">${s > 0 ? '−' + fm(cs, fmtNum(s, 0)) : ''}</div>
     </div>
-    ${r.ekranGorVar || r.ekranGor instanceof Blob ? `<button class="del" data-shot="${r.id}" title="${esc(t('ocrAttach'))}"
-      aria-label="${esc(t('ocrAttach'))}">📎</button>` : ''}
     ${withDelete ? `<button class="del" data-del="${r.id}">×</button>` : ''}
     <!-- WT-46/5: satıra dokununca düzenleme açıldığını göster -->
     <span class="crow-chev" aria-hidden="true">›</span>

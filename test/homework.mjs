@@ -85,7 +85,7 @@ function makeWindow() {
 
 // ---------- 2. AŞAMA: uygulamayı aç, v3 upgrade çalışsın ----------
 const w = makeWindow();
-w.eval(['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', 'db.js', 'calc.js', 'i18n.js', 'ocr.js', 'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js', 'app.js']
+w.eval(['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', 'db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js', 'app.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
   + `\n;window.__app = {db, S, t, openAdd, renderStats, saveSetting,
        syncHomePricing, HOME_LABEL, OLD_HOME_NAMES, isHomeFirm, applyI18n};`);

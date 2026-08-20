@@ -60,6 +60,10 @@ function setHomeMode(m) {
   $('in-firm').style.opacity = kapali ? '.5' : '';
   $('in-firm-other').style.display =
     !kapali && $('in-firm').value === '__other' ? '' : 'none';
+  // Ev/iş şarjında banka-kampanya indirimi geçerli değil; kutucuk
+  // işaretlendiğinde alan boşaltılır ki bir önceki firma şarjından kalan
+  // seçim sessizce kayda geçmesin.
+  if (kapali && $('in-bank')) $('in-bank').value = '';
 }
 // Kayda yazılacak firma DİZGİSİ. i18n değil db.js'teki tablodan geliyor —
 // depolanan değerin kaynağı tek olsun (bkz. EV_LABEL / IS_LABEL).
@@ -174,7 +178,7 @@ function parcaliOku(id) {
   const tam = ($(id).value || '').trim();
   const ond = ($(id + '-dec')?.value || '').trim();
   if (!tam && !ond) return '';
-  // Tam kutuya AYRAÇLI değer girilmiş olabilir: yapıştırma, OCR ya da eski
+  // Tam kutuya AYRAÇLI değer girilmiş olabilir: yapıştırma ya da eski
   // alışkanlık ("45,5"). pf'in kuralı gereği tek ayraç her zaman ondalıktır,
   // o yüzden böyle bir değer TAM sayılır ve ondalık kutusu yok sayılır.
   // Blur bunu iki kutuya bölüp kullanıcıya gösteriyor.
@@ -404,9 +408,6 @@ async function openAdd(id) {
   const r = id ? await db.sessions.get(id) : null;
   $('add-title').textContent = t(id ? 'editTitle' : 'addTitle');
   $('form-err').classList.remove('show');
-  // WT-39: her açılışta OCR işaretleri sıfırlanır; düğme yalnız özellik
-  // açıksa ve vendor dosyaları varsa görünür.
-  if (typeof ocrTemizle === 'function') { ocrTemizle(); ocrRowSync(); }
   // WT-42/2: kaydın şarj kaybı (varsa) formun üstünde
   const lossEl = $('in-loss');
   lossEl.style.display = 'none';
@@ -542,9 +543,16 @@ async function openAdd(id) {
   })();
   if (oneri) {
     if (oneri.tip) $('in-tip').querySelectorAll('button').forEach(b =>
-      b.classList.toggle('sel', b.dataset.v === oneri.tip));
-    // Listede olmayan bir banka atanırsa select kendiliğinden boşa düşer.
-    if (oneri.banka) $('in-bank').value = oneri.banka;
+      b.classList.toggle('sel', b.dataset.v === tipOf(oneri)));
+    // KUSUR (kullanıcı bildirimi): banka önerisi kaydın TÜRÜNE bakmıyordu.
+    // Firma şarjında banka/kampanya seçip kaydeden kullanıcı, ardından Ev ya
+    // da İş şarjı girmeye başladığında o bankayı SEÇİLİ buluyordu — ev
+    // şarjında banka indirimi diye bir şey yok, üstelik alan gelişmiş panelin
+    // içinde olduğu için fark edilmeden kaydediliyordu.
+    // Öneri artık yalnız AYNI TÜRDEN bir kayıttan geliyor; ev-iş şarjında
+    // banka alanı boş açılır.
+    if (oneri.banka && !homeSelected() && !isHomeRec(oneri))
+      $('in-bank').value = oneri.banka;
     // Lokasyon YALNIZ aynı gün önerilir: dünkü istasyon bugünkü şarjın yeri
     // değil, ama aynı gün ikinci kez şarj eden kullanıcı büyük olasılıkla
     // aynı yerdedir. (Madde de "aynı gün içindeyse" diyor.)
@@ -691,9 +699,6 @@ $('btn-save').addEventListener('click', async () => {
     const k = kayipHesapla(rec, veh);
     rec.kayipPct = k ? k.pct : null;
   }
-  // WT-39/BÖLÜM 7-8: ekran görüntüsü kayda eklenir, Geçmiş'te ataç ikonuyla
-  // açılır. Blob olarak saklanıyor (WT-39/1).
-  if (ocrShotBlob) { rec.ekranGor = ocrShotBlob; rec.ocrSablon = ocrSablonSon || 'genel'; }
   // WT-19: iki komşuya birden doğrulama — yazmadan ÖNCE
   if (odoKm != null) {
     const nb = await odoNeighbourCheck(rec.aracId, rec.tarih, odoKm, editingId);
@@ -744,131 +749,4 @@ $('btn-save').addEventListener('click', async () => {
     if (got) db.sessions.update(recId, {fxTable: got.rates, fxDate: got.date})
       .then(() => { if (screen === 'dashboard') renderDashboard(); });
   });
-});
-
-
-/* ---- WT-39/BÖLÜM 7: OCR doğrulama arayüzü ---- */
-// Kural: OCR formu DOLDURUR ama KAYDETMEZ. Doldurulan her alan sarı,
-// güveni %60 altındaki alan kırmızı işaretlenir; kullanıcı alana dokununca
-// işaret kalkar. Ekran görüntüsü formun üstünde küçük durur, dokununca
-// tam ekran açılır (WT-38'in photo-view overlay'i).
-const OCR_GUVEN_ESIK = 60;
-let ocrShotBlob = null;      // kaydedilecek ekran görüntüsü (Blob)
-let ocrSablonSon = null;
-
-function ocrIsaretle(id, dusuk) {
-  const el = $(id);
-  if (!el) return;
-  el.classList.add(dusuk ? 'ocr-low' : 'ocr-filled');
-  if (dusuk) el.setAttribute('title', t('ocrLowConf'));
-  const temizle = () => {
-    el.classList.remove('ocr-filled', 'ocr-low');
-    el.removeAttribute('title');
-  };
-  el.addEventListener('input', temizle, {once: true});
-  el.addEventListener('focus', temizle, {once: true});
-}
-function ocrTemizle() {
-  document.querySelectorAll('.ocr-filled, .ocr-low').forEach(el => {
-    el.classList.remove('ocr-filled', 'ocr-low');
-    el.removeAttribute('title');
-  });
-  $('ocr-bar').style.display = 'none';
-  $('ocr-shot-wrap').style.display = 'none';
-  ocrShotBlob = null;
-  ocrSablonSon = null;
-}
-// "Tümünü temizle": işaretleri ve otomatik doldurulan değerleri kaldır
-$('ocr-clear').addEventListener('click', () => {
-  document.querySelectorAll('.ocr-filled, .ocr-low').forEach(el => { el.value = ''; });
-  ocrTemizle();
-});
-
-// Alan -> form girdisi eşlemesi
-const OCR_ALAN_ID = {
-  kwh: 'in-kwh', odenen: 'in-amount', indirim: 'in-disc-val', dur: null,
-  socB: 'in-socb', socA: 'in-soca', tarih: 'in-date', loc: 'in-loc'
-};
-
-async function ocrFormaUygula(sonuc) {
-  const {alanlar: a, guven: g} = sonuc;
-  ocrSablonSon = sonuc.sablon;
-  const koy = (id, deger, alan) => {
-    if (deger == null || !$(id)) return;
-    // WT-65: parçalı alanda tek kutuya yazmak ondalığı düşürürdü
-    if (PARCALI.includes(id)) parcaliYaz(id, pf(deger));
-    else $(id).value = deger;
-    ocrIsaretle(id, (g[alan] ?? 100) < OCR_GUVEN_ESIK);
-  };
-  if (a.tarih) koy('in-date', a.tarih.slice(0, 10), 'tarih');
-  if (a.kwh != null) koy('in-kwh', fmtInput(a.kwh, 2), 'kwh');
-  if (a.odenen != null) koy('in-amount', fmtInput(a.odenen, 2), 'odenen');
-  // Düzen B brüt/indirim/net üçlüsünü birebir veriyor
-  if (a.indirim != null && a.indirim > 0) {
-    // indirim tipi "tutar" (segment kontrolü)
-    $('in-disc-type').querySelectorAll('button').forEach(b =>
-      b.classList.toggle('sel', b.dataset.v === 'amount'));
-    koy('in-disc-val', fmtInput(a.indirim, 2), 'indirim');
-  }
-  if (a.socB != null) koy('in-socb', String(a.socB), 'socB');
-  if (a.socA != null) koy('in-soca', String(a.socA), 'socA');
-  if (a.dur != null) {
-    if ($('in-dur-h')) { $('in-dur-h').value = Math.floor(a.dur / 60); ocrIsaretle('in-dur-h', false); }
-    if ($('in-dur-m')) { $('in-dur-m').value = a.dur % 60; ocrIsaretle('in-dur-m', false); }
-  }
-  if (a.loc) koy('in-loc', a.loc, 'loc');
-  if (a.tip && $('in-tip')) {
-    $('in-tip').querySelectorAll('button').forEach(b =>
-      b.classList.toggle('sel', b.dataset.v === a.tip));
-  }
-  // Blokaj ücreti NETE EKLENMEZ; nota yazılır
-  if (a.blokaj) {
-    const not = $('in-note');
-    if (not) { not.value = (not.value ? not.value + ' · ' : '') + t('ocrBlokaj', {v: fmtNum(a.blokaj, 2)}); }
-  }
-  // Gelişmiş alanlar doluysa bloğu aç ki kullanıcı görebilsin
-  if (a.socB != null || a.socA != null || a.dur != null)
-    $('adv-fields').classList.add('open');
-  $('ocr-bar').style.display = 'flex';
-}
-
-// Ayarlar'daki anahtar açıksa ve vendor dosyaları varsa görünür
-async function ocrRowSync() {
-  const acik = S.ocrOn === true && await ocrVarMi();
-  $('ocr-row').style.display = acik ? '' : 'none';
-}
-$('btn-ocr').addEventListener('click', () => $('ocr-file').click());
-// WT-53: paylaşım yolu da buraya giriyor, o yüzden ayrı fonksiyon.
-// Ekran görüntüsü OCR'dan ÖNCE iliştiriliyor: OCR başarısız olsa bile
-// kullanıcının paylaştığı görsel kayda eklensin (eskiden OCR hata verince
-// görsel de kayboluyordu).
-async function ocrDosyaIsle(file) {
-  if (!file) return;
-  $('ocr-status').textContent = t('ocrWorking');
-  try {
-    ocrShotBlob = await resizePhoto(file);       // kayda eklenecek kopya
-    $('ocr-shot').src = photoSrc(ocrShotBlob);
-    $('ocr-shot-wrap').style.display = '';
-  } catch (err) {
-    console.error('[WattTrack] görsel:', err);
-  }
-  try {
-    const sonuc = await ocrOku(file);
-    await ocrFormaUygula(sonuc);
-    $('ocr-status').textContent = sonuc.sablon
-      ? t('ocrTemplate', {s: sonuc.sablon}) : t('ocrNoTemplate');
-  } catch (err) {
-    console.error('[WattTrack] OCR:', err);
-    $('ocr-status').textContent = t('ocrFailed');
-  }
-}
-$('ocr-file').addEventListener('change', async e => {
-  const file = e.target.files[0];
-  e.target.value = '';
-  await ocrDosyaIsle(file);
-});
-// Küçük görüntüye dokununca tam ekran (WT-38'in overlay'i)
-$('ocr-shot').addEventListener('click', () => openPhotoView($('ocr-shot')));
-$('ocr-shot').addEventListener('keydown', e => {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPhotoView($('ocr-shot')); }
 });

@@ -55,8 +55,31 @@ const isHomeFirm = f => HOME_NAMES.has(f);
 // UYDURMAK olurdu, o yüzden migration YAZILMADI.
 // Yeni alan eklenmedi, var olan boyut genişledi; `mekan` zaten indeksli,
 // Dexie sürümü artmıyor.
-const isHomeRec = r => (r.mekan ? r.mekan !== 'firma' : isHomeFirm(r.firma));
 const MEKAN_VALS = ['ev', 'is', 'firma', 'evis'];
+const HOME_MEKAN = ['ev', 'is', 'evis'];
+// KUSUR (kullanıcı bildirimi): ölçüt `r.mekan !== 'firma'` idi, yani `mekan`
+// alanında TANINMAYAN bir değer taşıyan her kayıt "Ev-İş" sayılıyordu. Dışarıdan
+// gelen veri (eski yedek, başka uygulamadan CSV) 'public' gibi bir değer
+// taşıyorsa İstatistik'teki şarj yeri donutu "Ev-İş %100" gösteriyor, "Şarj
+// firması" dilimi sıfırlandığı için hiç çizilmiyordu.
+// Kural: `mekan` YALNIZ bilinen bir değerse ona güvenilir; tanınmayan ya da
+// eksik değerde firma adından türetilir (mekanOfFirm ile aynı ölçüt).
+const isHomeRec = r => MEKAN_VALS.includes(r.mekan)
+  ? HOME_MEKAN.includes(r.mekan) : isHomeFirm(r.firma);
+
+// KUSUR (kullanıcı bildirimi): şarj TİPİ üç ayrı yerde `r.tip === 'DC'` diye
+// sınanıyordu ama Geçmiş satırı `r.tip || 'DC'` yazıyordu. `tip` alanı eksik
+// (WT-16 öncesi yedek) ya da farklı harflerle ('dc') gelen kayıt listede "DC"
+// görünüyor, donutta ve AC/DC filtresinde AC sayılıyordu — donut "AC %100"
+// diyordu. Tek çözümleme noktası:
+//   bilinen değer  -> büyük harfe normalize edilir
+//   eksik/bilinmez -> ev-iş kaydıysa AC (fiziksel olarak öyle), değilse DC
+//                     (Geçmiş satırının bugüne kadarki varsayılanı)
+const tipOf = r => {
+  const v = String(r && r.tip || '').trim().toUpperCase();
+  if (v === 'DC' || v === 'AC') return v;
+  return isHomeRec(r) ? 'AC' : 'DC';
+};
 // Firma DİZGİSİNDEN mekan türet — yalnız `mekan` sütunu OLMAYAN kaynaklarda
 // (CSV içe aktarma, eski yedek). Birleşik eski etiket 'evis'te bırakılır.
 const mekanOfFirm = f => {
@@ -91,7 +114,6 @@ db.version(4).stores({
 // WT-39/BÖLÜM 8: OCR'dan gelen isteğe bağlı alanlar. İNDEKS EKLENMEDİ —
 // hiçbiri sorgulanmıyor, yalnız kayıtla birlikte saklanıyor:
 //   soket ('CCS'|'Type2'|'CHAdeMO'|'Tesla') · istGuc (kW) · istasyonId
-//   ekranGor (Blob) · ocrSablon (hangi düzenle okundu)
 // upgrade GÖVDESİ BOŞ ve öyle kalmalı: mevcut kayıtların hiçbiri yeniden
 // yazılmıyor, bu yüzden bu sürüm geçişi geri alınabilir (v3/v4'ün aksine).
 db.version(5).stores({
@@ -193,16 +215,12 @@ CACHED_TABLES.forEach(n => {
     db[n].hook(ev, () => { invalidateCache(n); }));
 });
 
-// WT-49/5: ekran görüntüsü (WT-39) ÖNBELLEĞE ALINMAZ. `_all` tablonun tamamını
-// bellekte tuttuğu için her şarj kaydının Blob'u kalıcı olarak bellekte kalırdı
-// — birkaç yüz kayıtlı bir telefonda onlarca MB. Yerine yalnız bayrak tutuluyor;
-// görselin kendisi istendiğinde ui/shell.js tek kaydı db.sessions.get() ile
-// okuyor. Kayıt yazma yolları partial update kullandığı için (add/update(id,{..}))
-// ayıklanmış nesnenin geri yazılıp Blob'u silmesi mümkün değil.
+// Ekran görüntüsü özelliği kaldırıldı; eski kayıtlarda kalmış olabilecek
+// Blob'un önbelleğe (dolayısıyla belleğe) girmesi yine engelleniyor.
 const stripBlob = r => {
   if (!r.ekranGor) return r;
   const {ekranGor, ...kalan} = r;
-  return {...kalan, ekranGorVar: true};
+  return kalan;
 };
 // Çağıranlar diziyi yerinde sıralayabiliyor (sort), bu yüzden sığ kopya
 // dönüyor: IndexedDB gidiş-dönüşü kalkıyor ama önbellek bozulmuyor.

@@ -46,7 +46,7 @@ async function boot() {
   // WT-37: jsdom'da HTMLMediaElement.play() yok; splash yedek yolu koşsun
   window.HTMLMediaElement.prototype.play = () => Promise.reject(new Error('autoplay blocked (test)'));
 
-  const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', 'db.js', 'calc.js', 'i18n.js', 'ocr.js', 'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js', 'app.js']
+  const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', 'db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js', 'app.js']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
     + `\n;window.__app = {db, S, applyI18n, applyTheme, importBackupText,
          deleteVehicleFlow, moveRecordsFlow, scanOrphans, warnings,
@@ -321,7 +321,8 @@ dlgPick('__yok__');   // hiçbir seçenekle eşleşmez → Vazgeç butonuna bas�
   const cached = (await C.allSessions()).find(r => r.id === sid);
   check('WT-49/5: önbellekteki kayıtta Blob YOK',
     !('ekranGor' in cached), 'alanlar: ' + Object.keys(cached).join(','));
-  check('WT-49/5: yerine ekranGorVar bayrağı var', cached.ekranGorVar === true);
+  // Ekran görüntüsü özelliği kaldırıldı: artık bayrak da üretilmiyor.
+  check('önbellekte ekranGorVar bayrağı da yok', !('ekranGorVar' in cached));
 
   // Ayıklama YALNIZ önbellek yolunda: tek kayıt okuması görseli hâlâ veriyor.
   // (fake-indexeddb'nin structured clone'u jsdom Blob'unu düz nesneye
@@ -332,11 +333,11 @@ dlgPick('__yok__');   // hiçbir seçenekle eşleşmez → Vazgeç butonuna bas�
     'ekranGor' in taze && taze.ekranGor != null && !('ekranGorVar' in taze),
     'alanlar: ' + Object.keys(taze).join(','));
 
-  // Geçmiş satırı ataç ikonunu artık bayraktan çiziyor
+  // Özellik kaldırıldıktan sonra ataç ikonu hiçbir kayıtta çizilmiyor
   await C.renderHistory();
   await sleep(300);
-  check('WT-49/5: ataç ikonu bayraktan çiziliyor (WT-39/7 bozulmadı)',
-    /📎/.test(w3.document.getElementById('h-groups').innerHTML));
+  check('ataç ikonu artık hiç çizilmiyor',
+    !/📎/.test(w3.document.getElementById('h-groups').innerHTML));
 
   // Yedek: ne Blob ne de önbellek artefaktı çıkmalı
   const payload = await C.backupPayload();
@@ -362,8 +363,8 @@ dlgPick('__yok__');   // hiçbir seçenekle eşleşmez → Vazgeç butonuna bas�
     geri ? 'alanlar: ' + Object.keys(geri).join(',') : 'kayıt gelmedi');
   await C.renderHistory();
   await sleep(300);
-  check('WT-49/5: geri yüklenen kayıtta kırık ataç ikonu çıkmıyor',
-    (w3.document.getElementById('h-groups').innerHTML.match(/📎/g) || []).length === 1,
+  check('geri yüklenen eski kayıtta da ataç ikonu yok',
+    (w3.document.getElementById('h-groups').innerHTML.match(/📎/g) || []).length === 0,
     'ataç sayısı: ' + (w3.document.getElementById('h-groups').innerHTML.match(/📎/g) || []).length);
 }
 

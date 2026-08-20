@@ -75,7 +75,7 @@ const vehFilter = (list, vid) => vid ? list.filter(r => String(r.aracId) === vid
 // WT-90: AC/DC filtresi artık ana sayfanın TAMAMINI süzüyor (eskiden yalnız
 // detay kutularını). Araç km sayacı kutuları bunun dışında: onların kaynağı
 // şarj kaydı değil, aracın sayacı.
-const typeFilter = list => S.dstatType ? list.filter(r => r.tip === S.dstatType) : list;
+const typeFilter = list => S.dstatType ? list.filter(r => tipOf(r) === S.dstatType) : list;
 // odometre için araç: seçili > tek araç > varsayılan araç
 function pickOdoVeh(vehicles, sel) {
   if (sel) return vehicles.find(v => String(v.id) === sel) || null;
@@ -140,7 +140,9 @@ async function renderDashboard() {
   if (prev > 0) {
     const pct = Math.round((net - prev) / prev * 100);
     dEl.textContent = (pct >= 0 ? '▲ +' : '▼ ') + pct + '% ' + t('prevPeriod');
-    dEl.className = 'delta ' + (pct >= 0 ? 'up' : 'down');
+    // Kullanıcı kuralı: değişim pozitifse yeşil, negatifse kırmızı; tam 0'da
+    // renk verilmiyor (ne artış ne azalış var).
+    dEl.className = 'delta ' + (pct > 0 ? 'up' : pct < 0 ? 'down' : '');
   } else { dEl.textContent = ''; dEl.className = 'delta'; }
   $('d-avg').textContent = kwhConv ? fm(sym(), fmtNum(net / kwhConv, 2)) : '—';
   $('d-avg-g').textContent = kwhConv ? fm(sym(), fmtNum(gross / kwhConv, 2)) : '—';
@@ -154,7 +156,10 @@ async function renderDashboard() {
   const scopeEl = $('d-dist-scope');
   if (distKm >= 20) {
     fillPerKm(netD / distKm, grossD / distKm);
-    scopeEl.textContent = t('distFromRecords');
+    // Olağan durumda not YAZILMIYOR (kullanıcı isteği): mesafenin kayıtlardan
+    // geldiği zaten varsayılan. Not yalnız YEDEK bir kaynağa düşüldüğünde
+    // (sayaç) ya da hesap yapılamadığında çıkıyor — orada bilgi taşıyor.
+    scopeEl.textContent = '';
   } else {
     const oV = pickOdoVeh(vehicles, S.dashVeh);
     const oDist = odoDistOf(oV);
@@ -233,11 +238,6 @@ async function renderDashboard() {
     cd.textContent = (pct >= 0 ? '▲ +' : '▼ ') + pct + '% ' + t('prevPeriod');
     cd.style.color = pct >= 0 ? 'var(--red)' : 'var(--accent-dark)';   // WT-34
   } else cd.textContent = '';
-  // WT-90: filtre yukarı taşınınca rozet tek başına kaldı; seçili tip de
-  // rozete giriyor ki kutuların kapsamı yine tek yerde yazılı olsun.
-  $('d-dstat-scope').textContent =
-    periodShort(S.period) + (S.dstatType ? ' · ' + S.dstatType : '');
-
   // WT-32/2: "Yıllık karşılaştırma" bloğu kaldırıldı — üstteki kutularla
   // mükerrerdi ve dönem seçicisinden bağımsız olması kafa karıştırıyordu.
   // WT-32/3: "Son şarjlar" bloğu kaldırıldı — Geçmiş sekmesi aynı işi yapıyor.
@@ -256,16 +256,25 @@ function butceCiz(cur, all) {
   const yillik = S.budgetY > 0 ? S.budgetY : null;
   // Dönem seçicisi ne ise ona uyan bütçe kullanılır; "Tümü" seçiliyse
   // (WT-92) kıyaslanacak bir hedef olmadığı için çubuk gizlenir.
-  const hedef = S.period === 'year' ? yillik : (S.period === 'month' ? aylik : null);
+  // "Tümü" (tarihsel) görünümünde de çubuk görünüyor ve YILLIK bütçeyi ölçüt
+  // alıyor — kullanıcı isteği. Aylık bütçe yalnız Ay görünümünde geçerli.
+  const hedef = S.period === 'month' ? aylik
+    : (S.period === 'year' || S.period === 'all') ? yillik : null;
   // WT-97 GERİ ALINDI (WT-99): "Tümü"de çubuğun yerine yönlendirme yazısı
   // konmuştu; kullanıcı onu istemedi. Bilgi ana sayfadan Ayarlar'daki bütçe
   // alanlarının altına taşındı — orası zaten değeri girdiği yer.
   if (!hedef) { box.style.display = 'none'; return; }
-  const harcanan = cur.filter(isConv).reduce((s, r) => s + amtB(r), 0);
+  // "Tümü" görünümünde ölçüt YİNE İÇİNDE BULUNULAN YIL. Tüm zamanların
+  // harcamasını tek bir yıllık bütçeyle kıyaslamak çubuğu ikinci yıldan
+  // itibaren kalıcı olarak taşırır ve hiçbir şey anlatmazdı; "yıldaki gibi"
+  // istenen davranış bu.
+  const olcut = S.period === 'all' ? inPeriod(all, 'year') : cur;
+  const harcanan = olcut.filter(isConv).reduce((s, r) => s + amtB(r), 0);
   const pct = Math.round(harcanan / hedef * 100);
   box.style.display = '';
   $('d-budget-lbl').textContent = t('budgetLine', {
-    p: periodShort(S.period), h: money(harcanan), b: money(hedef), y: pct});
+    p: periodShort(S.period === 'all' ? 'year' : S.period),
+    h: money(harcanan), b: money(hedef), y: pct});
   const bar = $('d-budget-bar');
   bar.style.width = Math.min(100, Math.max(0, pct)) + '%';
   // WT-45/3: aşımda hem renk hem METİN değişiyor — anlam yalnız renkle

@@ -68,7 +68,7 @@ function clearFormErr() {
 // init ve yedek geri yükleme aynı listeyi kullanır (WT-07)
 const SETTING_KEYS = ['country','currency','unit','lang','advOpen','defaultVehicleId',
   'onboarded','cmp','bankCountries','customBanks','gran','theme','homeKwhPrice',
-  'ocrOn','budgetM','budgetY','kwhRegion','homeKwhAuto',
+  'budgetM','budgetY','kwhRegion','homeKwhAuto',
   'workKwhPrice','workKwhAuto'];   // WT-39, WT-45, WT-78, WT-87
 
 // WT-81/3: ayarların S'e okunması init() ve yedek geri yükleme
@@ -99,6 +99,8 @@ async function loadSettings() {
   // WT-78: ev elektrik fiyatı hiç girilmemişse gömülü tablodan doldur.
   // Girilmiş bir değerin üstüne YAZMAZ; kaynak Ayarlar'da yazılı.
   await kwhPriceAutofill();
+  // Kayıp yüzdesi formülü değişti — kayıtlı değerler güncel formüle çekiliyor
+  await kayipYenidenHesapla();
   history.replaceState({page: 'dashboard'}, '');   // WT-24/6 taban durum
   initOnboarding();
   initSegments();   // WT-28
@@ -109,20 +111,8 @@ async function loadSettings() {
   renderDashboard();
   // PWA kısayolları (?action=add | ?page=history/compare/settings)
   const q = new URLSearchParams(location.search);
-  // WT-53: paylaşılan EKRAN GÖRÜNTÜSÜ (share_target artık POST + dosya).
-  // Service worker dosyayı Cache API'ye bırakıp buraya GET ile yönlendiriyor.
-  if (S.onboarded && q.get('share') === 'shot') {
-    await openAdd();
-    // Splash'ı BEKLETME: OCR saniyeler sürebilir, ocrDosyaIsle kendi
-    // "Okunuyor…" durumunu zaten yazıyor. Fonksiyonun tamamı try/catch
-    // içinde, o yüzden await'siz çağrı sahipsiz reddetme üretmez.
-    paylasilanGorseliAl();
-  }
-  // Paylaşım ONBOARDING sırasında geldiyse form açılmıyor ama kutu yine de
-  // BOŞALTILMALI: sürümden bağımsız olduğu için kendiliğinden temizlenmez,
-  // aylar sonraki ilk paylaşımda bayat görsel olarak geri gelirdi.
-  else if (!S.onboarded && q.get('share') === 'shot') paylasimKutusunuBosalt();
-  else if (S.onboarded && (q.get('share') === 'text' || q.get('share_text') || q.get('share_title'))) {
+  // Paylaşılan METİN not alanına düşer (görsel paylaşımı kaldırıldı).
+  if (S.onboarded && (q.get('share') === 'text' || q.get('share_text') || q.get('share_title'))) {
     await openAdd();
     $('in-note').value = [q.get('share_title'), q.get('share_text'), q.get('share_url')]
       .filter(Boolean).join(' ').slice(0, 200);
@@ -135,35 +125,6 @@ async function loadSettings() {
   syncEmptyStates();   // WT-36
   hideSplash();
 })();
-
-// WT-53/WT-39: paylaşılan ekran görüntüsünü service worker'ın bıraktığı
-// kutudan al ve OCR yoluna ver. Kutu okunduktan sonra HEMEN boşaltılıyor —
-// yoksa sonraki her açılışta aynı görsel yeniden yapışırdı.
-async function paylasimKutusunuBosalt() {
-  if (!('caches' in window)) return null;
-  try {
-    const c = await caches.open('watttrack-share');
-    const res = await c.match('./__paylasilan__');
-    await c.delete('./__paylasilan__');
-    return res || null;
-  } catch (err) {
-    console.error('[WattTrack] paylaşım:', err);
-    return null;
-  }
-}
-async function paylasilanGorseliAl() {
-  try {
-    const res = await paylasimKutusunuBosalt();
-    if (!res) return;
-    const blob = await res.blob();
-    if (!blob.size) return;
-    $('ocr-row').style.display = '';   // OCR kapalı olsa da görsel iliştirilecek
-    await ocrDosyaIsle(new File([blob], 'paylasilan.jpg',
-      {type: blob.type || 'image/jpeg'}));
-  } catch (err) {
-    console.error('[WattTrack] paylaşım:', err);
-  }
-}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

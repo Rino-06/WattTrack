@@ -126,8 +126,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
    Önceden --blue hem "Ücretsiz şarj" (olumlu) hem "yakıtlı araç" için,
    --red hem "döneme göre artış" hem "yakıtlı 1 km" için kullanılıyordu.
    ============================================ */
-.hero .delta.up{color:var(--red)}
-.hero .delta.down{color:var(--accent-dark)}
+.hero .delta.up{color:var(--accent-dark)}
+.hero .delta.down{color:var(--red)}
 .hero .pill{display:inline-block;margin-top:6px;padding:5px 10px;border-radius:100px;background:var(--pill);color:var(--accent-text);font-size:12px;font-weight:600}
 .donut-wrap{display:flex;align-items:center;gap:16px;background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);margin-bottom:14px}
 .donut-wrap svg{width:96px;height:96px;flex-shrink:0}
@@ -210,20 +210,6 @@ h1,h2{font-size:inherit;font-weight:inherit}
 .demo-bar{display:none;align-items:center;gap:10px;background:var(--pill);color:var(--accent-text);
   border-radius:12px;padding:8px 10px 8px 12px;font-size:13px;font-weight:600;margin-bottom:12px}
 .demo-bar.on{display:flex}
-/* WT-39/BÖLÜM 7: OCR doğrulama arayüzü */
-.ocr-bar{display:flex;align-items:center;gap:10px;background:#FFF8DC;color:#5a4a00;
-  border-radius:12px;padding:8px 10px 8px 12px;font-size:13px;font-weight:600;margin-bottom:12px}
-[data-theme="dark"] .ocr-bar{background:#3d3517;color:#f5e6a8}
-.ocr-bar button{margin-left:auto;background:var(--accent);color:#fff;border-radius:100px;
-  padding:0 14px;min-height:44px;font-size:12.5px;font-weight:700;white-space:nowrap;flex:none}
-[data-theme="dark"] .ocr-bar button{color:#0f172a}
-.ocr-filled{background:#FFF8DC}
-[data-theme="dark"] .ocr-filled{background:#3d3517}
-/* güveni düşük alan: doldur ama kırmızı işaretle */
-.ocr-low{background:#FFF8DC;outline:2px solid var(--red);outline-offset:-2px}
-[data-theme="dark"] .ocr-low{background:#3d3517}
-.ocr-shot{width:88px;height:88px;object-fit:cover;border-radius:10px;cursor:zoom-in;
-  border:1px solid var(--hairline);display:block}
 .demo-bar button{margin-left:auto;background:var(--accent);color:#fff;border-radius:100px;
   padding:0 14px;min-height:44px;font-size:12.5px;font-weight:700;white-space:nowrap;flex:none}
 [data-theme="dark"] .demo-bar button{color:#0f172a}
@@ -387,6 +373,8 @@ h1,h2{font-size:inherit;font-weight:inherit}
 
 .setting-btn{display:block;width:100%;text-align:left;background:var(--card);border-radius:12px;padding:13px 14px;font-size:14px;font-weight:600;box-shadow:var(--shadow);margin-bottom:10px}
 .setting-btn.danger{color:var(--red)}
+/* Aylık tüketim grafiği harcama grafiğinden ayrışsın diye uygulama mavisi */
+#s-cons .bar{background:var(--blue)}
 .about{font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:20px}
 .vlist{list-style:none;margin-bottom:10px}
 .vlist li{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:12px;padding:11px 14px;box-shadow:var(--shadow);margin-bottom:8px;font-size:14px}
@@ -690,26 +678,10 @@ nav button{min-height:48px;justify-content:center}
     <!-- WT-14/B: mesafe kaynağı dönem seçicisinden bağımsızsa burada söylenir -->
     <div class="scope-note" id="d-dist-scope"></div>
   </div>
-  <div class="tiles d-data">
-    <div class="tile"><div class="k"><span data-i18n="totalKwhP">Enerji (kWh)</span><span id="d-kwh-note"></span></div><div class="v" id="d-kwh">0</div></div>
-    <div class="tile"><div class="k" data-i18n="sessionsCompanies">Şarj / Firma</div><div class="v" id="d-sess">0 / 0</div></div>
-  </div>
-  <!-- WT-33 düzeltmesi: satır içi margin masaüstü ızgarasında #page-dashboard>*
-       kuralını yeniyordu (o hücrenin altında 20+14px boşluk kalıyordu) -->
-  <div class="tiles mb-lg d-data">
-    <div class="tile"><div class="k" data-i18n="totalDiscP">Alınan indirim</div><div class="v" id="d-disc" style="color:var(--accent-dark)">0</div></div>
-    <div class="tile"><div class="k" data-i18n="freeCount">Ücretsiz şarj</div><div class="v" id="d-free" style="color:var(--accent-dark)">0</div></div>
-  </div>
-
   <!-- WT-33: başlık, filtre ve değerleri tek hücrede tutan sarmalayıcı -->
   <div id="d-dstat-wrap" class="d-data">
-    <!-- WT-93: filtre yukarı taşınınca bu satırda yalnız dönem rozeti kaldı;
-         tam boy başlık boşluğu gereksizdi -->
-    <div class="h2row" style="margin-top:0;margin-bottom:6px">
-      <!-- WT-70: "Detay istatistikler" ibaresi kaldırıldı; dönem rozeti
-           kaldı çünkü kutuların hangi dönemi gösterdiğini söylüyor. -->
-      <h2 class="h2"><span class="scope-badge" id="d-dstat-scope"></span></h2>
-    </div>
+    <!-- Dönem rozeti KALDIRILDI (kullanıcı isteği): dönem seçicisi zaten
+         sayfanın en üstünde ve bu kutular onunla aynı dönemi gösteriyor. -->
     <div class="dstat">
       <div class="tile"><div class="k" data-i18n="avgDuration">Ort. şarj süresi</div><div class="v" id="d-dur">—</div></div>
       <!-- WT-91: "ort. eklenen +%N" satırı KALDIRILDI — aralığın kendisi
@@ -723,6 +695,18 @@ nav button{min-height:48px;justify-content:center}
       <div class="tile"><div class="k" data-i18n="avgCons">Ortalama tüketim</div><div class="v" id="d-cons">—</div><div class="yd" id="d-cons-d"></div></div>
     </div>
   </div>
+
+  <div class="tiles d-data">
+    <div class="tile"><div class="k"><span data-i18n="totalKwhP">Enerji (kWh)</span><span id="d-kwh-note"></span></div><div class="v" id="d-kwh">0</div></div>
+    <div class="tile"><div class="k" data-i18n="sessionsCompanies">Şarj / Firma</div><div class="v" id="d-sess">0 / 0</div></div>
+  </div>
+  <!-- WT-33 düzeltmesi: satır içi margin masaüstü ızgarasında #page-dashboard>*
+       kuralını yeniyordu (o hücrenin altında 20+14px boşluk kalıyordu) -->
+  <div class="tiles mb-lg d-data">
+    <div class="tile"><div class="k" data-i18n="totalDiscP">Alınan indirim</div><div class="v" id="d-disc" style="color:var(--accent-dark)">0</div></div>
+    <div class="tile"><div class="k" data-i18n="freeCount">Ücretsiz şarj</div><div class="v" id="d-free" style="color:var(--accent-dark)">0</div></div>
+  </div>
+
 
   <!-- WT-32: "Yıllık karşılaştırma" bölümü kaldırıldı — üstteki kutularla
        mükerrerdi (özellikle "Enerji (bu yıl)" ile "Enerji (kWh)").
@@ -748,12 +732,12 @@ nav button{min-height:48px;justify-content:center}
   <div class="lbl" id="s-gran-lbl" style="margin-top:2px">Dönem</div>
   <div class="seg" id="d-gran" role="radiogroup" aria-labelledby="s-gran-lbl" style="margin-bottom:16px">
     <button data-v="week" data-i18n="week">Hafta</button>
-    <button data-v="month" data-i18n="month">Ay</button>
+    <!-- Varsayılan Ay (kullanıcı isteği). Seçili dönemde kayıt olmayan
+         kullanıcı boş sayfa görmesin diye WT-56'nın uyarı şeridi ve tek
+         dokunuşluk "Tümünü göster" düğmesi yerinde duruyor. -->
+    <button data-v="month" class="sel" data-i18n="month">Ay</button>
     <button data-v="year" data-i18n="year">Yıl</button>
-    <!-- WT-95: ana sayfayla aynı varsayılan. "Ay" ile açılınca eski bir yedeği
-         geri yükleyen kullanıcı sayfayı BOŞ görüyordu (kayıtları bu ayda
-         değil) ve verisinin gelmediğini sanıyordu. -->
-    <button data-v="all" class="sel" data-i18n="periodAll">Tümü</button>
+    <button data-v="all" data-i18n="periodAll">Tümü</button>
   </div>
 
   <!-- WT-56: seçili dönemde kayıt yokken bloklar "Henüz kayıt yok" diyordu;
@@ -771,6 +755,14 @@ nav button{min-height:48px;justify-content:center}
       <span class="scope-badge" id="s-chart-scope"></span>
     </div>
     <div class="monthbars" id="d-months"></div>
+  </div>
+
+  <div class="gcell">
+    <!-- WT-81/6: başlık birim taşıyor (km/mi), applyI18n statik metin
+         çevirdiği için id ile render sırasında yazılıyor. -->
+    <h2 class="h2"><span id="s-cons-lbl">Aylık tüketim (kWh/100 km)</span></h2>
+    <div class="monthbars" id="s-cons"></div>
+    <div class="about" id="s-cons-note" style="margin:-8px 0 14px;font-size:12px"></div>
   </div>
 
   <!-- WT-72: haftanın günlerine göre dağılım grafiği kaldırıldı;
@@ -795,25 +787,12 @@ nav button{min-height:48px;justify-content:center}
     </div>
   </div>
 
-  <div class="gcell">
-    <h2 class="h2" data-i18n="topBanks">Bankalar (indirim kazancı)</h2>
-    <div class="toplist" id="d-banks"></div>
-  </div>
-
   <!-- WT-41/3: aylık tüketim trendi — kışın artışı görmek EV sahipleri için değerli -->
   <!-- WT-42/3: hangi operatörün ölçümü sapıyor — kullanıcı bunu başka yerde göremiyor -->
   <div class="gcell">
     <h2 class="h2" data-i18n="lossByFirm">Firma bazında ortalama şarj kaybı</h2>
     <div class="toplist" id="s-loss"></div>
     <div class="about" id="s-loss-note" style="margin:-8px 0 14px;font-size:12px" data-i18n="lossNote">Faturalanan enerji ile bataryaya giren enerji arasındaki fark. Şarj kaybını ve istasyonun ölçüm sapmasını birlikte içerir.</div>
-  </div>
-
-  <div class="gcell">
-    <!-- WT-81/6: başlık birim taşıyor (km/mi), applyI18n statik metin
-         çevirdiği için id ile render sırasında yazılıyor. -->
-    <h2 class="h2"><span id="s-cons-lbl">Aylık tüketim (kWh/100 km)</span></h2>
-    <div class="monthbars" id="s-cons"></div>
-    <div class="about" id="s-cons-note" style="margin:-8px 0 14px;font-size:12px"></div>
   </div>
 
   <div class="gcell">
@@ -1194,15 +1173,6 @@ nav button{min-height:48px;justify-content:center}
   <input type="file" id="file-import" accept=".json,.csv,text/csv" style="display:none">
   <!-- WT-36/2: örnek veri. Üretilen her kayıt demo:true ile işaretlenir,
        yedeklere GİRMEZ ve tek dokunuşla silinir. -->
-  <!-- WT-39/BÖLÜM 2: tesseract TEMBEL yüklenir, pakete girmez. Açılırken
-       indirilecek GERÇEK boyut ölçülüp gösterilir. -->
-  <div class="switchrow" style="box-shadow:none;border:1px solid var(--hairline);margin-bottom:10px">
-    <div>
-      <div class="t" data-i18n="ocrToggle">Ekran görüntüsünden otomatik oku (beta)</div>
-      <div class="d" id="ocr-size-note"></div>
-    </div>
-    <label class="sw"><input type="checkbox" id="set-ocr"><i></i></label>
-  </div>
   <a class="setting-btn" href="kilavuz.html" target="_blank" data-i18n="userGuide">Kullanım Kılavuzu</a>
   <button class="setting-btn" id="btn-demo" data-i18n="demoTry">Örnek verilerle dene</button>
   <button class="setting-btn danger" id="btn-wipe" data-i18n="reset" style="margin-bottom:22px">Verileri Sıfırla</button>
@@ -1236,21 +1206,6 @@ nav button{min-height:48px;justify-content:center}
     <div style="width:32px"></div>
   </div>
   <div class="ov-body">
-
-    <!-- WT-39/BÖLÜM 7: asla sessizce kaydetme. OCR formu doldurur, KAYDETMEZ;
-         doldurulan her alan sarı işaretlenir, düşük güvenli alan kırmızı. -->
-    <div id="ocr-bar" class="ocr-bar" style="display:none" role="status">
-      <span data-i18n="ocrCheck">Otomatik okundu — lütfen kontrol et</span>
-      <button type="button" id="ocr-clear" data-i18n="ocrClear">Tümünü temizle</button>
-    </div>
-    <div id="ocr-shot-wrap" style="display:none;margin-bottom:12px">
-      <img id="ocr-shot" class="ocr-shot" src="" alt="" role="button" tabindex="0">
-    </div>
-    <div id="ocr-row" style="display:none;margin-bottom:12px">
-      <button type="button" class="mini-btn" id="btn-ocr" data-i18n="ocrPick">📷 Ekran görüntüsünden oku</button>
-      <input type="file" id="ocr-file" accept="image/*" style="display:none">
-      <div class="about" id="ocr-status" style="margin-top:6px"></div>
-    </div>
 
     <!-- WT-42/2: kayıt açılınca şarj kaybı burada yazılı -->
     <div class="scope-note" id="in-loss" style="display:none;margin:0 0 12px"></div>
@@ -1716,7 +1671,6 @@ nav button{min-height:48px;justify-content:center}
 <script src="db.js"></script>
 <script src="calc.js"></script>
 <script src="i18n.js"></script>
-<script src="ocr.js"></script>
 <script src="ui/shell.js"></script>
 <script src="ui/dashboard.js"></script>
 <script src="ui/stats.js"></script>

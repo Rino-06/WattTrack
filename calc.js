@@ -14,7 +14,7 @@ const S = {
   // WT-92: ana sayfa "Tümü" dönemiyle açılıyor.
   // WT-94 DERSİ: bu satır çok uzun — SATIR SONUNA `//` yorum YAZMA, arkasındaki
   // bütün varsayılanları sessizce yutar. Yorum ayrı satırda durur.
-  period: 'all', cmp: null, dashVeh: '', cmpVeh: '', vehExpVeh: '', vehExpGran: 'month', vehExpFltTur: '', vehExpFltDon: '', bankCountries: null, gran: 'all', customBanks: [], theme: 'light', dstatType: '', histBadOnly: null, homeKwhPrice: null, kwhRegion: '', homeKwhAuto: false,
+  period: 'all', cmp: null, dashVeh: '', cmpVeh: '', vehExpVeh: '', vehExpGran: 'month', vehExpFltTur: '', vehExpFltDon: '', bankCountries: null, gran: 'month', customBanks: [], theme: 'light', dstatType: '', histBadOnly: null, homeKwhPrice: null, kwhRegion: '', homeKwhAuto: false,
   // WT-94: bunlar da SETTING_KEYS'te — varsayılansız bırakılırsa `undefined`
   // olurlar ve okuyan her yer sessiz dala düşer. Boş = kapalı / hedef yok.
   ocrOn: false, budgetM: null, budgetY: null, workKwhPrice: null, workKwhAuto: false
@@ -390,7 +390,11 @@ function kayipHesapla(rec, veh) {
   return {
     beklenen: Math.round(beklenen * 100) / 100,
     faturalanan: rec.kwh,
-    pct: Math.round((rec.kwh - beklenen) / beklenen * 1000) / 10
+    // PAYDA = FATURALANAN kWh (kullanıcı tanımı). Önceki sürümde payda
+    // `beklenen` idi; ikisi farklı büyüklükler verir ve faturalanan enerjiye
+    // oranlamak "ödediğim enerjinin yüzde kaçı bataryaya girmedi" sorusunun
+    // doğrudan cevabı olduğu için ölçüt bu.
+    pct: Math.round((rec.kwh - beklenen) / rec.kwh * 1000) / 10
   };
 }
 const KAYIP_UYARI = 20;   // %20'yi aşan sapmada satırda uyarı (madde 4)

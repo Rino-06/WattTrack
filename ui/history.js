@@ -54,7 +54,7 @@ async function renderHistory() {
     : sorted.filter(r =>
         (!vy || r.tarih.slice(0, 4) === vy) &&
         (!vf || r.firma === vf) &&
-        (!vt || (vt === 'free' ? r.free : r.tip === vt)) &&
+        (!vt || (vt === 'free' ? r.free : tipOf(r) === vt)) &&
         (!vv || String(r.aracId) === vv) &&
         (!vb || r.banka === vb) &&
         (!vl || r.loc === vl));
