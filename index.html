@@ -1520,23 +1520,14 @@ nav button{min-height:48px;justify-content:center}
     <div style="width:32px"></div>
   </div>
   <div class="ov-body">
-    <div class="about" data-i18n="fuelHistD" style="margin-bottom:14px">Her şarj kaydı, kendi tarihinde geçerli olan fiyatla kıyaslanır. Geçmiş tarihli fiyat da girebilirsin.</div>
-    <div class="row2">
-      <div>
-        <label class="lbl" data-i18n="date" for="fp-date">Tarih</label>
-        <input type="date" id="fp-date">
-      </div>
-      <div>
-        <label class="lbl" id="fp-price-lbl" for="fp-price">Fiyat</label>
-        <input type="text" inputmode="decimal" id="fp-price" placeholder="0,00">
-      </div>
-    </div>
-    <label class="lbl" style="margin-top:12px" data-i18n="fuelType" for="fp-type">Yakıt tipi</label>
+    <!-- Geçmiş fiyatlar ARTIK ELLE GİRİLMİYOR (kullanıcı kararı): kişisel
+         girdiler yanlış olabiliyor ve geçmişe dönük kıyası bozuyordu. Ölçüt
+         ülke düzeyinde yayımlanan ortalama bayi satış fiyatı; bu ekran onu
+         yalnız GÖSTERİYOR. -->
+    <div class="about" data-i18n="fuelHistD" style="margin-bottom:14px">Her şarj kaydı, kendi tarihinde geçerli olan ortalama yakıt fiyatıyla kıyaslanır.</div>
+    <label class="lbl" data-i18n="fuelType" for="fp-type">Yakıt Tipi</label>
     <select id="fp-type"></select>
-    <div class="form-err" id="fp-err" role="alert" aria-live="assertive"></div>
-    <button class="save-btn" id="fp-save" style="margin-top:16px" data-i18n="add">Ekle</button>
-    <div class="section-lbl" data-i18n="fuelHistList">Kayıtlı fiyatlar</div>
-    <!-- WT-77: gömülü EPDK geçmişi de listeleniyor; nereden geldiği burada. -->
+    <div class="section-lbl" data-i18n="fuelHistList">Yayımlanan Ortalama Fiyatlar</div>
     <div class="about" id="fp-embed" style="display:none;margin:-6px 0 8px;font-size:12px"></div>
     <ul class="vlist" id="fp-list"></ul>
   </div>

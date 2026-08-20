@@ -1436,74 +1436,86 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.overlayClose('page-expense', {force: true});
 }
 
-// --- WT-43: yakıt fiyatı geçmişi (uçtan uca) ---
-// WT-77 NOTU: TR'de artık 36 aylık EPDK geçmişi GÖMÜLÜ geliyor, o yüzden bu
-// blok kasten gömülü verisi OLMAYAN bir ülkede (DE) koşuyor — WT-43'ün kendi
-// kabul kriteri (her kayıt kendi tarihinin fiyatıyla) böyle yalıtılmış olarak
-// sınanıyor. Gömülü verinin devreye girdiği hâli WT-77 bloğu doğruluyor.
+// --- Yakıt fiyatı: ölçüt YAYIMLANAN ortalama, kullanıcı girdisi değil ---
+// KARAR DEĞİŞTİ (kullanıcı): "Kıyasla"ya her basışta girilen fiyat geçmişe
+// yazılıyor ve sonraki kıyaslarda ölçüt olarak kullanılıyordu. Kişisel girdi
+// yanlış olabildiği için geçmişe dönük kıyas bozuluyordu. Artık ölçüt ülke
+// düzeyinde yayımlanan ortalama bayi satış fiyatı; girilen fiyat yalnız
+// bugünkü birim maliyet kutularında ve yayımlanmış verisi olmayan ülkelerde
+// kullanılıyor. Yayımlanmış veri TR'de var (gömülü), DE'de yok.
 {
   const A = app();
-  A.S.unit = 'km'; A.S.country = 'DE'; A.S.cmpVeh = '';
+  A.S.unit = 'km'; A.S.cmpVeh = '';
   await A.db.sessions.clear();
   await A.db.fuelPrices.clear();
+
+  // --- (1) Yayımlanmış verisi OLMAYAN ülke: tek güncel fiyat tüm geçmişe ---
+  A.S.country = 'DE';
   await A.db.sessions.bulkAdd([
     {tarih: '2024-06-15T12:00', firma: 'ZES', tip: 'DC', kwh: 50, tutar: 500,
       odenen: 500, cur: 'TRY', mesafeKm: 300, aracId: null},
     {tarih: '2026-06-15T12:00', firma: 'ZES', tip: 'DC', kwh: 50, tutar: 500,
       odenen: 500, cur: 'TRY', mesafeKm: 300, aracId: null}
   ]);
-  await A.db.fuelPrices.bulkAdd([
-    {tarih: '2024-01-01', tur: 'diesel', fiyat: 20, ulke: 'DE'},
-    {tarih: '2026-01-01', tur: 'diesel', fiyat: 60, ulke: 'DE'}
-  ]);
   A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 0, prorate: true};
   await A.renderCompare();
   await sleep(350);
-  // 2024: 300 km × 10/100 × 20 = 600 · 2026: 300 × 1 × 60 = 1800 -> toplam 2400
-  // Tek fiyatla (60) olsaydı 3600 çıkardı.
-  check('WT-43/4 KABUL: iki kayıt kendi dönemlerinin fiyatıyla kıyaslandı',
-    /2\.400/.test($('c-icetot').textContent), 'c-icetot=' + $('c-icetot').textContent);
-  check('WT-43/6: kaç fiyat kaydıyla hesaplandığı yazılı',
-    /2/.test($('c-veh-note').textContent)
-      && /fiyat/i.test($('c-veh-note').textContent),
-    $('c-veh-note').textContent.slice(-90));
-
-  // tek fiyat kalınca uyarı
-  await A.db.fuelPrices.clear();
-  await A.db.fuelPrices.add({tarih: '2026-01-01', tur: 'diesel', fiyat: 60, ulke: 'DE'});
-  await A.renderCompare();
-  await sleep(300);
-  check('WT-43/6: tek fiyat varken uyarı çıkıyor',
-    /tek fiyat/i.test($('c-veh-note').textContent),
+  // 600 km × 10/100 × 60 = 3.600
+  check('yayımlanmış verisi olmayan ülkede tek güncel fiyat kullanılıyor',
+    /3\.600/.test($('c-icetot').textContent), 'c-icetot=' + $('c-icetot').textContent);
+  check('bu durumda kullanıcıya açıkça söyleniyor',
+    /yayımlanmış ortalama fiyat yok/i.test($('c-veh-note').textContent),
     $('c-veh-note').textContent.slice(-80));
 
-  // WT-43/2: fiyat güncellenince eskisi EZİLMİYOR, yeni satır ekleniyor
-  const oncekiN = (await A.allFuelPrices()).length;
+  // --- (2) KABUL: "Kıyasla" fiyat geçmişine ARTIK YAZMIYOR ---
   $('c-price').value = '75';
   $('c-cons').value = '10';
   $('c-calc').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
   await sleep(400);
-  const fpAll = await A.allFuelPrices();
-  check('WT-43/2: fiyat güncellemesi geçmişe EKLİYOR, ezmiyor',
-    fpAll.length === oncekiN + 1 && fpAll.some(x => x.fiyat === 60)
-      && fpAll.some(x => x.fiyat === 75),
-    'kayıt=' + fpAll.map(x => x.tarih + ':' + x.fiyat).join(' '));
+  check('KABUL: "Kıyasla" kullanıcının fiyatını geçmişe YAZMIYOR',
+    (await A.allFuelPrices()).length === 0,
+    'kayıt=' + (await A.allFuelPrices()).length);
 
-  // WT-43/3: geçmiş ekranı listeliyor ve silebiliyor
+  // --- (3) Kullanıcının ESKİ elle girdileri ölçüt olarak KULLANILMIYOR ---
+  await A.db.fuelPrices.bulkAdd([
+    {tarih: '2024-01-01', tur: 'diesel', fiyat: 5, ulke: 'DE'},
+    {tarih: '2026-01-01', tur: 'diesel', fiyat: 5, ulke: 'DE'}
+  ]);
+  A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 0, prorate: true};
+  await A.renderCompare();
+  await sleep(350);
+  check('KABUL: eski elle girilmiş fiyatlar hesaba KATILMIYOR',
+    /3\.600/.test($('c-icetot').textContent), 'c-icetot=' + $('c-icetot').textContent);
+  await A.db.fuelPrices.clear();
+
+  // --- (4) Yayımlanmış verisi OLAN ülke: her kayıt kendi tarihinin fiyatıyla ---
+  A.S.country = 'TR';
+  A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 0, prorate: true};
+  await A.renderCompare();
+  await sleep(350);
+  check('KABUL: yayımlanmış veri varsa her kayıt kendi tarihinin fiyatıyla',
+    /fiyat/i.test($('c-veh-note').textContent)
+      && !/yayımlanmış ortalama fiyat yok/i.test($('c-veh-note').textContent),
+    $('c-veh-note').textContent.slice(-90));
+
+  // --- (5) Fiyat geçmişi ekranı SALT OKUNUR ---
   await A.openFuelHist();
   await sleep(250);
-  check('WT-43/3: fiyat geçmişi ekranı kayıtları listeliyor',
-    window.document.querySelectorAll('#fp-list li[data-fid]').length === fpAll.length,
-    'satır=' + window.document.querySelectorAll('#fp-list li[data-fid]').length);
-  $('fp-date').value = '2025-03-01';
-  $('fp-price').value = '40';
-  $('fp-save').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
-  await sleep(350);
-  check('WT-43/3: geçmiş TARİHLİ fiyat girilebiliyor',
-    (await A.allFuelPrices()).some(x => x.tarih === '2025-03-01' && x.fiyat === 40));
+  const doc2 = window.document;
+  check('fiyat geçmişi ekranı yayımlanan fiyatları listeliyor',
+    doc2.querySelectorAll('#fp-list li').length > 0,
+    'satır=' + doc2.querySelectorAll('#fp-list li').length);
+  check('KABUL: ekranda fiyat ekleme alanı yok',
+    !doc2.getElementById('fp-save') && !doc2.getElementById('fp-price')
+      && !doc2.getElementById('fp-date'));
+  check('KABUL: yayımlanan satırlarda silme düğmesi yok',
+    doc2.querySelectorAll('#fp-list [data-fdel]').length === 0);
+  check('fiyatların nereden geldiği ekranda yazılı',
+    /EPDK/i.test(doc2.getElementById('fp-embed').textContent),
+    doc2.getElementById('fp-embed').textContent.slice(0, 60));
   await A.overlayClose('page-fuelprice', {force: true});
 
-  // WT-43/12: mi modunda etiketler gal/MPG
+  // --- (6) mi modunda etiketler gal/MPG ---
   A.S.unit = 'mi';
   A.applyI18n();
   await sleep(120);
@@ -1511,10 +1523,8 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     /MPG/.test($('c-cons-lbl').textContent) && /gal/i.test($('c-price-lbl').textContent),
     `${$('c-cons-lbl').textContent} | ${$('c-price-lbl').textContent}`);
   A.S.unit = 'km';
-  A.S.country = 'TR';        // WT-77: blok DE'de koştu, ülkeyi geri al
+  A.S.country = 'TR';
   A.applyI18n();
-  // Sonraki bloklar paylaşılan DOM'u devralıyor: formu ve fiyat geçmişini
-  // bıraktığımız gibi değil, bulduğumuz gibi geri ver.
   $('c-price').value = ''; $('c-cons').value = '';
   A.S.cmp = null;
   await A.db.fuelPrices.clear();
@@ -3361,37 +3371,32 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-77 KABUL: veri tabanına HİÇBİR ŞEY yazılmadı',
     (await A.allFuelPrices()).length === 0);
 
-  // --- fiyat geçmişi ekranı ---
+  // --- fiyat geçmişi ekranı (SALT OKUNUR) ---
+  // Ekran artık seçili yakıt türünü listeliyor: 36 ay × tek tür.
   await A.openFuelHist();
   await sleep(300);
   const satir = doc.querySelectorAll('#fp-list li');
-  check('WT-77: geçmiş ekranı gömülü fiyatları da listeliyor', satir.length === 108,
-    'satır=' + satir.length);
-  check('WT-77 KABUL: gömülü satırlarda silme düğmesi YOK',
+  check('WT-77: geçmiş ekranı yayımlanan fiyatları listeliyor (36 ay)',
+    satir.length === 36, 'satır=' + satir.length);
+  check('WT-77 KABUL: yayımlanan satırlarda silme düğmesi YOK',
     doc.querySelectorAll('#fp-list [data-fdel]').length === 0);
-  check('WT-77: satırlar "gömülü" olarak işaretli',
-    /gömülü/.test(doc.querySelector('#fp-list li').textContent));
   check('WT-77 KABUL: nereden geldiği ekranda yazılı (EPDK)',
     doc.getElementById('fp-embed').style.display !== 'none'
       && /EPDK/.test(doc.getElementById('fp-embed').textContent),
     doc.getElementById('fp-embed').textContent.slice(0, 70));
-  // kullanıcı kendi fiyatını girince o satır silinebilir olmalı
-  $('fp-date').value = '2025-05-01';
-  $('fp-price').value = '50';
-  $('fp-type').value = 'diesel';
-  $('fp-save').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
-  await sleep(400);
-  check('WT-77: kullanıcı kendi fiyatını girince o satır silinebilir oluyor',
-    doc.querySelectorAll('#fp-list [data-fdel]').length === 1
-      && doc.querySelectorAll('#fp-list li').length === 108,
-    'silinebilir=' + doc.querySelectorAll('#fp-list [data-fdel]').length
-      + ' satır=' + doc.querySelectorAll('#fp-list li').length);
+  check('KABUL: yakıt türü değişince liste o türe geçiyor',
+    await (async () => {
+      $('fp-type').value = 'petrol';
+      $('fp-type').dispatchEvent(new window.Event('change', {bubbles: true}));
+      await sleep(250);
+      return doc.querySelectorAll('#fp-list li').length === 36;
+    })(), 'satır=' + doc.querySelectorAll('#fp-list li').length);
   await A.overlayClose('page-fuelprice', {force: true});
   await A.db.fuelPrices.clear();
 
-  check('WT-77: iki yeni anahtar altı dilde de dolu',
+  check('WT-77: kaynak künyesi anahtarı altı dilde de dolu',
     ['tr', 'en', 'de', 'fr', 'es', 'it'].every(l =>
-      ['fuelHistEmbedded', 'fuelHistSrcTag'].every(k => (A.T[l][k] || '').length > 2)));
+      ['fuelHistSource', 'fuelHistD'].every(k => (A.T[l][k] || '').length > 2)));
 }
 
 // ---- WT-76: EV alt versiyonları — TESPİT ÇÜRÜTÜLDÜ, bulgu kilitleniyor ----
