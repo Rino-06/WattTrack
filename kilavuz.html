@@ -2,410 +2,235 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WattTrack — Kullanım Kılavuzu (v43)</title>
+<title>WattTrack — Kullanım Kılavuzu</title>
 <style>
-:root{--bg:#F1F7F2;--card:#ffffff;--ink:#131714;--muted:#5B655D;--line:#DCE6DD;
-  --accent:#1C8742;--blue:#1B5FAA;--calc:#EFF6F0;--calc-b:#CFE3D2}
+:root{--bg:#F1F7F2;--card:#fff;--ink:#131714;--muted:#5B655D;--line:#DCE6DD;
+  --accent:#1C8742;--blue:#1B5FAA;--tip:#EFF6F0;--tipb:#CFE3D2}
 *{box-sizing:border-box}
-body{font-family:-apple-system,Segoe UI,system-ui,sans-serif;max-width:760px;margin:0 auto;
-  padding:26px 18px 60px;line-height:1.55;color:var(--ink);background:var(--bg)}
-h1{font-size:23px;margin:0 0 4px}
-.sub{color:var(--muted);font-size:14px;margin-bottom:22px}
-h2.page{font-size:19px;margin:44px 0 4px;padding-top:10px;border-top:3px solid var(--accent);
-  color:var(--accent)}
-h2.page .en{font-size:12.5px;color:var(--muted);font-weight:500}
-h3.section{font-size:15.5px;margin:22px 0 6px;color:var(--blue)}
-h4.sub{font-size:13.5px;margin:14px 0 4px;color:var(--ink)}
-p,li{font-size:14px}
+body{font-family:-apple-system,Segoe UI,system-ui,sans-serif;max-width:720px;margin:0 auto;
+  padding:24px 18px 60px;line-height:1.6;color:var(--ink);background:var(--bg)}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:14px;margin-bottom:20px}
+h2{font-size:18px;margin:38px 0 10px;padding-top:12px;border-top:3px solid var(--accent);color:var(--accent)}
+h3{font-size:15px;margin:20px 0 6px;color:var(--blue)}
+p,li{font-size:14.5px}
 ul{margin:6px 0;padding-left:20px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0}
-.calc{background:var(--calc);border:1px solid var(--calc-b);border-left:4px solid var(--accent);
-  border-radius:8px;padding:10px 14px;margin:8px 0;font-size:13.5px}
-.calc b{color:var(--accent)}
-.note{background:#FFF6E9;border:1px solid #F0DDB8;border-left:4px solid #C87B00;
-  border-radius:8px;padding:10px 14px;margin:8px 0;font-size:13px}
-.field{font-size:13px;color:var(--muted);margin:2px 0}
-code{background:#E9F1EA;padding:1px 5px;border-radius:5px;font-size:12.5px}
-a{color:var(--accent)}
-table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0}
-td,th{border:1px solid var(--line);padding:5px 8px;text-align:left}
-th{background:#E9F1EA}
-.toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:18px 0 30px}
-.toc h2{font-size:15px;margin:0 0 8px}
-.toc ol{margin:0;padding-left:20px;columns:1}
-.toc li{font-size:13.5px;margin:3px 0}
-.toc a{text-decoration:none}
+li{margin:4px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.tip{background:var(--tip);border:1px solid var(--tipb);border-left:4px solid var(--accent);
+  border-radius:8px;padding:10px 14px;margin:10px 0;font-size:13.5px}
+.toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:16px 0 26px}
+.toc ol{margin:0;padding-left:20px}
+.toc li{font-size:14px;margin:3px 0}
+.toc a{color:var(--accent);text-decoration:none}
 .toc a:hover{text-decoration:underline}
-.badge{display:inline-block;font-size:11px;font-weight:700;background:var(--accent);color:#fff;
-  border-radius:20px;padding:2px 9px;margin-left:6px;vertical-align:middle}
-.badge.win{background:var(--blue)}
-hr{border:none;border-top:1px solid var(--line);margin:34px 0}
-footer{margin-top:40px;font-size:12px;color:var(--muted);text-align:center}
+a{color:var(--accent)}
+footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--muted);text-align:center}
 </style>
 </head>
 <body>
 
 <h1>⚡ WattTrack — Kullanım Kılavuzu</h1>
-<div class="sub">Sürüm v43 · 11.08.2026 — bu kılavuz Ayarlar → Hakkında bölümünden açılır ve uygulamayla birlikte cihazınızda saklanır (çevrimdışı okunabilir).</div>
+<div class="sub">Elektrikli aracınızın şarj harcamalarını takip etmek için basit bir rehber.</div>
 
 <div class="card">
-<h3 class="section" style="margin-top:2px">Bu kılavuzda "sayfa", "bölüm", "sekme" ne anlama geliyor?</h3>
-<p>Uygulamanın alt kısmındaki 6 gezinme düğmesiyle açılan tam ekranlara <b>Sayfa</b> diyorum
-(uygulamanın kendi koduyla bu tutarlı: her biri <code>.page</code> sınıflı bir bölüm ve
-<code>screen</code> adlı bir durum değişkeniyle izleniyor). Aynı şeyi günlük dilde <b>sekme</b>
-diye de anıyorum — alt çubukta yan yana duran düğmeler sekme gibi davranıyor.</p>
-<p>Bir sayfanın içinde kendi başlığı olan gruplara (örn. "Harcama grafiği", "Bankalar") <b>Bölüm</b>
-diyorum. Bölümün içindeki tek bir değeri gösteren küçük kutulara <b>Alan/Kutu</b> diyorum
-(örn. "kWh başı · net" kutusu). Bir düğmeye basınca üstüne açılan, formla doldurulan ekranlara
-(Yeni Şarj Kaydı, Gider Ekle gibi) <b>Pencere</b> diyorum (kodda <code>.overlay</code> sınıfı) —
-bunlar sayfa değil, geçici bir katman.</p>
-<p>Hesaplama açıklamalarını <span class="calc" style="padding:2px 8px">yeşil kutu</span> içinde,
-özel durum/uyarıları <span class="note" style="padding:2px 8px">turuncu kutu</span> içinde
-ayrı tuttum ki "ne gösteriyor" ile "nasıl hesaplıyor" karışmasın.</p>
+<p style="margin:0">WattTrack, şarj harcamalarınızı kaydettiğiniz ve gerçekte ne kadar
+harcadığınızı gösteren bir uygulamadır. <b>Tüm bilgileriniz yalnızca kendi telefonunuzda
+kalır</b> — hiçbir sunucuya gönderilmez, üyelik gerekmez.</p>
 </div>
 
 <div class="toc">
-<h2>İçindekiler</h2>
+<b>İçindekiler</b>
 <ol>
-<li><a href="#genel">Genel kurallar (sayı, para birimi, mesafe birimi)</a></li>
-<li><a href="#kurulum">Kurulum sihirbazı (ilk açılış)</a></li>
-<li><a href="#anasayfa">1 — Ana Sayfa</a></li>
-<li><a href="#istatistik">2 — İstatistik</a></li>
-<li><a href="#gecmis">3 — Geçmiş</a></li>
-<li><a href="#kiyasla">4 — Kıyasla</a></li>
-<li><a href="#aracim">5 — Aracım</a></li>
-<li><a href="#ayarlar">6 — Ayarlar</a></li>
-<li><a href="#pencereler">Ortak pencereler (Yeni Şarj Kaydı, Gider Ekle, …)</a></li>
+<li><a href="#basla">Başlarken</a></li>
+<li><a href="#sarj">Şarj kaydı ekleme</a></li>
+<li><a href="#gider">Gider ekleme (vergi, sigorta, bakım…)</a></li>
+<li><a href="#anasayfa">Ana Sayfa — harcama özetiniz</a></li>
+<li><a href="#istatistik">İstatistik — grafikler</a></li>
+<li><a href="#gecmis">Geçmiş — kayıtlarınız</a></li>
+<li><a href="#kiyasla">Kıyasla — benzinliyle karşılaştırma</a></li>
+<li><a href="#aracim">Aracım — araçlar ve hatırlatmalar</a></li>
+<li><a href="#ayarlar">Ayarlar</a></li>
+<li><a href="#sss">Sık sorulanlar</a></li>
 </ol>
 </div>
 
-<h2 class="page" id="genel">Genel kurallar</h2>
-<p>Bütün sayfalarda aynı şekilde geçerli birkaç kural var; her bölümde tekrar etmemek için buraya topladım.</p>
-<div class="calc">
-<b>Sayı biçimi:</b> ondalık ayracı virgül (,), binlik ayracı nokta (.) — dil ne olursa olsun
-aynı, bilinçli bir ürün kararı. Girişte "43,57" ile "43.57" ikisi de aynı sayı kabul edilir.<br><br>
-<b>Para birimi:</b> her kayıt KENDİ girildiği para biriminde saklanır. Ayarlar'daki gösterim
-para birimi farklıysa, kaydın tarihindeki döviz kuruyla (frankfurter.dev / ECB verisi) çevrilir.
-Kur bulunamayan bir kayıt varsa <i>o kayıt toplamlardan çıkarılır</i> ve sarı bir uyarı şeridiyle
-bildirilir — sessizce yanlış toplanmaz.<br><br>
-<b>Mesafe birimi:</b> dahili olarak HER ZAMAN kilometre saklanır; siz "mi" seçtiğinizde yalnız
-<i>gösterim</i> mile çevrilir (1 mi = 1,60934 km). Yakıtlı araç kıyasında da aynı mantık: mil
-seçiliyken yakıt fiyatı galon, tüketim MPG olarak gösterilir ama iç hesap her zaman litre/km'dir.</p>
-</div>
-<div class="calc">
-<b>Tüketim (kWh/100 birim):</b> <code>kWh ÷ mesafe(km) × 100 × birim çarpanı</code>. "mi" seçiliyken
-100 mi = 160,934 km olduğu için sayı km'dekinden büyük çıkar (örn. 18 kWh/100 km ≈ 29 kWh/100 mi) —
-bu bir hata değil, ABD'nin resmî ölçütü (EPA) de aynı birimi kullanır.</div>
-
-<h2 class="page" id="kurulum">Kurulum sihirbazı <span class="badge win">Pencere</span></h2>
-<p>Uygulamayı ilk açtığınızda (ya da veriler sıfırlandığında) iki adımlı bir sihirbaz çıkar.</p>
-<h4 class="sub">Adım 1 — Ülke ve Bölge</h4>
+<h2 id="basla">1. Başlarken</h2>
+<p>Uygulamayı ilk açtığınızda iki soru sorulur:</p>
 <ul>
-<li><b>Ülke</b> seçilince <b>Para Birimi</b>, <b>Mesafe Birimi</b> (km/mi) ve <b>Dil</b> otomatik
-önerilir — 45 ülkelik bir tablodan gelir, siz yine de her birini elle değiştirebilirsiniz.</li>
-<li>Tarayıcınızın kendi dil/bölge ayarına bakılarak sihirbaz açılmadan önce de bir ilk tahmin
-yapılır (örn. Türkiye'den açan biri Türkçe, Polonya'dan açan biri — Lehçe çevirisi olmadığı için —
-İngilizce görür); siz yine dilediğiniz gibi değiştirebilirsiniz.</li>
+<li><b>Hangi ülkedesiniz?</b> Ülkenizi seçtiğinizde para birimi, mesafe birimi (km/mil) ve
+uygulama dili otomatik ayarlanır. Bulunduğunuz ülke genelde kendiliğinden bulunur; yanlışsa
+listeden değiştirebilirsiniz.</li>
+<li><b>Aracınız hangisi?</b> Marka veya model yazıp listeden seçin. Aracınız listede yoksa
+kendi adınızla ekleyebilirsiniz. Bu adımı atlayıp sonra da ekleyebilirsiniz.</li>
 </ul>
-<h4 class="sub">Adım 2 — Araç seçimi (isteğe bağlı)</h4>
+<div class="tip">Aracınızın güncel kilometresini girerseniz, uygulama "aldığımdan beri kaç km
+yaptım" bilgisini de takip eder.</div>
+
+<h2 id="sarj">2. Şarj kaydı ekleme</h2>
+<p>Alt ortadaki <b>+</b> düğmesine basarak yeni şarj kaydı eklersiniz.</p>
+
+<h3>Doldurmanız gerekenler</h3>
 <ul>
-<li>Marka/model arayarak üretici veritabanından (batarya, menzil, DC/AC hız) bir araç seçebilir
-ya da listede yoksa özel isimle ekleyebilirsiniz.</li>
-<li>Güncel kilometre sayacını burada girerseniz, Aracım sayfasındaki "alımdan beri yapılan mesafe"
-kutusunun başlangıç noktası olur.</li>
-<li>"Atla" ile araçsız da devam edebilirsiniz; sonra Aracım sayfasından eklersiniz.</li>
+<li><b>Tarih</b> — bugünün tarihi hazır gelir.</li>
+<li><b>Nerede şarj ettiniz?</b> Evde veya iş yerinde şarj ettiyseniz <b>Ev</b> ya da <b>İş</b>
+kutucuğunu işaretleyin. Bir şarj istasyonunda şarj ettiyseniz listeden firmayı seçin.</li>
+<li><b>Enerji (kWh)</b> — şarj cihazının yazdığı kWh miktarı.</li>
+<li><b>Tutar</b> — ödediğiniz para. Ev/iş şarjında bu tutar, Ayarlar'a girdiğiniz elektrik
+birim fiyatından otomatik hesaplanır; isterseniz elle de yazabilirsiniz.</li>
 </ul>
 
-<h2 class="page" id="anasayfa">1 — Ana Sayfa <span class="badge">Sayfa</span></h2>
-<p>Uygulama açılınca gelen ilk ekran; genel harcama özetini gösterir.</p>
-
-<h3 class="section">Filtreler (sayfanın tamamını etkiler)</h3>
-<div class="field">Araç seçici (yalnız 2+ araç varsa görünür) · Dönem: <b>Ay / Yıl / Tümü</b>
-(varsayılan Tümü) · Şarj tipi: <b>Tümü / DC / AC</b></div>
-<div class="note">Şarj tipi filtresi araç kilometre sayacı kutuları HARİÇ sayfanın tamamını süzer —
-sayaç kaydın türüne değil aracın kendisine ait olduğu için filtrelenmez.</div>
-
-<h3 class="section">Bölüm: Üst özet kutusu</h3>
-<div class="calc">
-<b>{Dönem} · net</b> = seçili dönemdeki, kuru bilinen kayıtların net ödenen tutarları toplamı.<br>
-<b>İndirimsiz</b> = net + o kayıtların toplam indirim tutarı (indirim yüzdesi/tutarından türetilir).<br>
-<b>Değişim oku</b> (▲/▼ %) = <code>(bu dönem net − önceki dönem net) ÷ önceki dönem net × 100</code>.
-"Tümü" seçiliyken bir önceki dönem tanımsız olduğundan bu satır hiç görünmez.</div>
-
-<h3 class="section">Bölüm: Bütçe çubuğu <span class="field" style="font-weight:400">(yalnız Ay/Yıl seçiliyken ve Ayarlar'da bütçe girilmişse)</span></h3>
-<div class="calc">Yüzde = <code>harcanan ÷ bütçe hedefi × 100</code>. Hedef aşılınca çubuk kırmızıya
-döner ve metin "Bütçe aşıldı: +X" olarak değişir (yalnız renkle değil, yazıyla da anlatılır).
-<i>Bilerek yok:</i> "bu gidişle ay sonunda ~X harcarsınız" gibi bir projeksiyon YOK — az veriyle
-yapılan tahmin yanıltıcı olur diye eklenmedi.</div>
-
-<h3 class="section">Bölüm: Araç kilometre sayacı <span class="field" style="font-weight:400">(araç eklenmişse)</span></h3>
-<div class="calc">Aracın güncel sayacı üç kaynaktan <b>en büyüğü</b> alınarak bulunur:
-(1) kayıtlarınızdaki en son tarihli "sayaç" girişi, (2) Aracım'da elle girdiğiniz güncel km,
-(3) başlangıç sayacı + o zamandan beri girdiğiniz sürüş mesafelerinin toplamı. Hangisinin
-kullanıldığı Aracım sayfasında not olarak yazar.<br>
-<b>Alımdan beri yapılan</b> = güncel sayaç − başlangıç sayacı.</div>
-
-<h3 class="section">Bölüm: kWh başı / 1 km ya da 1 mi kutuları</h3>
-<div class="calc">
-<b>kWh başı (net/indirimsiz)</b> = toplam tutar ÷ toplam kWh.<br>
-<b>1 {birim} (net/indirimsiz)</b> — mesafe verisi yeterliyse (dönemde ≥ 20 birim sürüş kaydı)
-<code>toplam tutar ÷ toplam mesafe</code>. Yetersizse, ve araç kilometre sayacında yeterli veri
-varsa <i>otomatik olarak</i> "sayaç modu"na düşer: tüm zamanların harcaması ÷ sayaç farkı.
-Hangi modda olduğu kutunun altında küçük yazıyla belirtilir.</div>
-<div class="note">Şarj tipi filtresi (DC/AC) açıkken sayaç yedeği KULLANILMAZ — sayaç bütün
-sürüşü sayar, filtrelenmiş harcamayı filtrelenmemiş mesafeye bölmek maliyeti yanlış gösterirdi.</div>
-
-<h3 class="section">Bölüm: Enerji / Şarj·Firma / İndirim / Ücretsiz kutuları</h3>
-<div class="calc">
-<b>Enerji (kWh)</b> = dönemdeki TÜM kayıtların kWh toplamı (kuru bilinmeyenler dahil — bu ham bir
-enerji toplamı, para toplamı değil).<br>
-<b>Şarj / Firma</b> = kayıt sayısı / o dönemde kullanılan benzersiz firma sayısı.<br>
-<b>Alınan indirim</b> = toplam indirim tutarı. <b>Ücretsiz şarj</b> = "ücretsiz" işaretli kayıt sayısı.</div>
-
-<h3 class="section">Bölüm: Detay istatistikler</h3>
-<div class="calc">
-<b>Ort. şarj süresi</b> = süresi girilmiş kayıtların ortalama dakikası (saat+dakika olarak yazılır).<br>
-<b>Ort. şarj aralığı</b> = başlangıç ve bitiş şarj yüzdelerinin (SoC) ayrı ayrı ortalaması,
-"%30 → %80" biçiminde.<br>
-<b>Ort. şarj gücü</b> = süresi girilmiş kayıtların <code>toplam kWh ÷ toplam saat</code>.<br>
-<b>Ortalama tüketim</b> = <code>kWh ÷ mesafe × 100</code> (atlanan işaretli kayıtlar hariç,
-en az 20 birim mesafe gerekir). Değişim oku <b>kendi önceki döneminizle</b> kıyaslar — üretici
-menzil değeriyle (WLTP) KIYASLANMAZ, çünkü gerçek tüketim ona hemen hiç ulaşmaz ve yanlış alarm
-üretir.</div>
-
-<h2 class="page" id="istatistik">2 — İstatistik <span class="badge">Sayfa</span></h2>
-<p>Ana sayfadaki tekli kutuların ötesinde, grafik ve dağılım ağırlıklı ikinci bir bakış.</p>
-<div class="field">Dönem seçici: <b>Hafta / Ay / Yıl / Tümü</b> — yalnız "Harcama grafiği"ni
-etkiler; aşağıdaki tüm dağılımlar seçtiğiniz dönemin verisiyle, grafikteki dönem seçiciden
-BAĞIMSIZ kendi mantıklarıyla çalışır (aşağıda belirtildi).</div>
-
-<h3 class="section">Bölüm: Harcama grafiği</h3>
-<div class="calc">Seçime göre: <b>Hafta</b> → son 7 gün, <b>Ay</b> → son 6 ay, <b>Yıl</b> → son 5
-takvim yılı, <b>Tümü</b> → verinizin kendi yılları (en fazla son 6). Her çubuk, dönüştürülebilir
-kayıtların o dönemdeki net tutar toplamı. Bir çubuğa dokununca Geçmiş sayfasına o yıl filtresiyle
-gidersiniz.</div>
-
-<h3 class="section">Bölüm: Şarj tipi dağılımı (halka grafik)</h3>
-<div class="calc">DC ve AC kayıtlarının kWh bazında payı — seçili dönem (grafikteki değil, sayfanın
-üst dönem seçicisindeki dönem).</div>
-
-<h3 class="section">Bölüm: Şarj yeri dağılımı (halka grafik)</h3>
-<div class="calc">"Ev-İş" olarak işaretlenen kayıtlar ile ticari şarj firmalarının kWh bazında payı.</div>
-
-<h3 class="section">Bölüm: Bankalar (indirim kazancı)</h3>
-<div class="calc">Banka/kampanya bazında toplam indirim tutarı, en çok kazandıran 5 tanesi.</div>
-
-<h3 class="section">Bölüm: Firma bazında ortalama şarj kaybı</h3>
-<div class="calc">Yalnız başlangıç %, bitiş % ve aracın batarya kapasitesi birlikte girilmiş
-kayıtlarda hesaplanır (formül Aracım bölümünde). Firma bazında ortalaması alınır; sapma %20'yi
-geçerse kırmızı renkle vurgulanır — istasyon ölçümünün ya da batarya kapasitesi bilginizin
-kontrol edilmesi gerektiğinin işareti.</div>
-
-<h3 class="section">Bölüm: Aylık tüketim (kWh/100 birim)</h3>
-<div class="calc">Son 6 ayın her biri için o ayın ortalama tüketimi. Ölçek YİNE kendi geçmişiniz —
-WLTP ile kıyaslanmaz. En az iki dolu ay varsa altına "son 6 ayda X ile Y arasında" notu eklenir.</div>
-
-<h3 class="section">Bölüm: En çok şarj edilen lokasyonlar</h3>
-<div class="calc">Lokasyon bilgisi girilmiş kayıtlar arasından, en çok kayıt sayısına sahip 5 yer.</div>
-
-<h3 class="section">Bölüm: Firma dağılımı</h3>
-<div class="calc">Seçili dönemde firma bazında toplam tutar, en yüksek 6 tanesi, çubuk grafikle.</div>
-
-<h2 class="page" id="gecmis">3 — Geçmiş <span class="badge">Sayfa</span></h2>
-<p>Tüm şarj kayıtlarınızın ay ay gruplanmış, filtrelenebilir listesi.</p>
-<h3 class="section">Bölüm: Filtrele düğmesi</h3>
-<div class="field">Yıl · Firma · Tip (DC/AC/Ücretsiz) · Araç (2+ araçta) · Banka · Lokasyon —
-seçtiğiniz filtreler VE mantığıyla birleşir (hepsi birden uygulanır).</div>
-<h3 class="section">Bölüm: Özet satırı</h3>
-<div class="calc">Filtrelenmiş sonucun: kayıt sayısı, toplam tutar, toplam kWh ve
-<code>toplam tutar ÷ toplam kWh</code> ortalama birim fiyatı.</div>
-<h3 class="section">Bölüm: Kayıt listesi</h3>
-<div class="field">Ay başlıklarıyla gruplanır, en yeni üstte. Her satırda: firma, tarih, kWh, tip,
-girilmişse mesafe ve <b>bu kaydın kendi tüketimi</b> (kWh/100 birim), varsa ⚠︎ ("bu şarjdan
-öncekini girmeyi unuttum" işareti — mesafesi ortalamalara katılmaz) ve ⚡ (kayıp sapması %20'yi
-aştı) uyarı ikonları, tutar ve indirim. Satıra dokununca düzenleme penceresi açılır; × ile
-silinir (5 saniye içinde geri alınabilir).</div>
-
-<h2 class="page" id="kiyasla">4 — Kıyasla <span class="badge">Sayfa</span></h2>
-<p>EV'nizi varsayımsal bir yakıtlı (benzin/dizel/hibrit/LPG) araçla, aynı kilometrede ne
-harcayacağınızı hesaplayarak karşılaştırır.</p>
-
-<h3 class="section">Bölüm: Giriş kartı</h3>
+<h3>İsteğe bağlı ama işinize yarar</h3>
 <ul>
-<li><b>Araç</b> (2+ araçta) + arşivdeki araçların giderlerini dahil etme onay kutusu</li>
-<li><b>Diğer aracın yakıt tipi:</b> Benzin / Dizel / Hibrit / LPG</li>
-<li><b>Yakıt fiyatı</b> (₺/lt, mil kullanıcısında $/gal) ve <b>Tüketim</b> (lt/100km, mil
-kullanıcısında MPG)</li>
-<li><i>İsteğe bağlı, kapalı gelir:</i> yakıtlı aracın <b>yıllık sabit gideri</b> (vergi+sigorta+
-bakım toplamı) ve bunu izlenen döneme oranlama onay kutusu</li>
-</ul>
-<div class="note">"Kıyasla" düğmesine her bastığınızda fiyat ESKİSİNİN ÜZERİNE YAZILMAZ — bugünün
-tarihiyle fiyat geçmişine yeni bir satır eklenir. Böylece geçmiş kayıtlarınız o günün gerçek
-fiyatıyla hesaplanır, enflasyonun yüksek olduğu dönemlerde toplam kazanç rakamı yanlış çıkmaz.</div>
-
-<h3 class="section">Bölüm: Birim maliyet — EV ve Yakıtlı yan yana</h3>
-<div class="calc">
-<b>EV 1 {birim} (net)</b> = seçili dönemdeki net harcama ÷ mesafe.<br>
-<b>Yakıtlı 1 {birim}</b> = güncel yakıt fiyatı × tüketim ÷ 100.<br>
-<b>İndirim etkisi</b> = (indirimsiz − net) × 100 birim başına.<br>
-<b>{Birim} başına kazanç</b> = Yakıtlı 1 birim − EV net 1 birim (bugünkü fiyatlarla).</div>
-
-<h3 class="section">Bölüm: Bugüne kadar — aynı km yakıtlıyla gidilseydi</h3>
-<div class="calc">
-<b>EV toplam (net)</b> = mesafeli tüm kayıtların net tutarı toplamı.<br>
-<b>Yakıtlıyla olurdu</b> = her kaydın KENDİ TARİHİNDEKİ yakıt fiyatıyla (fiyat geçmişinden)
-hesaplanan <code>mesafe × (o günkü fiyat × tüketim ÷ 100)</code> değerlerinin toplamı — tek bir
-güncel fiyatla değil.<br>
-<b>Toplam kazanç</b> = max(0, Yakıtlı toplam − EV toplam).<br>
-Altındaki çizgi grafik, iki tarafın kümülatif toplamını son 14 nokta üzerinden gösterir.</div>
-<div class="note">Kayıt bazlı mesafe yetersizse hesap "sayaç modu"na düşer (mesafe, harcamayla
-orantılı dağıtılır); bu modda çizgi grafik EV çizgisinin sabit bir katı olacağından (gerçek bilgi
-taşımadığından) gizlenir, yerine bir açıklama yazısı çıkar — toplam rakamlar yine de görünür.</div>
-
-<h3 class="section">Bölüm: Toplam sahip olma maliyeti (TCO) <span class="field" style="font-weight:400">(yalnız iki tarafta da sabit gider varsa görünür)</span></h3>
-<div class="calc">
-<b>EV sabit giderleri</b> = Aracım sayfasındaki giderler toplamı — "vergi" ve "sigorta" gibi
-doğası yıllık olan kalemler izlenen döneme <i>oranlanır</i> (örn. 6 aylık bir kayıt geçmişiniz
-varsa yıllık verginin yarısı sayılır), diğer türler tam tutarıyla sayılır.<br>
-<b>Yakıtlı sabit gider</b> = girdiğiniz yıllık tutar × (izlenen gün sayısı ÷ 365).<br>
-<b>EV / Yakıtlı toplam</b> = şarj (ya da yakıt) maliyeti + ilgili sabit gider.<br>
-<b>1 {birim} (sabit gider dahil)</b> = toplam ÷ toplam mesafe.<br>
-<b>Toplam kazanç (sabit gider dahil)</b> = Yakıtlı toplam − EV toplam (negatifse kırmızı gösterilir).</div>
-
-<h3 class="section">Bölüm: Yakıt dışı gider kıyaslaması</h3>
-<div class="calc">
-Yıllık yakıt dışı gider farkı = Yakıtlının girdiğiniz yıllık sabit gideri − EV'nin
-(gider kayıtlarından günlük ortalama × 365 ile yıllığa tamamlanmış) sabit gideri.
-"Detayları göster" ile birim/100 birim/yıl/kWh başına kırılımları da görebilirsiniz.</div>
-<div class="note">Bu bölümdeki bütün sayılar, üstte tek bir alana yazdığınız YILLIK TAHMİNDEN
-türer — kesinlik değil, kaba bir kıyas niyetindedir.</div>
-
-<h2 class="page" id="aracim">5 — Aracım <span class="badge">Sayfa</span></h2>
-<p>Araç envanteri ve sabit (yakıt dışı) giderlerin yönetildiği sayfa.</p>
-
-<h3 class="section">Bölüm: Yaklaşanlar <span class="field" style="font-weight:400">(bakım hatırlatması varsa)</span></h3>
-<div class="calc">En yakın 3 hatırlatma. Bir gidere hem tarih hem km aralığı tanımlıysa,
-<b>hangisi önce gelirse</b> o esas alınır (km, günlük ~50 km sürüş varsayımıyla güne çevrilip
-kıyaslanır). Vadesi geçenler kırmızı gösterilir. "Tekrarlayan gider" işaretliyse, vade
-dolduğunda onayınızla yeni bir taslak kayıt önerilir.</div>
-
-<h3 class="section">Bölüm: Araçlarım</h3>
-<div class="field">Her satırda: ★ varsayılan araç yap · km✎ sayaç güncelle · ⚙ teknik değerleri
-(batarya/menzil/DC/AC) düzelt · 📷 fotoğraf · ⇄ kayıtları başka araca taşı · × arşivle (kayıtlar
-silinmez, sadece "arşiv" listesine düşer).</div>
-
-<h3 class="section">Bölüm: Araç giderleri</h3>
-<div class="calc">
-<b>Toplam gider (şarj + sabit)</b> = şarj harcaması + sabit gider toplamı.<br>
-<b>Sabit giderler toplamı</b> = tüm gider kayıtlarının (kur çevrilmiş) toplamı.<br>
-Grafik Ay/Yıl olarak değiştirilebilir (son 6 ay / son 5 yıl). Alttaki tür+dönem filtresi
-YALNIZ görünen LİSTEYİ daraltır — üstteki toplamlar, grafik ve dağılım her zaman TÜM giderleri
-gösterir (filtre uygulanmışsa "n / m" yazısıyla belirtilir).</div>
-<h4 class="sub">9 gider türü</h4>
-<table><tr><th>🧾 Vergi</th><th>🛡️ Sigorta/Kasko</th><th>🔧 Bakım/Servis</th></tr>
-<tr><td>🛞 Lastik</td><td>✅ Muayene</td><td>🛠️ Onarım/Hasar</td></tr>
-<tr><td>🅿️ Otopark/Otoyol</td><td>🔌 Ekipman</td><td>📦 Diğer (özel başlıklı)</td></tr></table>
-<div class="note">"Diğer" türünde girdiğiniz özel başlık (örn. "Araç yıkama"), gider dağılımında
-kendi kategorisi gibi ayrı gösterilir — hepsi "Diğer" başlığı altında toplanmaz.</div>
-
-<h3 class="section">Bölüm: Şarj kaybı / verim analizi</h3>
-<div class="calc">Yalnızca başlangıç %, bitiş % ve aracın batarya kapasitesi (Aracım'da ⚙'dan
-girilir) birlikte doluysa hesaplanır:<br>
-<code>Beklenen kWh = batarya kapasitesi × (bitiş % − başlangıç %) ÷ 100</code><br>
-<code>Kayıp % = (faturalanan kWh − beklenen kWh) ÷ beklenen kWh × 100</code><br>
-Pozitif kayıp = fatura beklenenden fazla (şarj kaybı/verim); negatif = fatura beklenenden az
-(istasyon ölçüm sapması olabilir). %20'yi aşan sapmalar Geçmiş'te ve İstatistik'te vurgulanır.</div>
-
-<h2 class="page" id="ayarlar">6 — Ayarlar <span class="badge">Sayfa</span></h2>
-
-<h3 class="section">Bölüm: Ülke ve Bölge</h3>
-<div class="field"><b>Ülke</b> (arama kutulu seçici — seçiminiz para birimi, mesafe birimi ve
-dil önerisini günceller) · <b>Para Birimi</b> · <b>Mesafe Birimi</b> (km/mi) · <b>Dil</b>
-(Türkçe/English/Deutsch/Français/Español/Italiano) · <b>Görünüm</b> (Açık/Koyu).</div>
-
-<h3 class="section">Bölüm: Banka Ülkelerim</h3>
-<div class="field">Kartlarınızın ait olduğu ülkeleri seçersiniz — Yeni Şarj Kaydı formundaki
-banka/kampanya listesi buradan gelir ve şarj ettiğiniz ülke değişse de sabit kalır (kartınız
-hâlâ aynı ülkeden).</div>
-
-<h3 class="section">Bölüm: Kayıt Formu</h3>
-<div class="field"><b>"Gelişmiş alanlar hep açık"</b> anahtarı — açıksa banka, süre, lokasyon
-ve şarj aralığı alanları formda baştan görünür gelir.<br>
-<b>Aylık/Yıllık bütçe</b> — Ana Sayfa'daki bütçe çubuğunu besler; boş bırakılırsa çubuk hiç
-görünmez (isteğe bağlı bir özellik).</div>
-
-<h3 class="section">Bölüm: Ev/İş elektrik birim fiyatı</h3>
-<div class="calc">Tek bir kWh fiyatı (vergiler dahil) girilir — saat dilimine göre T1/T2/T3 ayrımı
-BİLİNÇLİ OLARAK yok. Ev şarjlarında "mesken" fiyatı, iş şarjlarında "ticarethane" fiyatı kullanılır
-(bazı ülkelerde ikisi arasında ~2 kat fark olabiliyor). Alan boşken ülkenize (gerekiyorsa eyalet/
-ile) göre yayımlanmış bir ortalama otomatik önerilir; kaynağı ve yılı altında yazar. Siz kendi
-fiyatınızı yazarsanız bu değer "elle girilmiş" işaretlenir ve bir daha otomatik güncellenmez —
-ülke değiştirseniz bile korunur.</div>
-
-<h3 class="section">Bölüm: Veri</h3>
-<ul>
-<li><b>Dışa Aktar (JSON)</b> — tam yedek (kayıtlar, araçlar, giderler, ayarlar); örnek/demo
-verileri yedeğe hiç girmez.</li>
-<li><b>Dışa Aktar (CSV)</b> — Excel/Power BI'da açılabilecek, ";" ayraçlı, formül enjeksiyonuna
-karşı korumalı bir tablo.</li>
-<li><b>Yedeği Geri Yükle (JSON)</b> — hem kendi yedeğinizi hem başka bir cihazdan aktarımı kabul
-eder; mükerrer kayıtları atlayıp yalnız yenilerini ekler.</li>
-<li><b>CSV içe aktarma</b> — kendi dosyanız ya da başka bir uygulamadan gelen tabloyu, sütun
-eşleme ekranında elle eşleştirerek içe aktarabilirsiniz (başlıklar otomatik tanınmaya çalışılır).</li>
-<li><b>Ekran görüntüsünden otomatik oku (beta)</b> — açıldığında bir OCR motoru indirilir (boyutu
-önceden gösterilir); şarj makbuzu ekran görüntüsünden firma/kWh/tutar gibi alanları otomatik
-doldurmayı dener, siz kontrol edip düzeltirsiniz.</li>
-<li><b>Örnek verilerle dene</b> — 36 şarj, 3 araç, 10 gider içeren gerçekçi bir demo seti ekler;
-tamamı işaretli gelir ve tek dokunuşla geri silinir, kendi verinize karışmaz.</li>
-<li><b>Verileri Sıfırla</b> — tüm kayıt, araç ve ayarları kalıcı olarak siler (iki adımlı onay).</li>
+<li><b>Sürülen mesafe</b> — son şarjdan bu yana kaç km gittiğiniz. Bunu girerseniz uygulama
+"kilometre başına ne kadar harcıyorum" ve "aracım kaç kWh yakıyor" sorularını cevaplayabilir.
+Dilerseniz mesafe yerine aracın <b>sayaç değerini</b> yazabilirsiniz — ikisinden birini girin,
+ikisini birden değil.</li>
+<li><b>İndirim</b> — bir banka kampanyasıyla indirim aldıysanız tutar ya da yüzde olarak girin.
+Uygulama hem indirimli hem indirimsiz maliyetinizi ayrı ayrı gösterir.</li>
+<li><b>Ücretsiz şarj</b> — kampanya, güneş enerjisi vb. bir sebeple hiç ödemediyseniz işaretleyin.</li>
+<li><b>Gelişmiş alanlar</b> — banka, şarj süresi, konum ve şarj yüzdesi (%20 → %80 gibi).
+Şarj yüzdesini girerseniz uygulama, faturalanan enerjinin ne kadarının gerçekten bataryaya
+girdiğini de hesaplayabilir.</li>
 </ul>
 
-<h3 class="section">Bölüm: Hakkında</h3>
-<div class="field">Sürüm numarası ve tarihi · depolama durumu (kalıcı mı geçici mi) · gizlilik
-politikası ve bu kılavuza bağlantı · geliştirici iletişim/destek bağlantıları.</div>
+<div class="tip"><b>Yurt dışında şarj ettiyseniz:</b> kayıt formunda ülkeyi değiştirin. Uygulama
+o günün döviz kurunu bulup harcamanızı kendi para biriminize çevirir.</div>
 
-<h2 class="page" id="pencereler">Ortak pencereler <span class="badge win">Pencere</span></h2>
-<p>Bir düğmeye basınca sayfanın üstüne açılan, formla doldurulan ekranlar.</p>
+<div class="tip"><b>"Bu şarjdan öncekini girmeyi unuttum"</b> kutucuğu, arada girmediğiniz bir
+şarj olduğunda işaretlenir. O kaydın mesafesi ortalamalarınızı bozmaz, ama harcamanız yine
+toplama girer.</div>
 
-<h3 class="section">Yeni Şarj Kaydı / Kaydı Düzenle</h3>
-<div class="field">
-<b>Zorunlu:</b> Tarih, Firma (Ev-İş ya da şarj şirketi), Enerji (kWh), Tutar (ücretsiz
-işaretliyse tutar istenmez).<br>
-<b>Şarj Tipi:</b> DC / AC — Ev-İş seçilince otomatik AC sayılır.<br>
-<b>Mesafe ya da sayaç:</b> "sürülen mesafe" VEYA "sayaç değeri" — İKİSİ BİRDEN girilemez (sayaç
-girilirse mesafe ondan türetilir).<br>
-<b>İndirim:</b> Tutar ya da Yüzde olarak, indirim öncesi/sonrası ikisi de saklanır.<br>
-<b>Yurt dışı kayıt:</b> ülke seçilince para birimi farklıysa kur alanı çıkar; otomatik kur
-bulunabiliyorsa doldurulur, bulunamayan para birimlerinde (RSD, BAM, MKD, ALL, MDL) elle
-girmeniz istenir.<br>
-<b>Gelişmiş alanlar:</b> Banka/kampanya, Araç, Şarj süresi, Lokasyon (📍 ile GPS'ten
-doldurulabilir), Şarj aralığı (%başlangıç → %bitiş — verim analizi bunu kullanır), Not,
-Ekran görüntüsü ekleme.<br>
-<b>"Bu şarjdan öncekini girmeyi unuttum"</b> — işaretlerseniz bu kaydın mesafesi tüketim ve
-km-maliyeti ortalamalarına katılmaz (harcama/enerji toplamlarına katılmaya devam eder). Enerjiye
-göre alışılmadık uzun mesafe girildiğinde bu, size otomatik olarak sorulur.</div>
+<h2 id="gider">3. Gider ekleme</h2>
+<p>Şarj dışındaki masraflarınızı (vergi, sigorta, lastik…) <b>Aracım</b> sayfasındaki
+<b>Gider Ekle</b> düğmesiyle girersiniz. Bunları girdiğinizde uygulama aracınızın gerçek
+toplam maliyetini gösterebilir.</p>
+<ul>
+<li><b>Gider türü</b> — Vergi, Sigorta/Kasko, Bakım/Servis, Lastik, Muayene, Onarım,
+Otopark/Otoyol, Ekipman ve Diğer. "Diğer"i seçerseniz kendi başlığınızı yazabilirsiniz
+(örneğin "Araç yıkama").</li>
+<li><b>Tarih, tutar ve araç</b> — birden fazla aracınız varsa hangisine ait olduğunu seçin.</li>
+</ul>
 
-<h3 class="section">Gider Ekle / Düzenle</h3>
-<div class="field">Tür (9 sabit + Diğer), Tarih, Para birimi, Tutar, Araç (birden fazla araçta
-zorunlu seçim), Not. İsteğe bağlı <b>hatırlatma</b>: tarih aralığı (3 ay/6 ay/1 yıl/2 yıl) ve/veya
-km aralığı (5.000'den 30.000'e), aralık seçilince sonraki tarih/km otomatik önerilir (siz
-değiştirebilirsiniz), "tekrarlayan gider" onay kutusu.</div>
+<h3>Hatırlatma kurma</h3>
+<p>Bir giderin altındaki <b>Hatırlatma Ekle</b> ile "1 yıl sonra" ya da "10.000 km sonra"
+gibi bir hatırlatma kurabilirsiniz. Vakti geldiğinde Aracım sayfasındaki <b>Yaklaşanlar</b>
+bölümünde görünür. Hem tarih hem kilometre girdiyseniz, hangisi önce gelirse o uyarır.</p>
+<div class="tip"><b>Tekrarlayan gider</b> kutucuğunu işaretlerseniz, vakti geldiğinde uygulama
+size yeni bir kayıt önerir — onaylarsanız oluşturur.</div>
 
-<h3 class="section">Diğer küçük pencereler</h3>
-<div class="field">
-<b>Ülke seç</b> — arama kutulu ülke listesi (hem genel ülke ayarı hem banka ülkeleri için kullanılır).<br>
-<b>Yakıt fiyatı geçmişi</b> — Kıyasla'da kullanılan yakıt fiyatlarının tam listesi; EPDK gibi
-kaynaklardan gömülü olarak gelen satırlar silinemez ama üstüne kendi fiyatınızı yazabilirsiniz.<br>
-<b>CSV içe aktar — sütun eşleme</b> — dosyanızdaki başlıkları uygulamanın alanlarıyla eşleştirir,
-hatalı/mükerrer satırları ayrı gösterir.<br>
-<b>Araç teknik değerleri</b> — batarya (kWh), WLTP menzil, maks. DC/AC gücünü üretici listesinin
-üzerine yazarak düzeltebilirsiniz; "üretici değerlerine dön" ile geri alınabilir.<br>
-<b>Yeni araç ekle</b> — marka/model arama ya da özel isimle araç ekleme.</div>
+<h2 id="anasayfa">4. Ana Sayfa</h2>
+<p>Uygulamayı açtığınızda gördüğünüz özet ekran.</p>
+<ul>
+<li>Üstteki büyük rakam, seçtiğiniz dönemde <b>ne kadar ödediğinizi</b> gösterir. Yanında
+indirimsiz hâli ve ne kadar tasarruf ettiğiniz yazar.</li>
+<li>Dönem seçicisiyle <b>Ay</b>, <b>Yıl</b> veya <b>Tümü</b> arasında geçiş yapabilirsiniz.
+Yanındaki <b>DC / AC</b> düğmeleri yalnız o tip şarjları gösterir.</li>
+<li><b>Bütçe çubuğu</b>, Ayarlar'a bir bütçe girdiyseniz görünür ve ne kadarını harcadığınızı
+gösterir. Bütçeyi aşarsanız çubuk kırmızıya döner.</li>
+<li>Alttaki kutular kWh başına maliyetinizi, kilometre başına maliyetinizi, toplam enerjiyi,
+ortalama şarj sürenizi ve aracınızın ortalama tüketimini gösterir.</li>
+</ul>
+<div class="tip">Bir önceki döneme göre değişim, büyük rakamın hemen altında ok işaretiyle
+görünür.</div>
 
-<hr>
-<footer>WattTrack — bu kılavuz uygulamanın v43 (11.08.2026) sürümüne göre hazırlanmıştır.
-Sürüm güncellendikçe içerik güncel kalmayabilir; en doğru bilgi her zaman uygulamanın kendisidir.<br>
-<a href="privacy.html">Gizlilik Politikası</a> · <a href="https://github.com/Rino-06">github.com/Rino-06</a></footer>
+<h2 id="istatistik">5. İstatistik</h2>
+<p>Harcamanızın zaman içindeki seyri ve dağılımları.</p>
+<ul>
+<li><b>Harcama grafiği</b> — aylara (ya da haftalara/yıllara) göre ne kadar harcadığınız.
+Bir sütuna dokunursanız o dönemin kayıtlarına gidersiniz.</li>
+<li><b>Aylık tüketim</b> — aracınızın 100 km'de kaç kWh harcadığı. Kışın artması normaldir.</li>
+<li><b>Şarj tipi ve şarj yeri dağılımı</b> — enerjinizin ne kadarı hızlı şarjdan (DC), ne
+kadarı evden/işten geldi.</li>
+<li><b>Firma bazında şarj kaybı</b> — şarj yüzdesi girdiğiniz kayıtlarda, ödediğiniz enerjinin
+ne kadarının bataryaya girmediğini gösterir. Bir firmada bu oran belirgin yüksekse kırmızı
+görünür.</li>
+<li><b>En çok şarj edilen yerler</b> ve <b>firma dağılımı</b>.</li>
+</ul>
+<div class="tip">Seçtiğiniz dönemde kaydınız yoksa uygulama bunu söyler ve tek dokunuşla
+tüm kayıtlarınızı göstermeyi önerir — verileriniz kaybolmuş değildir.</div>
+
+<h2 id="gecmis">6. Geçmiş</h2>
+<p>Bütün şarj kayıtlarınız, aylara göre gruplanmış hâlde. Bir kayda dokunarak
+düzenleyebilir, <b>×</b> ile silebilirsiniz (silmeyi 5 saniye içinde geri alabilirsiniz).</p>
+<p><b>Filtrele</b> düğmesiyle yıl, firma, şarj tipi, araç, banka ve konuma göre daraltabilirsiniz.
+Üstteki vurgulu satır, filtrelenen kayıtların toplamını gösterir.</p>
+
+<h2 id="kiyasla">7. Kıyasla</h2>
+<p>"Benzinli bir araç kullansaydım ne öderdim?" sorusunun cevabı.</p>
+<p>Yakıt tipini (benzin, dizel, hibrit, LPG) seçin ve o aracın <b>100 km'de kaç litre</b>
+yaktığını yazın. Uygulama, sizin gerçekte gittiğiniz kilometreyi baz alarak iki maliyeti
+yan yana koyar.</p>
+<div class="tip">Geçmiş kıyaslamalarda, her kaydın <b>kendi tarihindeki</b> ortalama yakıt
+fiyatı kullanılır. Bu fiyatlar ülke genelinde yayımlanan ortalama satış fiyatlarıdır —
+elle girmenize gerek yoktur. Ülkeniz için böyle bir veri yoksa girdiğiniz güncel fiyat
+kullanılır ve bu ekranda belirtilir.</div>
+
+<h3>Sabit giderleri de katmak</h3>
+<p>Aracım sayfasına giderlerinizi girdiyseniz ve karşılaştırdığınız benzinli aracın yıllık
+sabit giderini (vergi + sigorta + bakım) de yazarsanız, uygulama <b>toplam sahip olma
+maliyetini</b> karşılaştırır. "Yıllık giderleri döneme oranla" kutucuğu işaretliyken her iki
+araç da aynı süre üzerinden hesaplanır.</p>
+
+<h2 id="aracim">8. Aracım</h2>
+<ul>
+<li><b>Yaklaşanlar</b> — kurduğunuz bakım hatırlatmalarından en yakın üçü. Vakti geçenler
+kırmızı görünür.</li>
+<li><b>Araçlarım</b> — araç ekleyebilir, kilometre güncelleyebilir, fotoğraf koyabilirsiniz.
+Sattığınız aracı <b>×</b> ile arşive alırsanız kayıtları silinmez.</li>
+<li><b>Araç giderleri</b> — girdiğiniz sabit giderler, grafiği ve kategori dağılımı.</li>
+</ul>
+<div class="tip">Aracınızın batarya kapasitesi yanlışsa <b>⚙</b> düğmesinden düzeltebilirsiniz.
+Şarj kaybı hesabı bu değeri kullanır.</div>
+
+<h2 id="ayarlar">9. Ayarlar</h2>
+<ul>
+<li><b>Ülke, para birimi, mesafe birimi, dil ve görünüm</b> (açık/koyu tema).</li>
+<li><b>Banka ülkelerim</b> — kartlarınızın hangi ülkeden olduğunu seçin; kayıt formundaki
+banka listesi buna göre gelir.</li>
+<li><b>Bütçe</b> — aylık ve/veya yıllık bütçe girerseniz Ana Sayfa'da bütçe çubuğu görünür.</li>
+<li><b>Ev / iş elektrik birim fiyatı</b> — ev ve iş şarjlarınızın tutarı bundan hesaplanır.
+Ülkenize göre bir ortalama otomatik önerilir; kendi faturanızdaki fiyatı yazarsanız uygulama
+bir daha üstüne yazmaz.</li>
+<li><b>Yedekleme</b> — <b>Dışa Aktar</b> ile verilerinizi dosya olarak kaydedin,
+<b>Geri Yükle</b> ile başka bir telefona taşıyın. Excel'de açmak isterseniz CSV seçeneğini
+kullanın.</li>
+<li><b>Örnek verilerle dene</b> — uygulamayı gerçekçi örnek kayıtlarla gezmenizi sağlar;
+tek dokunuşla silinir ve kendi verilerinize karışmaz.</li>
+</ul>
+<div class="tip"><b>Önemli:</b> Verileriniz yalnız bu telefonda durur. Telefonu değiştirecekseniz
+ya da uygulamayı sileceksesiniz önce <b>Dışa Aktar</b> ile yedek alın.</div>
+
+<h2 id="sss">10. Sık sorulanlar</h2>
+<h3>Mesafe girmezsem ne olur?</h3>
+<p>Harcama ve enerji toplamlarınız yine doğru olur; ama "kilometre başına maliyet" ve
+"ortalama tüketim" hesaplanamaz. Aracınızın kilometre sayacını güncel tutarsanız uygulama
+bu bilgileri sayaçtan da çıkarabilir.</p>
+
+<h3>Neden bazı kayıtlar toplamlara girmiyor?</h3>
+<p>Yurt dışı bir kayıt için döviz kuru bulunamadıysa o kayıt toplama katılmaz ve uygulama
+size sarı bir uyarı ile bunu söyler. Uyarıdaki düğmeden kuru elle girebilirsiniz.</p>
+
+<h3>Şarj kaybı yüzdesi ne anlama geliyor?</h3>
+<p>Şarj yüzdesini (örneğin %20 → %80) ve aracınızın batarya kapasitesini girdiyseniz,
+uygulama ödediğiniz enerjinin ne kadarının gerçekten bataryaya girdiğini karşılaştırır.
+Bir miktar kayıp normaldir; belirgin yüksek bir sapma, istasyonun ölçümünü ya da girdiğiniz
+batarya kapasitesini kontrol etmeniz gerektiği anlamına gelebilir.</p>
+
+<h3>Uygulama internete ne zaman bağlanıyor?</h3>
+<p>Yalnızca üç durumda: yurt dışı kayıtta döviz kuru için, 📍 düğmesine bastığınızda konum
+adı için ve ilk kurulumda ülkenizi tahmin etmek için. Kayıtlarınız hiçbir zaman
+gönderilmez.</p>
+
+<h3>Verilerimi başka telefona nasıl taşırım?</h3>
+<p>Eski telefonda Ayarlar → <b>Dışa Aktar (JSON)</b>, yeni telefonda Ayarlar →
+<b>Yedeği Geri Yükle</b>. Aynı kayıtlar iki kez eklenmez.</p>
+
+<footer>
+WattTrack · <a href="privacy.html">Gizlilik Politikası</a><br>
+Sorularınız için uygulama içindeki <b>Soru Sor / Hata Bildir</b> düğmesini kullanabilirsiniz.
+</footer>
 
 </body>
 </html>

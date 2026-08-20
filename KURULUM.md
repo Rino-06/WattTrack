@@ -11,13 +11,12 @@ Yayına çıkarken bu listeyi aç — sohbette "Play listesine bakalım" demen y
 [ ] 3. IARC yaş anketi: Console yönlendirir; içerik yok → "Herkes" çıkar.
        Çıkan IARC kimliğini istersen manifest'e sonra ekleriz.
 [ ] 4. ASSETLINKS: PWABuilder paket indirirken assetlinks.json verir →
-       repoda .well-known/assetlinks.json yoluna koy (Claude'a "assetlinks
-       zamanı" yaz, birlikte yaparız). Bu olmadan TWA üstte adres çubuğu
-       gösterir.
+       repoda .well-known/assetlinks.json yoluna koy. Bu olmadan TWA üstte
+       adres çubuğu gösterir.
 [ ] 5. PAKET KİMLİĞİ: PWABuilder'da Package ID = app.watttrack.twa
        (uygulamadaki "Play'de Değerlendir" butonu ve manifest
        related_applications bu kimliğe bağlı — DEĞİŞTİRME, değiştirirsen
-       Claude'a söyle ikisini güncellesin).
+       ikisini de güncellemek gerekir).
 [ ] 6. KAPALI TEST: kişisel geliştirici hesaplarında üretime çıkmadan önce
        12+ testçiyle 14 gün kapalı test şartı var — testçi e-postalarını
        hazırla.
@@ -302,7 +301,7 @@ bağımsızdır (5. maddedeki gözlemin hata değil, tasarım gereğidir).
   çerçevesi görünümü; telefonda tam ekran
 - Playwright ile ekran görüntüsü testinden geçirildi
 
-## Sürüm notu (v2 — Claude Design prototipine göre yeniden tasarım)
+## Sürüm notu (v2 — arayüz prototipine göre yeniden tasarım)
 
 - Arayüz: açık yeşil tema, beyaz kartlar, firma baş harfli renkli avatarlar,
   5 sekme (Ana Sayfa / Geçmiş / İstatistik / Kıyasla / Ayarlar) + yüzen "+" butonu
