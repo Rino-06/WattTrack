@@ -180,6 +180,38 @@ $('btn-kwh-default').addEventListener('click', async () => {
 // ONBOARDING (kompakt: açılır listeler)
 // ============================================================
 let obEv = null;
+// Kullanıcı sihirbazdaki alanlardan birine dokunduysa, sonradan gelen IP
+// tahmini onun seçimini EZMEZ.
+let obKullaniciDokundu = false;
+
+// Ülke seçimini sihirbazın dört alanına birden uygular. Dil kuralı: ülkenin
+// kendi dili uygulamada varsa o, yoksa İngilizce (COUNTRIES tablosunda
+// çevirisi olmayan ülkeler zaten 'en' işaretli).
+function obUlkeUygula(code) {
+  const c = COUNTRIES.find(x => x[0] === code);
+  if (!c) return;
+  $('ob-country').value = c[0];
+  $('ob-currency').value = c[3];
+  $('ob-unit').querySelectorAll('button').forEach(b =>
+    b.classList.toggle('sel', b.dataset.v === c[5]));
+  const lang = LANG_NAMES[c[6]] ? c[6] : 'en';
+  $('ob-lang').value = lang;
+  S.lang = lang;
+  applyI18n();
+}
+
+// Sihirbaz açılır açılmaz tarayıcı diline göre bir tahminle doluyor (anında).
+// Bulunulan ülke ancak IP'den öğrenilebildiği için o sorgu ARKA PLANDA
+// koşuyor ve cevap gelene kadar sihirbaz beklemiyor. Cevap geldiğinde
+// kullanıcı henüz hiçbir alana dokunmamışsa varsayılanlar güncelleniyor.
+async function obKonumTahmini() {
+  if (S.onboarded) return;
+  const kod = await guessCountryFromIP();
+  if (!kod || S.onboarded || obKullaniciDokundu) return;
+  if (kod === $('ob-country').value) return;
+  obUlkeUygula(kod);
+}
+
 function initOnboarding() {
   $('ob-country').innerHTML = COUNTRIES.map(c =>
     `<option value="${c[0]}">${c[1]} ${c[2]}</option>`).join('');
@@ -195,22 +227,18 @@ function initOnboarding() {
   $('ob-lang').value = S.lang;
 
   $('ob-country').addEventListener('change', () => {
-    const c = COUNTRIES.find(x => x[0] === $('ob-country').value);
-    $('ob-currency').value = c[3];
-    $('ob-unit').querySelectorAll('button').forEach(b =>
-      b.classList.toggle('sel', b.dataset.v === c[5]));
-    if (LANG_NAMES[c[6]]) {
-      $('ob-lang').value = c[6];
-      S.lang = c[6];
-      applyI18n();
-    }
+    obKullaniciDokundu = true;
+    obUlkeUygula($('ob-country').value);
   });
   $('ob-lang').addEventListener('change', () => {
+    obKullaniciDokundu = true;
     S.lang = $('ob-lang').value;
     applyI18n();
   });
+  $('ob-currency').addEventListener('change', () => { obKullaniciDokundu = true; });
   $('ob-unit').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
+    obKullaniciDokundu = true;
     $('ob-unit').querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b));
   });
   $('ob-next').addEventListener('click', () => {
@@ -773,8 +801,12 @@ if ('launchQueue' in window) {
 $('btn-rate').addEventListener('click', () => {
   window.open('https://play.google.com/store/apps/details?id=app.watttrack.twa', '_blank', 'noopener');
 });
+// Soru/hata: depo issue sayfası. Katkı: GitHub Sponsors sayfası.
+$('btn-ask').addEventListener('click', () => {
+  window.open('https://github.com/Rino-06/WattTrack/issues', '_blank', 'noopener');
+});
 $('btn-support').addEventListener('click', () => {
-  window.open('https://github.com/Rino-06/WattTrack', '_blank', 'noopener');
+  window.open('https://github.com/sponsors/Rino-06', '_blank', 'noopener');
 });
 $('btn-wipe').addEventListener('click', async () => {
   if (!confirm(t('wipeAsk1')) || !confirm(t('wipeAsk2'))) return;

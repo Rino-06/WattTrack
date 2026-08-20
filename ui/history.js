@@ -68,6 +68,7 @@ async function renderHistory() {
        kwhT > 0 ? t('avgPerKwhShort', {v: fm(sym(), fmtNum(tut / kwhT, 2))}) : null]
       .filter(Boolean).join(' · ')
     : '';
+  $('h-summary').classList.toggle('on', rows.length > 0);
   // Çok araçlı kullanıcıda satırdaki rozet için ad tablosu (WT-46/3)
   VEH_ADI = vehicles.length > 1
     ? Object.fromEntries(vehicles.map(v => [v.id, vehName(v)])) : null;

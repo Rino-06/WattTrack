@@ -107,7 +107,13 @@ async function loadSettings() {
   applyI18n();
   applyTheme();
   initStorage();   // WT-12/4
-  if (!S.onboarded) overlayOpen('ob');
+  if (!S.onboarded) {
+    overlayOpen('ob');
+    // Tarayıcı dili cihazdan gelir; bulunulan ülkeyi IP söyler. Sihirbaz
+    // beklemiyor — cevap geldiğinde (ve kullanıcı henüz dokunmadıysa)
+    // varsayılanlar tazeleniyor.
+    obKonumTahmini();
+  }
   renderDashboard();
   // PWA kısayolları (?action=add | ?page=history/compare/settings)
   const q = new URLSearchParams(location.search);

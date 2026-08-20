@@ -13,13 +13,6 @@
 let editingId = null;
 $('nav-plus').addEventListener('click', () => openAdd());
 $('btn-close-add').addEventListener('click', () => overlayClose('page-add'));
-// WT-35: yakıt dışı gider detayları varsayılan olarak kapalı
-$('c-nf-more').addEventListener('click', () => {
-  const d = $('c-nf-details'), acik = d.style.display === 'none';
-  d.style.display = acik ? '' : 'none';
-  $('c-nf-more').setAttribute('aria-expanded', String(acik));
-  $('c-nf-more').textContent = acik ? t('hideDetails') : t('showDetails');
-});
 $('btn-adv').addEventListener('click', () => {
   $('adv-fields').classList.toggle('open');
   $('btn-adv').textContent =

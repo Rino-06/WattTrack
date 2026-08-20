@@ -149,15 +149,14 @@ async function renderCompare() {
   box.style.display = '';
   if (distKm < 20) {
     $('c-ev').textContent = '—'; $('c-ice').textContent = '—';
-    $('c-ev-g').textContent = '—'; $('c-disc-fx').textContent = '—';
+    $('c-ev-g').textContent = '—';
     $('c-1km').textContent = '—'; $('c-1km-g').textContent = '—';
     $('c-ice1km').textContent = '—';
     ['c-exptot','c-icefixtot','c-tcoev','c-tcoice','c-tco1km','c-tcoice1km'].forEach(id => $(id).textContent = '—');
     $('c-perkm').textContent = t('needData');
     $('c-perkm').style.fontSize = '15px';
     $('c-per100').textContent = '';
-    ['c-nf-ev-km','c-nf-ice-km','c-nf-ev-100','c-nf-ice-100','c-nf-ev-yr','c-nf-ice-yr','c-nf-kwh','c-nf-diff']
-      .forEach(id => $(id).textContent = '—');
+    $('c-nf-diff').textContent = '—';
     $('c-nf-diff-pill').textContent = '';
     $('c-nf-bar-ev').style.width = '0%'; $('c-nf-bar-ice').style.width = '0%';
     $('c-nf-bar-ev-lbl').textContent = ''; $('c-nf-bar-ice-lbl').textContent = '';
@@ -197,7 +196,6 @@ async function renderCompare() {
   $('c-ev').textContent = money2(evNetPerKm * 100 * f);
   $('c-ev-g').textContent = money2(evGrossPerKm * 100 * f);
   $('c-ice').textContent = money2(icePerKm * 100 * f);
-  $('c-disc-fx').textContent = '−' + money2((evGrossPerKm - evNetPerKm) * 100 * f);
   $('c-perkm').textContent = money2((icePerKm - evNetPerKm) * f) + ' / ' + S.unit;
   $('c-per100').textContent = t('per100', {v: money((icePerKm - evNetPerKm) * 100 * f), u: S.unit});
 
@@ -252,14 +250,30 @@ async function renderCompare() {
   const days = dates.length > 1
     ? Math.max(30, (new Date(dates[dates.length - 1]) - new Date(dates[0])) / 864e5) : 365;
   const yearly = ['tax', 'insurance'];          // doğası gereği yıllık kalemler
-  const pr = S.cmp.prorate !== false && days < 365 ? days / 365 : 1;
+  // KUSUR (kullanıcı bildirimi): onay kutusu YALNIZ EV tarafını etkiliyordu.
+  // Yakıtlı taraf her durumda `days/365` ile oranlanıyordu; kutu kapatılınca
+  // EV'nin yıllık kalemleri tam sayılırken yakıtlınınki döneme kırpılıyor,
+  // yani iki taraf FARKLI dönemler üzerinden kıyaslanıyordu. Onay kutusu artık
+  // İKİ TARAFI birden yönetiyor:
+  //   işaretli  → her iki taraf da izlenen döneme oranlanır (varsayılan)
+  //   işaretsiz → her iki taraf da tam yıl olarak sayılır
+  const orani = S.cmp.prorate !== false;
+  const pr = orani && days < 365 ? days / 365 : 1;
   const expTot = ex.reduce((s, e) =>
     s + expB(e) * (yearly.includes(e.tur) ? pr : 1), 0);
   const tcoEv = net + expTot;
-  const iceFix = (S.cmp.icefix || 0) * days / 365;
+  const iceFix = (S.cmp.icefix || 0) * (orani ? days / 365 : 1);
   const tcoIce = iceTot + iceFix;
   $('c-exptot').textContent = money(expTot);
   $('c-icefixtot').textContent = money(iceFix);
+  // Kutunun kendisi hangi döneme oranlandığını söylesin (kullanıcı isteği):
+  // 60 günden kısa dönemde gün, sonrasında ay daha okunur.
+  const gunSayi = Math.round(days);
+  $('c-icefix-scope').textContent = orani
+    ? t('proratedOver', {p: gunSayi < 60
+        ? t('nDays', {n: gunSayi})
+        : t('nMonths', {n: Math.max(1, Math.round(days / 30.44))})})
+    : t('notProrated');
   $('c-tcoev').textContent = money(tcoEv);
   $('c-tco1km-lbl').textContent = t('tco1km', {u: S.unit});
   $('c-tco1km').textContent = money2(tcoEv / distKm * f);
@@ -284,18 +298,10 @@ async function renderCompare() {
   // boşken de kıyas sıfıra karşı yapılıyordu. Artık ikisi de dolu olacak.
   if (!tcoGoster) { $('c-nf-wrap').style.display = 'none'; splitParenLabels(); return; }
   $('c-nf-wrap').style.display = '';
-  const kwhSum = all.reduce((s, r) => s + (r.kwh || 0), 0);
   const nfEvPerKm = expTot / distKm;
   const nfIcePerKm = iceFix / distKm;
-  $('c-nf-ev-km').textContent = money2(nfEvPerKm * f);
-  $('c-nf-ice-km').textContent = money2(nfIcePerKm * f);
-  $('c-nf-ev-100').textContent = money2(nfEvPerKm * 100 * f);
-  $('c-nf-ice-100').textContent = money2(nfIcePerKm * 100 * f);
   const nfEvYear = expTot / days * 365;
   const nfIceYear = S.cmp.icefix || 0;
-  $('c-nf-ev-yr').textContent = money(nfEvYear);
-  $('c-nf-ice-yr').textContent = money(nfIceYear);
-  $('c-nf-kwh').textContent = kwhSum ? money2(expTot / kwhSum) + '/kWh' : '—';
   const nfDiff = nfIceYear - nfEvYear;
   $('c-nf-diff').textContent = (nfDiff >= 0 ? '+' : '') + money(nfDiff);
   $('c-nf-diff').style.color = nfDiff >= 0 ? 'var(--accent-dark)' : 'var(--red)';

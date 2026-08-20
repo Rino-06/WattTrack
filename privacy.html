@@ -26,6 +26,10 @@ verisi) sorgulanır. Yalnızca para birimi kodları ve tarih iletilir; tutar ile
 <li><b>Konum adı ve yakın istasyonlar</b> (yalnızca 📍 butonuna basarsanız): koordinatlarınız
 OpenStreetMap Nominatim ve Open Charge Map servislerine gönderilir; sonuç yalnızca
 formu doldurmak için kullanılır, saklanmaz.</li>
+<li><b>Ülke tahmini</b> (yalnızca ilk kurulum ekranında, bir kez): hangi ülkeden bağlandığınızı
+öğrenip dil, para birimi ve mesafe birimini önermek için bir IP sorgusu yapılır. Hiçbir
+kişisel veriniz gönderilmez ve dönen cevap saklanmaz; sorgu başarısız olursa tarayıcınızın
+dil ayarına düşülür. Önerilen değerleri her zaman elle değiştirebilirsiniz.</li>
 </ul>
 <h2>Çerez, analitik, reklam</h2>
 <p>Uygulamada çerez, analitik, izleme veya reklam <b>yoktur</b>.</p>
@@ -42,9 +46,10 @@ uygulama galerinize doğrudan erişmez.</p>
 <p>All charging records, vehicle info and settings live only in your device's browser
 storage (IndexedDB). Nothing is sent to the developer or any server. There is no account
 or login. Network is used only for: (1) exchange rates from frankfurter.dev (currency
-codes and date only), and (2) reverse-geocoding / nearby-station lookup via OpenStreetMap
+codes and date only), (2) reverse-geocoding / nearby-station lookup via OpenStreetMap
 Nominatim and Open Charge Map, only when you tap the 📍 button (coordinates only, not
-stored). No cookies, no analytics, no ads. Contact:
+stored), and (3) a one-off IP lookup on the first-run setup screen to suggest your country,
+language, currency and distance unit (no personal data sent, result not stored). No cookies, no analytics, no ads. Contact:
 <a href="https://github.com/Rino-06">github.com/Rino-06</a></p>
 </div>
 </body>

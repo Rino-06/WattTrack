@@ -913,38 +913,23 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   }
 }
 
-// --- WT-35: yakıt dışı gider bloğu sadeleşti mi? ---
+// --- Yakıt dışı gider bloğu: türetilmiş kutular tamamen kaldırıldı ---
+// WT-35 bu yedi kutuyu "Detayları göster"in arkasına almıştı; kullanıcı
+// isteğiyle blok tamamen kaldırıldı. Görünen: fark satırı, sabit gider dahil
+// toplam kazanç ve iki bar.
 {
   const doc = window.document;
   const wrap = doc.getElementById('c-nf-wrap');
-  const det = doc.getElementById('c-nf-details');
-  const btn = doc.getElementById('c-nf-more');
-
-  check('WT-35: türetilmiş kutular varsayılan olarak gizli',
-    det.style.display === 'none' && btn.getAttribute('aria-expanded') === 'false');
-  // Kapalıyken görünen sayı: fark + pill + iki bar etiketi
-  const gorunen = [...wrap.querySelectorAll('.tile')].filter(el => !det.contains(el));
-  check('WT-35: kapalıyken hiç türetilmiş kutu görünmüyor', gorunen.length === 0,
-    'görünen kutu=' + gorunen.length);
-  check('WT-35: fark satırı ve iki bar görünür kalıyor',
+  check('türetilmiş yakıt dışı gider kutuları kaldırıldı',
+    !doc.getElementById('c-nf-details') && !doc.getElementById('c-nf-more'));
+  check('blokta hiç türetilmiş kutu kalmadı',
+    wrap.querySelectorAll('.tile').length === 0,
+    'kutu=' + wrap.querySelectorAll('.tile').length);
+  check('fark satırı ve iki bar görünür kalıyor',
     !!doc.getElementById('c-nf-diff') && !!doc.getElementById('c-nf-bar-ev')
-      && !!doc.getElementById('c-nf-bar-ice') && !det.contains(doc.getElementById('c-nf-diff')));
-  check('WT-35: yedi kutunun hiçbiri SİLİNMEDİ, detaya taşındı',
-    det.querySelectorAll('.tile').length === 7,
-    'detaydaki kutu=' + det.querySelectorAll('.tile').length);
-  check('WT-35: detayda "tek tahminden türetildi" uyarısı var',
-    !!det.querySelector('#c-nf-guess'));
-
-  btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  await sleep(60);
-  check('WT-35: butona basınca detay açılıyor',
-    det.style.display !== 'none' && btn.getAttribute('aria-expanded') === 'true',
-    'metin=' + btn.textContent);
-  btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  await sleep(60);
-  check('WT-35: tekrar basınca kapanıyor',
-    det.style.display === 'none' && btn.getAttribute('aria-expanded') === 'false',
-    'metin=' + btn.textContent);
+      && !!doc.getElementById('c-nf-bar-ice'));
+  check('sabit gider dahil toplam kazanç fark satırının YANINDA',
+    !!wrap.querySelector('#c-tcosave'));
 }
 
 // --- WT-34: renk semantiği tek sözlüğe bağlı mı? ---
@@ -960,10 +945,11 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     /\.crow \.free-tag\{color:var\(--accent-dark\)\}/.test(css));
 
   // Kıyasla: EV tarafı yeşil, yakıtlı taraf mavi — kırmızı kalmamalı
+  // Türetilmiş yakıt dışı gider kutuları ve "İndirim etkisi" kaldırıldı.
   const ev = ['c-1km', 'c-ev', 'c-evtot', 'c-savetot', 'c-exptot', 'c-tcoev',
-    'c-tco1km', 'c-nf-ev-km', 'c-nf-ev-100', 'c-nf-ev-yr', 'c-disc-fx'];
+    'c-tco1km'];
   const ice = ['c-ice1km', 'c-ice', 'c-icetot', 'c-icefixtot', 'c-tcoice',
-    'c-tcoice1km', 'c-nf-ice-km', 'c-nf-ice-100', 'c-nf-ice-yr'];
+    'c-tcoice1km'];
   check('WT-34: EV değerlerinin hepsi yeşil',
     ev.every(id => renk(id) === YESIL),
     ev.filter(id => renk(id) !== YESIL).map(id => id + '=' + renk(id)).join(', ') || 'tamam');
@@ -3744,8 +3730,11 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const kaynaklar = ['ui/shell.js', 'ui/settings.js', 'index.html', 'privacy.html',
     '.github/FUNDING.yml']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  // github.com/sponsors/<hesap> biçimi de aynı hesabı gösterir; "sponsors"
+  // bir kullanıcı adı değil, yol parçası.
   const sahipler = new Set(
-    [...kaynaklar.matchAll(/github\.com\/([A-Za-z0-9-]+)/g)].map(m => m[1]));
+    [...kaynaklar.matchAll(/github\.com\/(?:sponsors\/)?([A-Za-z0-9-]+)/g)]
+      .map(m => m[1]).filter(x => x !== 'sponsors'));
   check('GitHub bağlantılarının hepsi AYNI hesabı gösteriyor (harf birebir)',
     sahipler.size === 1 && sahipler.has('Rino-06'), [...sahipler].join(', '));
   check('depo taşındıktan sonra eski hesap adı hiçbir yerde kalmadı',

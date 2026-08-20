@@ -373,6 +373,12 @@ h1,h2{font-size:inherit;font-weight:inherit}
 
 .setting-btn{display:block;width:100%;text-align:left;background:var(--card);border-radius:12px;padding:13px 14px;font-size:14px;font-weight:600;box-shadow:var(--shadow);margin-bottom:10px}
 .setting-btn.danger{color:var(--red)}
+/* Geçmiş özet satırı: filtrelenmiş sonucun toplamı sayfanın en önemli
+   rakamı — düz not yerine kendi kartında ve vurgulu (kullanıcı isteği). */
+.h-summary{display:none;background:var(--card);border-left:4px solid var(--accent);
+  border-radius:12px;padding:10px 14px;margin:10px 0 14px;box-shadow:var(--shadow);
+  font-size:13.5px;font-weight:700;color:var(--ink)}
+.h-summary.on{display:block}
 /* Aylık tüketim grafiği harcama grafiğinden ayrışsın diye uygulama mavisi */
 #s-cons .bar{background:var(--blue)}
 .about{font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:20px}
@@ -829,7 +835,7 @@ nav button{min-height:48px;justify-content:center}
     <select id="f-loc" data-i18n-aria="ariaLocFilter" aria-label="Lokasyon filtresi"></select>
   </div>
   <!-- WT-46/2: asıl istenen — filtrelenmiş sonucun toplamı -->
-  <div class="scope-note" id="h-summary" aria-live="polite" style="margin:10px 0 12px"></div>
+  <div class="h-summary" id="h-summary" aria-live="polite"></div>
   <div id="h-groups"></div>
 </section>
 
@@ -905,22 +911,25 @@ nav button{min-height:48px;justify-content:center}
       <div class="tile"><div class="k" id="c-1km-g-lbl">EV 1 km (indirimsiz)</div><div class="v" id="c-1km-g">—</div></div>
       <div class="tile"><div class="k" id="c-evg-lbl">EV 100 km (indirimsiz)</div><div class="v" id="c-ev-g">—</div></div>
     </div>
-    <div class="tiles">
-      <div class="tile"><div class="k" id="c-discfx-lbl">İndirim etkisi</div><div class="v" id="c-disc-fx" style="color:var(--accent-dark)">—</div></div>
-    </div>
     <div class="hero" style="margin-top:2px">
-      <div class="k" id="c-perkm-lbl">Km başına kazanç</div>
-      <div class="v" id="c-perkm" style="font-size:28px">—</div>
-      <div class="pill" id="c-per100">—</div>
+      <div class="hero2">
+        <div>
+          <div class="k" id="c-perkm-lbl">Km Başına Kazanç</div>
+          <div class="v" id="c-perkm" style="font-size:24px">—</div>
+          <div class="pill" id="c-per100">—</div>
+        </div>
+        <div class="hero-sep"></div>
+        <div>
+          <div class="k" data-i18n="totalSaved">Toplam Kazanç</div>
+          <div class="v" id="c-savetot" style="font-size:24px;color:var(--accent-dark)">—</div>
+        </div>
+      </div>
     </div>
     <h2 class="h2" data-i18n="cumTitle">Bugüne kadar: aynı km yakıtlıyla gidilseydi</h2>
     <div class="tiles">
-      <div class="tile"><div class="k" data-i18n="evSpent">EV toplam (net)</div><div class="v" id="c-evtot" style="color:var(--accent-dark)">—</div></div>
-      <div class="tile"><div class="k" data-i18n="iceWould">Yakıtlıyla olurdu</div><div class="v" id="c-icetot" style="color:var(--blue)">—</div></div>
-    </div>
-    <div class="tiles">
-      <div class="tile"><div class="k" id="c-dist-lbl">Toplam mesafe</div><div class="v" id="c-dist">—</div></div>
-      <div class="tile"><div class="k" data-i18n="totalSaved">Toplam kazanç</div><div class="v" id="c-savetot" style="color:var(--accent-dark)">—</div></div>
+      <div class="tile"><div class="k" data-i18n="evSpent">EV Toplam (Net)</div><div class="v" id="c-evtot" style="color:var(--accent-dark)">—</div></div>
+      <div class="tile"><div class="k" data-i18n="iceWould">Yakıtlıyla Olurdu</div><div class="v" id="c-icetot" style="color:var(--blue)">—</div></div>
+      <div class="tile"><div class="k" id="c-dist-lbl">Toplam Mesafe</div><div class="v" id="c-dist">—</div></div>
     </div>
     <div class="about" id="c-dist-src" style="margin:-6px 0 10px;font-size:12px"></div>
     <div class="chart-card" id="c-line-card">
@@ -944,7 +953,7 @@ nav button{min-height:48px;justify-content:center}
     <div class="about" data-i18n="tcoExplain" style="margin:-4px 0 10px;font-size:12px">Giderler toplamı, Aracım sekmesine girdiğin vergi, sigorta, bakım gibi kalemlerdir.</div>
     <div class="tiles">
       <div class="tile"><div class="k" data-i18n="tcoExpEv">EV sabit giderleri (Aracım)</div><div class="v" id="c-exptot" style="color:var(--accent-dark)">—</div></div>
-      <div class="tile"><div class="k" data-i18n="tcoExpIce">Yakıtlı sabit gider (döneme oranlı)</div><div class="v" id="c-icefixtot" style="color:var(--blue)">—</div></div>
+      <div class="tile"><div class="k" data-i18n="tcoExpIce">Yakıtlı Sabit Gider</div><div class="v" id="c-icefixtot" style="color:var(--blue)">—</div><div class="yd" id="c-icefix-scope"></div></div>
     </div>
     <div class="tiles">
       <div class="tile"><div class="k" data-i18n="tcoEv">EV toplam (şarj + sabit gider)</div><div class="v" id="c-tcoev" style="color:var(--accent-dark)">—</div></div>
@@ -954,11 +963,6 @@ nav button{min-height:48px;justify-content:center}
       <div class="tile"><div class="k" id="c-tco1km-lbl">EV 1 km (sabit gider dahil)</div><div class="v" id="c-tco1km" style="color:var(--accent-dark)">—</div></div>
       <div class="tile"><div class="k" id="c-tcoice1km-lbl">Yakıtlı 1 km (sabit gider dahil)</div><div class="v" id="c-tcoice1km" style="color:var(--blue)">—</div></div>
     </div>
-    <div class="hero" style="margin-top:2px">
-      <div class="k" data-i18n="tcoSaved">Sabit gider dahil toplam kazanç</div>
-      <div class="v" id="c-tcosave" style="font-size:26px">—</div>
-      <div class="pill" id="c-tcopill">—</div>
-    </div>
     <div class="about" id="c-tco-note" style="margin:-4px 0 14px;font-size:12px"></div>
     </div><!-- /#c-tco-wrap -->
 
@@ -967,11 +971,23 @@ nav button{min-height:48px;justify-content:center}
          bu kadar çıktı sahte kesinlik yaratıyor. Görünen: tek fark satırı +
          iki bar. Türetilmiş kutular "Detayları göster"in arkasında. -->
     <div id="c-nf-wrap" style="display:none">
-      <h2 class="h2" data-i18n="nonFuelTitle">Yakıt dışı gider kıyaslaması</h2>
+      <h2 class="h2" data-i18n="nonFuelTitle">Yakıt Dışı Gider Kıyaslaması</h2>
+      <!-- İki özet rakam yan yana: solda yıllık yakıt dışı gider farkı,
+           sağda sabit giderler dahil toplam kazanç (kullanıcı isteği). -->
       <div class="hero" style="margin-top:2px">
-        <div class="k" data-i18n="nonFuelDiffYear">Yıllık yakıt dışı gider farkı</div>
-        <div class="v" id="c-nf-diff" style="font-size:26px">—</div>
-        <div class="pill" id="c-nf-diff-pill">—</div>
+        <div class="hero2">
+          <div>
+            <div class="k" data-i18n="nonFuelDiffYear">Yıllık Yakıt Dışı Gider Farkı</div>
+            <div class="v" id="c-nf-diff" style="font-size:24px">—</div>
+            <div class="pill" id="c-nf-diff-pill">—</div>
+          </div>
+          <div class="hero-sep"></div>
+          <div>
+            <div class="k" data-i18n="tcoSaved">Sabit Gider Dahil Toplam Kazanç</div>
+            <div class="v" id="c-tcosave" style="font-size:24px">—</div>
+            <div class="pill" id="c-tcopill">—</div>
+          </div>
+        </div>
       </div>
       <div class="cmp" style="margin:14px 0">
         <div class="cmp-head" style="margin-bottom:6px">
@@ -981,26 +997,6 @@ nav button{min-height:48px;justify-content:center}
         <div class="track" style="margin-bottom:8px"><div class="fill" id="c-nf-bar-ev" style="width:0%"></div></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted2);margin-bottom:3px"><span id="c-nf-bar-ice-name">Yakıtlı</span><span id="c-nf-bar-ice-lbl">—</span></div>
         <div class="track"><div class="fill" id="c-nf-bar-ice" style="width:0%;background:var(--blue)"></div></div>
-      </div>
-      <button type="button" class="details-toggle" id="c-nf-more"
-        aria-expanded="false" aria-controls="c-nf-details" data-i18n="showDetails">+ Detayları göster</button>
-      <div id="c-nf-details" style="display:none;margin-top:10px">
-        <div class="tiles">
-          <div class="tile"><div class="k" id="c-nf-ev-km-lbl">—</div><div class="v" id="c-nf-ev-km" style="color:var(--accent-dark)">—</div></div>
-          <div class="tile"><div class="k" id="c-nf-ice-km-lbl">—</div><div class="v" id="c-nf-ice-km" style="color:var(--blue)">—</div></div>
-        </div>
-        <div class="tiles">
-          <div class="tile"><div class="k" id="c-nf-ev-100-lbl">—</div><div class="v" id="c-nf-ev-100" style="color:var(--accent-dark)">—</div></div>
-          <div class="tile"><div class="k" id="c-nf-ice-100-lbl">—</div><div class="v" id="c-nf-ice-100" style="color:var(--blue)">—</div></div>
-        </div>
-        <div class="tiles">
-          <div class="tile"><div class="k" id="c-nf-ev-yr-lbl">—</div><div class="v" id="c-nf-ev-yr" style="color:var(--accent-dark)">—</div></div>
-          <div class="tile"><div class="k" id="c-nf-ice-yr-lbl">—</div><div class="v" id="c-nf-ice-yr" style="color:var(--blue)">—</div></div>
-        </div>
-        <div class="tiles" style="margin-bottom:14px">
-          <div class="tile"><div class="k" id="c-nf-kwh-lbl">—</div><div class="v" id="c-nf-kwh">—</div></div>
-        </div>
-        <div class="about" id="c-nf-guess" style="margin:-4px 0 10px;font-size:12px" data-i18n="nonFuelGuessNote">Bu değerlerin hepsi yukarıda girdiğin tek yıllık gider tahmininden türetilmiştir.</div>
       </div>
     </div>
   </div>
@@ -1182,13 +1178,14 @@ nav button{min-height:48px;justify-content:center}
   <div class="about" style="margin-top:-8px">
     <span data-i18n="version">Sürüm</span>: <b id="app-version"></b><br>
     <span data-i18n="storageLbl">Depolama</span>: <span id="storage-info">—</span><br>
-    <span data-i18n="contactDev">Soru ve katkı</span>:
-    <a href="https://github.com/Rino-06" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">github.com/Rino-06</a><br>
     <a href="privacy.html" target="_blank" style="color:var(--accent);font-weight:600" data-i18n="privacy">Gizlilik Politikası</a>
   </div>
   <button class="setting-btn" id="btn-rate" style="color:var(--accent-dark)">★ <span data-i18n="rateApp">Play Store'da Değerlendir</span></button>
-  <div class="about" data-i18n="supportNote">Bu uygulama tamamen ücretsiz ve reklamsız olarak geliştirilmiştir. Projeye destek olmak veya bir kahve ısmarlamak isterseniz GitHub sayfamıza göz atabilirsiniz.</div>
-  <button class="setting-btn" id="btn-support"><span data-i18n="supportDev">GitHub Proje Sayfası</span></button>
+  <!-- Soru ve katkı AYRI iki kutu: biri hata/öneri bildirimine, öteki
+       sponsor sayfasına gidiyor (kullanıcı isteği). -->
+  <button class="setting-btn" id="btn-ask">💬 <span data-i18n="askQuestion">Soru Sor / Hata Bildir</span></button>
+  <button class="setting-btn" id="btn-support" style="color:var(--accent-dark)">❤️ <span data-i18n="supportDev">Projeye Katkıda Bulun</span></button>
+  <div class="about" data-i18n="supportNote">Bu uygulama tamamen ücretsiz ve reklamsızdır. Projeye destek olmak isterseniz sponsor sayfasına göz atabilirsiniz.</div>
 </section>
 
 <!-- WT-59: burada </div></div> yazıyordu; ilki <main class="content">'i

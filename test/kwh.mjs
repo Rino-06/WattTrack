@@ -65,6 +65,7 @@ async function boot() {
     'app.js']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
     + `\n;window.__app = {db, S, t, finishOnboarding, kwhPriceAutofill,
+         guessCountryFromIP, obKonumTahmini, obUlkeUygula,
          defaultKwhPrice, renderSettings, saveSetting, backupPayload,
          importBackupText, loadSettings, kwhFiyatOnar, kwhRegions,
          TR_KWH_2025, renderDashboard};`;
@@ -89,6 +90,57 @@ const deFiyat = A.defaultKwhPrice('DE');
 check('WT-81/8: gömülü tabloda TR ve DE fiyatları ayrı (test anlamlı)',
   trFiyat && deFiyat && Math.abs(trFiyat.p - deFiyat.p) > 1,
   `TR=${trFiyat?.p} ${trFiyat?.cur} · DE=${deFiyat?.p} ${deFiyat?.cur}`);
+
+// ---- Kurulumda ülke tahmini: tarayıcı dili TR olsa da IP başka ülke derse ----
+// Kullanıcı bildirimi: VPN ile yurt dışından bağlanınca sihirbaz yine Türkçe
+// açılıyordu. Tarayıcı dili CİHAZDAN gelir, bağlantının çıktığı ülkeden değil.
+{
+  // IP kaynağı Polonya diyor: uygulamada Lehçe YOK -> İngilizce'ye düşmeli,
+  // ülke/para birimi yine PL olmalı.
+  const orjFetch = w.fetch;
+  w.fetch = async () => ({ok: true, json: async () => ({country_code: 'PL'})});
+  await A.obKonumTahmini();
+  await sleep(150);
+  check('KABUL: IP ülkesi sihirbaza uygulandı (PL)',
+    $(w, 'ob-country').value === 'PL', 'ülke=' + $(w, 'ob-country').value);
+  check('KABUL: çevirisi olmayan ülkede dil İngilizce\'ye düşüyor',
+    $(w, 'ob-lang').value === 'en', 'dil=' + $(w, 'ob-lang').value);
+  check('IP ülkesinin para birimi de uygulandı (PLN)',
+    $(w, 'ob-currency').value === 'PLN', 'para=' + $(w, 'ob-currency').value);
+
+  // Kendi dili olan bir ülke: İspanya -> İspanyolca
+  w.fetch = async () => ({ok: true, json: async () => ({country_code: 'ES'})});
+  await A.obKonumTahmini();
+  await sleep(150);
+  check('KABUL: kendi dili olan ülkede o dil seçiliyor (ES -> es)',
+    $(w, 'ob-country').value === 'ES' && $(w, 'ob-lang').value === 'es',
+    `ülke=${$(w, 'ob-country').value} dil=${$(w, 'ob-lang').value}`);
+
+  // Ağ düşerse sessizce vazgeçilmeli, seçim BOZULMAMALI
+  w.fetch = async () => { throw new Error('offline'); };
+  await A.obKonumTahmini();
+  await sleep(150);
+  check('ağ yoksa tahmin sessizce vazgeçiyor, seçim korunuyor',
+    $(w, 'ob-country').value === 'ES', 'ülke=' + $(w, 'ob-country').value);
+
+  // Tanınmayan ülke kodu uygulanmamalı
+  w.fetch = async () => ({ok: true, json: async () => ({country_code: 'ZZ'})});
+  await A.obKonumTahmini();
+  await sleep(150);
+  check('desteklenmeyen ülke kodu yok sayılıyor',
+    $(w, 'ob-country').value === 'ES', 'ülke=' + $(w, 'ob-country').value);
+
+  // Kullanıcı elle seçim yaptıysa IP cevabı onu EZMEMELİ
+  $(w, 'ob-country').value = 'IT';
+  $(w, 'ob-country').dispatchEvent(new w.Event('change', {bubbles: true}));
+  await sleep(100);
+  w.fetch = async () => ({ok: true, json: async () => ({country_code: 'FR'})});
+  await A.obKonumTahmini();
+  await sleep(150);
+  check('KABUL: kullanıcı elle seçtiyse IP tahmini onu EZMİYOR',
+    $(w, 'ob-country').value === 'IT', 'ülke=' + $(w, 'ob-country').value);
+  w.fetch = orjFetch;
+}
 
 // ---- Kullanıcı onboarding'de ALMANYA'yı seçiyor ----
 $(w, 'ob-country').value = 'DE';
