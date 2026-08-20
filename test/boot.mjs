@@ -493,7 +493,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 
   // c-icefix-lbl özellikle: applyI18n bu id'ye HİÇ dokunmuyordu
   check('WT-22/2: "yakıtlı aracın yıllık sabit gideri" etiketi çevrildi',
-    /Fuel car/.test($('c-icefix-lbl').textContent),
+    /Fuel Car/i.test($('c-icefix-lbl').textContent),
     'etiket=' + $('c-icefix-lbl').textContent.slice(0, 60));
 
   // altı dilin hepsinde sözlük eksiksiz mi?
@@ -2781,7 +2781,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-70: "Kilometre sayacı" başlığı kaldırıldı',
     !/Kilometre sayacı/.test(dash), dash.match(/Kilometre sayacı/) ? 'hâlâ var' : '');
   check('WT-70 KABUL: sayaç etiketi birimi söylüyor (km)',
-    $('d-odo-lbl').textContent === 'Araç km sayacı', $('d-odo-lbl').textContent);
+    $('d-odo-lbl').textContent === 'Araç km Sayacı', $('d-odo-lbl').textContent);
   A.S.unit = 'mi'; A.applyI18n();
   check('WT-70 KABUL: mil seçilince etiket "mi" oluyor',
     /mi/.test($('d-odo-lbl').textContent), $('d-odo-lbl').textContent);
@@ -2918,8 +2918,8 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     'parantezli=' + parenli.length + ' bölünmemiş='
       + parenli.filter(el => !el.querySelector('.paren')).length);
   check('WT-73/3: bölünen etiket metni bozulmadı',
-    /^EV toplam$/.test(doc.querySelector('[data-i18n="tcoEv"]').firstChild.textContent)
-      && /^ \(şarj \+ sabit gider\)$/.test(
+    /^EV Toplam$/.test(doc.querySelector('[data-i18n="tcoEv"]').firstChild.textContent)
+      && /^ \(Şarj \+ Sabit Gider\)$/.test(
         doc.querySelector('[data-i18n="tcoEv"] .paren').textContent),
     doc.querySelector('[data-i18n="tcoEv"]').textContent);
   const cssAll = [...doc.querySelectorAll('style')].map(x => x.textContent).join('\n');
