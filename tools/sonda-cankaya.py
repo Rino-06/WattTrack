@@ -1,69 +1,60 @@
-"""county parametresinin hangi ilçeye denk geldiğini bulur.
+"""county değerinin hangi ilçeye denk geldiğini fiyattan doğrular.
 
-Arşiv sayfası ilçe ADINI yazmıyor, yalnız sayısal county değerini alıyor.
-Bu yüzden eşleme dolaylı kuruluyor: önce ilçe listesini sunan sayfadan
-(varsa) ad-değer çiftleri okunuyor, olmazsa birkaç county değeri için
-BUGÜNÜN fiyatı yazdırılıp elle bilinen değerle karşılaştırılıyor.
+Arşiv sayfası ilçe ADINI hiçbir yerde yazmıyor; yalnız sayısal county
+değerini alıyor. Bu yüzden eşleme dolaylı kuruluyor: aynı gün için farklı
+county değerlerinin GÜNLÜK fiyatları yan yana yazdırılıyor. Elde bilinen
+bir Çankaya fiyatı varsa hangi değerin tuttuğu buradan görülüyor.
+
+Ayrıştırma güncelleyicinin kendi ayrıştırıcısıyla AYNI (kopya değil,
+doğrudan onu içe aktarıyor) — sonda başka bir şey okuyup yanlış güven
+vermesin diye.
 """
-import re, urllib.request
-from datetime import datetime
+import importlib.util, os, re
+from collections import defaultdict
+from datetime import datetime, timezone
 
-BAS = 'https://www.tppd.com.tr'
-ARSIV = BAS + '/gecmis-akaryakit-fiyatlari?id=6&county={c}&StartDate={b}&EndDate={s}'
-UA = {'User-Agent': 'Mozilla/5.0 (WattTrack fiyat sondasi)'}
+yol = os.path.join(os.path.dirname(__file__), 'fiyat-guncelle.py')
+spec = importlib.util.spec_from_file_location('fg', yol)
+fg = importlib.util.module_from_spec(spec); spec.loader.exec_module(fg)
 
-def cek(url):
-    r = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(r, timeout=60) as f:
-        return f.read().decode('utf-8', 'replace')
+BAS = '01.06.2026'
+bugun = datetime.now(timezone.utc).strftime('%d.%m.%Y')
 
-def temiz(h):
-    h = re.sub(r'(?is)<(script|style).*?</\1>', ' ', h)
-    return re.sub(r'\s+', ' ', re.sub(r'(?s)<[^>]+>', ' ', h)).strip()
+def gunluk(county):
+    url = (f"https://www.tppd.com.tr/gecmis-akaryakit-fiyatlari"
+           f"?id={fg.TPPD_IL}&county={county}&StartDate={BAS}&EndDate={bugun}")
+    html = fg.indir(url, 12_000_000).decode('utf-8', 'replace')
+    tablolar = re.findall(r'(?is)<table[^>]*>.*?</table>', html)
+    if not tablolar: return None, 'tablo yok'
+    satirlar = re.findall(r'(?is)<tr[^>]*>(.*?)</tr>', tablolar[0])
+    basliklar = [fg.duz(x) for x in re.findall(r'(?is)<t[dh][^>]*>(.*?)</t[dh]>', satirlar[0])]
+    idx = {}
+    for i, b in enumerate(basliklar):
+        u = b.upper()
+        if 'BENZİN' in u and 'petrol' not in idx: idx['petrol'] = i
+        elif 'MOTORİN' in u and 'diesel' not in idx: idx['diesel'] = i
+    out = []
+    for s in satirlar[1:]:
+        h = [fg.duz(x) for x in re.findall(r'(?is)<t[dh][^>]*>(.*?)</t[dh]>', s)]
+        if len(h) < 2: continue
+        p = fg.sayi(h[idx['petrol']]) if idx.get('petrol', 99) < len(h) else None
+        d = fg.sayi(h[idx['diesel']]) if idx.get('diesel', 99) < len(h) else None
+        if p or d: out.append((h[0], p, d))
+    return out, None
 
-# 1) İlçe listesini sunan sayfayı ara: <option value="1000">ÇANKAYA</option>
-print('=' * 70)
-print('1) İlçe adı -> county değeri eşlemesi aranıyor')
-print('=' * 70)
-bulundu = False
-for yol in ['/akaryakit-fiyatlari', '/gecmis-akaryakit-fiyatlari?id=6',
-            '/akaryakit-fiyatlari?id=6']:
+print('=' * 72)
+print(f'TPPD günlük fiyat — il={fg.TPPD_IL}, {BAS} … {bugun}')
+print('Uygulamanın kullandığı county değeri:', fg.TPPD_ILCE)
+print('=' * 72)
+for c in (1000, 1001, 1002, 1006, 1010):
     try:
-        h = cek(BAS + yol)
+        satir, hata = gunluk(c)
     except Exception as e:
-        print(f'  {yol}: {e}'); continue
-    ops = re.findall(r'<option[^>]*value=["\']?(\d{3,5})["\']?[^>]*>([^<]{2,40})</option>', h, re.I)
-    ops = [(v, a.strip()) for v, a in ops if a.strip()]
-    if ops:
-        bulundu = True
-        print(f'  {yol}: {len(ops)} seçenek')
-        for v, a in ops:
-            if v in ('1000', '1001') or 'ANKAYA' in a.upper():
-                print(f'    >>> value={v}  ad={a}')
-        print('    ilk 12:', ops[:12])
-    else:
-        print(f'  {yol}: option bulunamadı')
-if not bulundu:
-    print('  (sayfa ilçe listesini sunucu tarafında üretmiyor olabilir)')
-
-# 2) Bugünün fiyatı: birkaç county değeri yan yana
-print()
-print('=' * 70)
-print('2) Bugünün fiyatı — county değerlerine göre')
-print('=' * 70)
-bugun = datetime.now().strftime('%d.%m.%Y')
-bas = datetime.now().strftime('01.%m.%Y')
-for c in (1000, 1001, 1002, 1006):
-    try:
-        h = cek(ARSIV.format(c=c, b=bas, s=bugun))
-    except Exception as e:
-        print(f'  county={c}: HATA {e}'); continue
-    t = temiz(h)
-    # son satır: tarih + fiyatlar
-    satir = re.findall(r'(\d{2}\.\d{2}\.\d{4})((?:\s+\d+[.,]\d+)+)', t)
-    if not satir:
-        print(f'  county={c}: veri satırı okunamadı'); continue
-    tarih, ham = satir[-1]
-    say = [x.replace(',', '.') for x in ham.split()]
-    print(f'  county={c:5d}  {tarih}  benzin={say[0]}  motorin={say[2] if len(say)>2 else "?"}'
-          f'   (tüm sütunlar: {say})')
+        print(f'  county={c:5d}  HATA: {e}'); continue
+    if hata or not satir:
+        print(f'  county={c:5d}  okunamadı ({hata})'); continue
+    isaret = '  <== uygulamanın kullandığı' if c == fg.TPPD_ILCE else ''
+    print(f'  county={c:5d}  satır={len(satir):3d}  SON: {satir[-1][0]}  '
+          f'benzin={satir[-1][1]}  motorin={satir[-1][2]}{isaret}')
+    for t, p, d in satir[-3:]:
+        print(f'              {t}  benzin={p}  motorin={d}')
