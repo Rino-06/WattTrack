@@ -1,4 +1,4 @@
-name: sonda-id
+name: tr-fiyat-sonda
 on: workflow_dispatch
 jobs:
   sonda:
