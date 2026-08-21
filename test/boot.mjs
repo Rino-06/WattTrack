@@ -3380,13 +3380,27 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 0, prorate: true};
   await A.renderCompare();
   await sleep(400);
-  // 2023-09 motorin 39,181 · 2026-06 motorin: gömülü tablodan
-  const bek = Math.round(1000 * 0.10 * H.m['2023-09'][1] + 1000 * 0.10 * H.m['2026-06'][1]);
+  // Beklenen değer tablodan TÜRETİLİYOR: kaynak her ay yeniden çekildiği
+  // için belirli bir ayın var olduğu varsayılamaz. fiyatBul() gibi
+  // "tarihten önceki son fiyat" seçiliyor (yoksa en eskisi).
+  const motorinFiyati = t => {
+    const uygun = aylar.filter(a => a + '-01' <= t && H.m[a][1] != null);
+    const a = uygun.length ? uygun[uygun.length - 1]
+                           : aylar.find(x => H.m[x][1] != null);
+    return H.m[a][1];
+  };
+  const f1 = motorinFiyati('2023-09-15'), f2 = motorinFiyati('2026-06-15');
+  const bek = Math.round(1000 * 0.10 * f1 + 1000 * 0.10 * f2);
   // money() ondalıksız yazıyor; binlik ayıracı "." olduğu için pf() değil
   // doğrudan rakamlar okunuyor
   const okunan = Number($('c-icetot').textContent.replace(/[^\d]/g, ''));
   check('WT-77 KABUL: kullanıcı hiç fiyat girmeden geçmiş fiyatlar kullanıldı',
     Math.abs(okunan - bek) <= 2, 'beklenen≈' + bek + ' okunan=' + okunan);
+  // Tek bir fiyat her kayda uygulansaydı bu sınama da geçerdi; iki tarihin
+  // fiyatı gerçekten AYRI olmalı ki "kaydın kendi tarihindeki fiyat" iddiası
+  // sınanmış olsun.
+  check('WT-77: iki kaydın fiyatı birbirinden farklı (tarihe göre seçiliyor)',
+    f1 !== f2, `2023-09→${f1} · 2026-06→${f2}`);
   check('WT-77: tek fiyat uyarısı artık çıkmıyor (çok aylık geçmiş var)',
     !/tek fiyat/i.test($('c-veh-note').textContent)
       && /fiyat kaydı/i.test($('c-veh-note').textContent),
