@@ -3314,8 +3314,14 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const aylar = Object.keys(H.m).sort();
   // Tablo artık otomatik tazeleniyor; ay SAYISI koşumdan koşuma değişir.
   // Sınanan şey sayı değil, verinin yeterli ve güncel olması.
-  check('WT-77 KABUL: en az 24 aylık geçmiş var',
-    aylar.length >= 24, 'ay=' + aylar.length);
+  //
+  // Eşik 24'tü, 12'ye indi. Gömülen geçmiş 24 AYLIK KAYAN PENCERE ama
+  // kaynak o pencerenin her ayında fiyat yayımlamıyor (TPPD 24 ayın
+  // ~19'unda yayımlıyor). Eşiği pencere boyuna eşitlemek, kaynağın
+  // seyrekliğini kusur saymak olurdu. 12, "kazıma çöktü, elde bir şey
+  // yok" durumunu hâlâ yakalar.
+  check('WT-77 KABUL: yeterli geçmiş var (en az 12 ay)',
+    aylar.length >= 12, 'ay=' + aylar.length);
   check('WT-77: geçmiş güncel (son ay en fazla 3 ay eski)', (() => {
     const [y, m] = aylar[aylar.length - 1].split('-').map(Number);
     const son = new Date(y, m - 1, 1), bugun = new Date();

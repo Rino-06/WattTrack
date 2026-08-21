@@ -39,7 +39,12 @@ TPPD_BASLANGIC = '01.01.2020'
 # çevrimdışı çalışıyor: tabloyu olduğu gibi gömmek evprices.js'i 11 KB'den
 # ~230 KB'ye çıkarırdı. Sekiz yıl, gerçekçi bir şarj geçmişini fazlasıyla
 # kapsıyor. Değeri büyütmek dosyayı doğrusal büyütür.
-GECMIS_YIL = 8
+# Gömülecek geçmişin derinliği, AY cinsinden kayan pencere.
+# Yıl bazlı ("bu yıl eksi N") bir kesim her 1 Ocak'ta bir yıllık veriyi
+# tek seferde uçuruyordu: 31 Aralık'ta 20 ay olan geçmiş, ertesi sabah
+# 12 aya düşerdi. Kayan pencere bu uçurumu yapmaz — her ay bir yeni ay
+# girer, bir eski ay çıkar.
+GECMIS_AY = 24
 
 # Litre başına yakıt fiyatı AVRO KARŞILIĞI bu aralığın dışındaysa veri
 # şüphelidir. Para biriminden bağımsız olsun diye ölçüt hep avro cinsinden:
@@ -80,6 +85,12 @@ AB_SAYFA = "https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en
 # bültendeki avro değeri doğrudan kullanılıyor ve geçmiş tam.
 AVRO_DISI = {'CZ': 'CZK', 'DK': 'DKK', 'HU': 'HUF',
              'PL': 'PLN', 'RO': 'RON', 'SE': 'SEK'}
+
+def en_eski_ay():
+    """Kayan pencerenin en eski ayı, 'YYYY-MM' olarak."""
+    b = datetime.now(timezone.utc)
+    top = b.year * 12 + (b.month - 1) - (GECMIS_AY - 1)
+    return f"{top // 12:04d}-{top % 12 + 1:02d}"
 
 def uygulama_ulkeleri():
     """evdata.js'teki COUNTRIES kodları. Tablo yalnız uygulamanın
@@ -207,7 +218,7 @@ def ab_tablo():
     if not aylar: raise SystemExit("AB: hiç ay üretilmedi")
     # Kur serisi YALNIZ gömülecek dönem için; TRY de isteniyor çünkü Türkiye
     # verisinin denetimi de avro karşılığı üzerinden yapılıyor.
-    bas = max(aylar[0], f"{datetime.now(timezone.utc).year - GECMIS_YIL}-01")
+    bas = max(aylar[0], en_eski_ay())
     kur = fx_serisi(set(AVRO_DISI.values()) | {'TRY'}, bas + '-01', aylar[-1] + '-28')
     # ay -> ortalama kur
     # Kur artık (gün, kur) çifti olarak tutuluyor: fiyat tek bir günün
@@ -217,7 +228,7 @@ def ab_tablo():
         for p, v in m.items():
             ay_kur[gun[:7]][p].append((gun, v))
 
-    en_eski = f"{datetime.now(timezone.utc).year - GECMIS_YIL}-01"
+    en_eski = en_eski_ay()
     out, atilan = {}, 0
     for kod, veri in sorted(aylik.items()):
         para = AVRO_DISI.get(kod)
@@ -334,7 +345,7 @@ def tr_tablo():
         temiz_seri, _ = dikenleri_ayikla(sorted(seri[tur]), f'TR/{tur}')
         for gun, v in temiz_seri:
             aylik[gun[:7]][tur].append((gun, v))
-    en_eski = f"{datetime.now(timezone.utc).year - GECMIS_YIL}-01"
+    en_eski = en_eski_ay()
     m = {}
     for ay in sorted(aylik):
         if ay < en_eski: continue
