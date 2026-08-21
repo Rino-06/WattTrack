@@ -18,7 +18,7 @@ KAYNAKLAR
 Kullanım:  python tools/fiyat-guncelle.py [--yaz]
            --yaz verilmezse hiçbir dosya değiştirilmez, yalnız rapor basılır.
 """
-import io, json, re, sys, urllib.request, urllib.error
+import io, json, os, re, sys, urllib.request, urllib.error
 from collections import defaultdict
 from datetime import datetime, timezone
 
@@ -77,6 +77,19 @@ AB_SAYFA = "https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en
 AVRO_DISI = {'BG': 'BGN', 'CZ': 'CZK', 'DK': 'DKK', 'HU': 'HUF',
              'PL': 'PLN', 'RO': 'RON', 'SE': 'SEK'}
 
+def uygulama_ulkeleri():
+    """evdata.js'teki COUNTRIES kodları. Tablo yalnız uygulamanın
+    seçilebilir ülkelerinden oluşsun diye ölçüt buradan geliyor —
+    bültendeki 'EU' ortalama bloğu gibi ülke OLMAYAN sütunlar böyle
+    eleniyor, üstelik liste büyüdüğünde bu dosyayı elle güncellemek
+    gerekmiyor."""
+    yol = os.path.join(os.path.dirname(__file__), '..', 'evdata.js')
+    with open(yol, encoding='utf-8') as f: s = f.read()
+    i = s.index('COUNTRIES')
+    kodlar = set(re.findall(r"\['([A-Z]{2})',", s[i:s.index('];', i)]))
+    if len(kodlar) < 20: raise SystemExit('COUNTRIES okunamadı')
+    return kodlar
+
 def ab_dosya_adresi():
     html = indir(AB_SAYFA, 8_000_000).decode('utf-8', 'replace')
     for m in re.finditer(r'href="([^"]*document/download/[^"]*?)"', html, re.I):
@@ -113,10 +126,13 @@ def ab_cek():
 
     # ülke kodu ilk veri satırından okunuyor ('AT_' gibi)
     veri = satir[3:]
+    gecerli = uygulama_ulkeleri()
     ulke_sutun = {}
     for bas, son in bloklar:
         kod = str(veri[0][bas] or '').rstrip('_')
-        if len(kod) != 2: continue          # EU_ ortalaması ve boş bloklar atlanır
+        # 'EU_' ortalaması iki harfli olduğu için uzunluk denetimine TAKILMIYOR;
+        # ölçüt uygulamanın ülke listesi (boş bloklar da böyle eleniyor).
+        if kod not in gecerli: continue
         ulke_sutun[kod] = {
             'petrol': sutun_bul(bas, son, r'Euro[- ]?super\s*95'),
             'diesel': sutun_bul(bas, son, r'Gas oil automobile', r'chauffage'),

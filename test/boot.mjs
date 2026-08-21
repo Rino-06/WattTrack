@@ -3343,6 +3343,17 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       .join(',') || 'tamam');
   check('WT-77: eksik otogaz değeri UYDURULMUYOR (null geçiliyor)',
     aylar.every(a => H.m[a][2] === null || typeof H.m[a][2] === 'number'));
+  // Bülten ülke sütunlarının yanında bir de 'EU' ortalama bloğu yayımlıyor.
+  // O bir ülke değil: kullanıcı seçemez, para birimi karşılığı yok. Tabloya
+  // sızarsa hiçbir ekranda görünmediği için sessiz kalırdı.
+  check('WT-77: tabloda ülke OLMAYAN anahtar yok (bültenin EU ortalaması dahil)',
+    (() => {
+      const gecerli = new Set(A.COUNTRIES.map(c => c[0]));
+      return Object.keys(A.FUEL_HIST).every(k => gecerli.has(k));
+    })(),
+    Object.keys(A.FUEL_HIST).filter(k =>
+      !A.COUNTRIES.some(c => c[0] === k)).join(',') || 'tamam');
+
   check('WT-77 KABUL: kaynak künyesi var (uydurma veri değil)',
     !!A.FUEL_HIST_SRC[H.src] && /^https:\/\//.test(A.FUEL_HIST_SRC[H.src].url)
       && (A.FUEL_HIST_SRC[H.src].ad || '').length > 4
