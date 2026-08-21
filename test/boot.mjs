@@ -1442,7 +1442,9 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 // yanlış olabildiği için geçmişe dönük kıyas bozuluyordu. Artık ölçüt ülke
 // düzeyinde yayımlanan ortalama bayi satış fiyatı; girilen fiyat yalnız
 // bugünkü birim maliyet kutularında ve yayımlanmış verisi olmayan ülkelerde
-// kullanılıyor. Yayımlanmış veri TR'de var (gömülü), DE'de yok.
+// kullanılıyor. Yayımlanmış veri TR'de var (gömülü), MC'de yok — AB
+// bülteni eklendikten sonra DE'nin de geçmişi var, bu yüzden ölçüt ülke
+// olarak AB üyesi OLMAYAN Monako alındı.
 {
   const A = app();
   A.S.unit = 'km'; A.S.cmpVeh = '';
@@ -1450,7 +1452,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.db.fuelPrices.clear();
 
   // --- (1) Yayımlanmış verisi OLMAYAN ülke: tek güncel fiyat tüm geçmişe ---
-  A.S.country = 'DE';
+  A.S.country = 'MC';
   await A.db.sessions.bulkAdd([
     {tarih: '2024-06-15T12:00', firma: 'ZES', tip: 'DC', kwh: 50, tutar: 500,
       odenen: 500, cur: 'TRY', mesafeKm: 300, aracId: null},
@@ -1478,8 +1480,8 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 
   // --- (3) Kullanıcının ESKİ elle girdileri ölçüt olarak KULLANILMIYOR ---
   await A.db.fuelPrices.bulkAdd([
-    {tarih: '2024-01-01', tur: 'diesel', fiyat: 5, ulke: 'DE'},
-    {tarih: '2026-01-01', tur: 'diesel', fiyat: 5, ulke: 'DE'}
+    {tarih: '2024-01-01', tur: 'diesel', fiyat: 5, ulke: 'MC'},
+    {tarih: '2026-01-01', tur: 'diesel', fiyat: 5, ulke: 'MC'}
   ]);
   A.S.cmp = {fuel: 'diesel', price: 60, cons: 10, icefix: 0, prorate: true};
   await A.renderCompare();
