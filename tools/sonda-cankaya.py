@@ -43,6 +43,18 @@ def gunluk(county):
     return out, None
 
 print('=' * 72)
+print('HAM SATIRLAR — county=%s, tum sutunlar' % fg.TPPD_ILCE)
+print('=' * 72)
+url = (f"https://www.tppd.com.tr/gecmis-akaryakit-fiyatlari"
+       f"?id={fg.TPPD_IL}&county={fg.TPPD_ILCE}&StartDate={BAS}&EndDate={bugun}")
+html = fg.indir(url, 12_000_000).decode('utf-8', 'replace')
+tab = re.findall(r'(?is)<table[^>]*>.*?</table>', html)[0]
+satirlar = re.findall(r'(?is)<tr[^>]*>(.*?)</tr>', tab)
+for s2 in satirlar[:1] + satirlar[-12:]:
+    h = [fg.duz(x) for x in re.findall(r'(?is)<t[dh][^>]*>(.*?)</t[dh]>', s2)]
+    print(f'  hucre={len(h):2d}  {h}')
+print()
+print('=' * 72)
 print(f'TPPD günlük fiyat — il={fg.TPPD_IL}, {BAS} … {bugun}')
 print('Uygulamanın kullandığı county değeri:', fg.TPPD_ILCE)
 print('=' * 72)
