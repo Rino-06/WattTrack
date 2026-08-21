@@ -1,93 +1,81 @@
-"""AB Haftalık Petrol Bülteni — GEÇMİŞ dosyası sondası (2. tur).
+"""AB Petrol Bülteni geçmiş dosyası — 3. tur: ülke ve para birimi haritası.
 
-Birinci tur şunları kanıtladı:
-  - Bülten sayfası erişilebilir, anahtar gerekmiyor
-  - Haftalık "vergiler dahil" dosyası AB ÜYELERİNİ kapsıyor, TÜRKİYE YOK
-  - Yakıt türleri: Euro-super 95, Gas oil (dizel), LPG — uygulamayla örtüşüyor
-  - Birim: 1000 litre başına EUR
+Kanıtlanan (1. ve 2. tur):
+  - Dosya: Weekly_Oil_Bulletin_Prices_History_*.xlsx, anahtar gerekmiyor
+  - Sayfa "Prices with taxes" = vergiler dahil tüketici fiyatı (uygulamanın istediği)
+  - 2018-10-15 … 2026-08-17, HAFTALIK, 399 satır, 226 sütun
+  - Yakıtlar: Euro-super 95 · Gas oil automobile (dizel) · GPL (LPG) — 1000 litre başına
+  - TÜRKİYE YOK
 
-Bu tur asıl işe yarayacak dosyayı inceliyor:
-  Weekly_Oil_Bulletin_Prices_History_*.xlsx
-Sorular: tarih aralığı? ülke listesi? para birimi (EUR mi ulusal mı)?
-sütun düzeni nasıl — ayrıştırıcıyı buna göre yazacağız.
+Bu tur: 226 sütun hangi ülkelere ait, fiyatlar EUR mu ulusal para mı?
 """
-import io, re, urllib.request
+import io, re, urllib.request, datetime
 import openpyxl
 
 UA = {'User-Agent': 'Mozilla/5.0 (compatible; fuel-data-probe)'}
-
 def al(url, limit=80_000_000):
     r = urllib.request.Request(url, headers=UA)
     with urllib.request.urlopen(r, timeout=120) as f:
-        return f.status, f.headers.get('Content-Type', ''), f.read(limit)
+        return f.read(limit)
 
-LANDING = "https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en"
-
-print("=" * 70)
-print("ADIM 1 — Geçmiş dosyasının bağlantısını sayfadan KEŞFET")
-print("=" * 70)
-# UUID'li adres zamanla değişebilir; bağlantı DOSYA ADI ÖRÜNTÜSÜNDEN bulunuyor.
-st, ct, body = al(LANDING)
-html = body.decode('utf-8', 'replace')
-aday = []
+html = al("https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en").decode('utf-8','replace')
+url = None
 for m in re.finditer(r'href="([^"]*document/download/[^"]*?)"', html, re.I):
     h = m.group(1)
-    if h.startswith('/'):
-        h = 'https://energy.ec.europa.eu' + h
+    if h.startswith('/'): h = 'https://energy.ec.europa.eu' + h
     if re.search(r'Prices?_History', h, re.I):
-        aday.append(h.replace('&amp;', '&'))
-aday = list(dict.fromkeys(aday))
-print(f"  'Prices_History' içeren bağlantı: {len(aday)}")
-for h in aday[:5]:
-    print("   -", h[:160])
-if not aday:
-    raise SystemExit("Geçmiş dosyası bağlantısı bulunamadı")
+        url = h.replace('&amp;','&'); break
+print("dosya:", url[:120])
 
-url = aday[0]
-print()
-print("=" * 70)
-print("ADIM 2 — Dosyayı indir ve yapısını çıkar")
-print("=" * 70)
-st, ct, body = al(url)
-print(f"  durum={st}  tip={ct[:60]}  boyut={len(body)}")
-wb = openpyxl.load_workbook(io.BytesIO(body), read_only=True, data_only=True)
-print(f"  sayfalar ({len(wb.sheetnames)}):", wb.sheetnames[:20])
+wb = openpyxl.load_workbook(io.BytesIO(al(url)), read_only=True, data_only=True)
+ws = wb['Prices with taxes']
+rows = []
+for i, r in enumerate(ws.iter_rows(values_only=True)):
+    rows.append(r)
+    if i > 6: break
+baslik, altbaslik, birim = rows[0], rows[1], rows[2]
+ornek = rows[3]
 
-for sayfa in wb.sheetnames[:3]:
-    ws = wb[sayfa]
-    print(f"\n  ===== SAYFA: {sayfa} =====")
-    satirlar = []
-    for i, row in enumerate(ws.iter_rows(values_only=True)):
-        satirlar.append(row)
-        if i > 400: break
-    print(f"  okunan satır: {len(satirlar)}  sütun: {max((len(r) for r in satirlar), default=0)}")
-    print("  --- ilk 10 satır (ilk 9 sütun) ---")
-    for r in satirlar[:10]:
-        h = [('' if c is None else str(c)[:20]) for c in r[:9]]
-        print("   |", " | ".join(h))
-    print("  --- son 3 satır ---")
-    for r in satirlar[-3:]:
-        h = [('' if c is None else str(c)[:20]) for c in r[:9]]
-        print("   |", " | ".join(h))
+print("\n" + "="*70)
+print("SÜTUN HARİTASI — ülke blokları")
+print("="*70)
+# Düzen: [Tarih] [CTR] [6 fiyat] [para birimi] [CTR] [6 fiyat] [para birimi] ...
+bloklar = []
+for i, v in enumerate(baslik):
+    if v == 'CTR':
+        kod = ornek[i] if i < len(ornek) else None
+        # bloğun sonundaki para birimi işareti
+        para = None
+        for j in range(i+1, min(i+9, len(ornek))):
+            s = str(ornek[j]) if ornek[j] is not None else ''
+            if re.match(r'^[A-Z]{3}_$', s): para = s; break
+        bloklar.append((i, kod, para))
+print(f"blok sayısı: {len(bloklar)}")
+for i, kod, para in bloklar:
+    print(f"  sütun {i:>3}  ülke={str(kod):<6} para={str(para):<6}")
 
-    metin = " ".join(str(c) for r in satirlar for c in r if c is not None)
-    print("  TÜRKİYE:", "VAR" if re.search(r'Turkey|Türkiye|Turkiye', metin) else "YOK")
-    for p in ['EUR', 'euro', 'National', 'national', 'CTR', 'VAT', 'Taxes', 'taxes']:
-        if p in metin: print("   ipucu VAR:", p)
-    # ülke adı taraması
-    ulkeler = ['Austria','Belgium','Bulgaria','Croatia','Cyprus','Czechia','Denmark',
-               'Estonia','Finland','France','Germany','Greece','Hungary','Ireland',
-               'Italy','Latvia','Lithuania','Luxembourg','Malta','Netherlands','Poland',
-               'Portugal','Romania','Slovakia','Slovenia','Spain','Sweden',
-               'Norway','Switzerland','United Kingdom','Iceland','Serbia','Albania']
-    bulunan = [u for u in ulkeler if u in metin]
-    print(f"  bulunan ülke ({len(bulunan)}):", ", ".join(bulunan[:35]))
-    # tarih aralığı
-    import datetime
-    tarihler = [c for r in satirlar for c in r if isinstance(c, datetime.datetime)]
-    if tarihler:
-        print(f"  tarih aralığı: {min(tarihler).date()} … {max(tarihler).date()}  (adet={len(tarihler)})")
+kodlar = [str(k).rstrip('_') for _, k, _ in bloklar if k]
+paralar = sorted({str(p) for _, _, p in bloklar if p})
+print(f"\nülke kodları ({len(kodlar)}):", ", ".join(kodlar))
+print("kullanılan para birimleri:", paralar)
 
-print("\n" + "=" * 70)
-print("SONDA BİTTİ")
-print("=" * 70)
+print("\n" + "="*70)
+print("WattTrack'in 45 ÜLKESİYLE ÖRTÜŞME")
+print("="*70)
+wt = ['TR','DE','FR','GB','US','CA','ES','IT','NL','BE','AT','CH','PT','IE','NO','SE',
+      'DK','FI','IS','PL','CZ','SK','HU','RO','BG','GR','HR','SI','RS','BA','ME','MK',
+      'AL','XK','MD','EE','LV','LT','LU','MT','CY','LI','MC','AD','SM']
+bult = {k for k in kodlar if len(k) == 2}
+var = [c for c in wt if c in bult]
+yok = [c for c in wt if c not in bult]
+print(f"KAPSANAN ({len(var)}/45):", ", ".join(var))
+print(f"KAPSANMAYAN ({len(yok)}):", ", ".join(yok))
+
+print("\n" + "="*70)
+print("YAKIT SÜTUNLARI (ilk ülke bloğu)")
+print("="*70)
+i0 = bloklar[0][0]
+for j in range(i0+1, i0+8):
+    if j < len(altbaslik):
+        print(f"  sütun {j}: {str(altbaslik[j])[:45]:<45} birim={birim[j] if j < len(birim) else ''}")
+print("\nSONDA BİTTİ")
