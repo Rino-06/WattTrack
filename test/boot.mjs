@@ -3447,12 +3447,14 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     (await A.allFuelPrices()).length === 0);
 
   // --- fiyat geçmişi ekranı (SALT OKUNUR) ---
-  // Ekran artık seçili yakıt türünü listeliyor: 36 ay × tek tür.
+  // Ekran seçili yakıt türünü listeliyor: pencere kadar ay × tek tür.
+  // Eşik yukarıdaki ay sayısı sınamasıyla AYNI gerekçeyle 12: gömülen
+  // geçmiş 24 aylık kayan pencere ama kaynak her ayında yayımlamıyor.
   await A.openFuelHist();
   await sleep(300);
   const satir = doc.querySelectorAll('#fp-list li');
   check('WT-77: geçmiş ekranı yayımlanan fiyatları listeliyor',
-    satir.length >= 24, 'satır=' + satir.length);
+    satir.length >= 12, 'satır=' + satir.length);
   check('WT-77 KABUL: yayımlanan satırlarda silme düğmesi YOK',
     doc.querySelectorAll('#fp-list [data-fdel]').length === 0);
   check('WT-77 KABUL: fiyatın nereden geldiği ekranda yazılı',
@@ -3466,7 +3468,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       $('fp-type').value = 'petrol';
       $('fp-type').dispatchEvent(new window.Event('change', {bubbles: true}));
       await sleep(250);
-      return doc.querySelectorAll('#fp-list li').length >= 24;
+      return doc.querySelectorAll('#fp-list li').length >= 12;
     })(), 'satır=' + doc.querySelectorAll('#fp-list li').length);
   await A.overlayClose('page-fuelprice', {force: true});
   await A.db.fuelPrices.clear();
