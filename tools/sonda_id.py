@@ -1,34 +1,34 @@
-import sys, re
+import sys, re, json
 sys.path.insert(0, 'tools')
 import importlib.util
 spec = importlib.util.spec_from_file_location('fg', 'tools/fiyat-guncelle.py')
 fg = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fg)
 
-# 1) Ana sayfadan id -> şirket adı eşlemesini bul (select/option kalıbı)
 html = fg.indir("https://www.tppd.com.tr/gecmis-akaryakit-fiyatlari", 3_000_000).decode('utf-8', 'replace')
-opts = re.findall(r'<option[^>]*value=["\']?(\d+)["\']?[^>]*>([^<]+)</option>', html, re.I)
-print("=== id seçenekleri (ilk 40) ===")
-for v, t in opts[:40]:
-    print(f"  id={v}  ->  {t.strip()}")
-print(f"toplam seçenek: {len(opts)}")
 
+# Sayfadaki select elemanlarını bul (id="..." isimleriyle)
+selects = re.findall(r'(?is)<select[^>]*(?:id|name)=["\']?([\w-]+)["\']?[^>]*>(.*?)</select>', html)
+print("=== sayfadaki <select> elemanları ===")
+for name, body in selects:
+    opts = re.findall(r'<option[^>]*value=["\']?(\d+)["\']?[^>]*>([^<]+)</option>', body, re.I)
+    print(f"-- select={name}  (secenek={len(opts)}) --")
+    for v, t in opts[:15]:
+        print(f"   {v} -> {t.strip()}")
+
+# JS içinde ilçe/county çağrısı var mı (ajax url) ara
 print()
-print("=== id=6 için ham temmuz satırları (county=1000) ===")
-tablo = fg.tr_tablo()
-print("2026-07 secilen deger:", tablo['m'].get('2026-07'))
+print("=== 'county' veya 'ilce' geçen script parçaları ===")
+for m in re.finditer(r'.{80}(county|ilce|İlçe|ilçe).{80}', html, re.I):
+    print(" ...", m.group(0).replace("\n", " ").strip(), "...")
 
-# Ham satırları da göster
-url = (f"https://www.tppd.com.tr/gecmis-akaryakit-fiyatlari"
-       f"?id=6&county=1000&StartDate=01.07.2026&EndDate=31.07.2026")
-html2 = fg.indir(url, 3_000_000).decode('utf-8', 'replace')
-tablolar = re.findall(r'(?is)<table[^>]*>.*?</table>', html2)
-if tablolar:
-    satirlar = re.findall(r'(?is)<tr[^>]*>(.*?)</tr>', tablolar[0])
-    basliklar = [fg.duz(x) for x in re.findall(r'(?is)<t[dh][^>]*>(.*?)</t[dh]>', satirlar[0])]
-    print("basliklar:", basliklar)
-    for s in satirlar[1:]:
-        h = [fg.duz(x) for x in re.findall(r'(?is)<t[dh][^>]*>(.*?)</t[dh]>', s)]
-        print(" ", h)
-else:
-    print("tablo bulunamadi")
+# id=6 seçiliyken ilçe dropdown'ı sunucu tarafı render mı ediyor? id parametresiyle tekrar iste
+html2 = fg.indir("https://www.tppd.com.tr/gecmis-akaryakit-fiyatlari?id=6", 3_000_000).decode('utf-8', 'replace')
+selects2 = re.findall(r'(?is)<select[^>]*(?:id|name)=["\']?([\w-]+)["\']?[^>]*>(.*?)</select>', html2)
+print()
+print("=== id=6 ile tekrar istekte <select> elemanları ===")
+for name, body in selects2:
+    opts = re.findall(r'<option[^>]*value=["\']?(\d+)["\']?[^>]*>([^<]+)</option>', body, re.I)
+    print(f"-- select={name}  (secenek={len(opts)}) --")
+    for v, t in opts[:30]:
+        print(f"   {v} -> {t.strip()}")
