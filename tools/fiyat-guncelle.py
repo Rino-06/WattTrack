@@ -155,8 +155,38 @@ def ab_cek():
                 if j is None or j >= len(r): continue
                 v = r[j]
                 if isinstance(v, (int, float)) and v > 0:
-                    aylik[kod][(ay, tur)].append(v / 1000.0)
+                    aylik[kod][(ay, tur)].append((t.strftime('%Y-%m-%d'),
+                                                  v / 1000.0))
     return aylik
+
+AY_ORTASI = 15
+
+def ay_ortasina_en_yakin(kayitlar):
+    """[(YYYY-MM-DD, deger)] içinden ayın ORTASINA en yakın günü seçer.
+
+    Ay ortalaması yerine tek bir günün fiyatı gömülüyor: ortalama kimsenin
+    ödemediği yapay bir sayı, ayın ortasındaki fiyat ise o tarihte gerçekten
+    geçerli olmuş bir fiyat. Kaynak her gün yayımlamadığı için "ayın 15'i"
+    diye sabit bir gün aranmıyor, o aydaki YAYIMLANMIŞ günler arasından
+    15'e en yakını alınıyor. Eşitlikte erken gün kazanır (sonuç koşumdan
+    koşuma değişmesin diye).
+    """
+    if not kayitlar: return None
+    gun_no = lambda g: int(g[8:10])
+    en = min(kayitlar, key=lambda kv: (abs(gun_no(kv[0]) - AY_ORTASI), kv[0]))
+    return en[1]
+
+def kura_en_yakin(seri, gun):
+    """Fiyatın seçildiği güne en yakın kuru döndürür.
+
+    Fiyat artık belirli bir günün fiyatı olduğu için çevrimin de o günün
+    kuruyla yapılması gerekiyor; ay ortalaması kuru başka bir günün fiyatına
+    uygulanmış olurdu. ECB yalnız iş günü yayımladığından tam gün her zaman
+    bulunmaz, en yakın tarih alınıyor.
+    """
+    if not seri: return None
+    return min(seri, key=lambda kv: (abs(
+        (datetime.fromisoformat(kv[0]) - datetime.fromisoformat(gun)).days), kv[0]))[1]
 
 def fx_serisi(para_birimleri, bas, bit):
     """ECB kurları (frankfurter, anahtarsız). {tarih: {PARA: kur}}"""
@@ -180,10 +210,12 @@ def ab_tablo():
     bas = max(aylar[0], f"{datetime.now(timezone.utc).year - GECMIS_YIL}-01")
     kur = fx_serisi(set(AVRO_DISI.values()) | {'TRY'}, bas + '-01', aylar[-1] + '-28')
     # ay -> ortalama kur
+    # Kur artık (gün, kur) çifti olarak tutuluyor: fiyat tek bir günün
+    # fiyatı olduğu için çevrim de o güne en yakın kurla yapılıyor.
     ay_kur = defaultdict(lambda: defaultdict(list))
     for gun, m in kur.items():
         for p, v in m.items():
-            ay_kur[gun[:7]][p].append(v)
+            ay_kur[gun[:7]][p].append((gun, v))
 
     en_eski = f"{datetime.now(timezone.utc).year - GECMIS_YIL}-01"
     out, atilan = {}, 0
@@ -192,20 +224,22 @@ def ab_tablo():
         m = {}
         for ay in sorted({a for a, _ in veri}):
             if ay < en_eski: continue
-            katsayi = 1.0
-            if para:
-                k = ay_kur.get(ay, {}).get(para)
-                if not k:
-                    continue        # kuru olmayan ayı UYDURMA, atla
-                katsayi = sum(k) / len(k)
+            kur_seri = ay_kur.get(ay, {}).get(para) if para else None
+            if para and not kur_seri:
+                continue            # kuru olmayan ayı UYDURMA, atla
             sira = []
             for tur in ('petrol', 'diesel', 'lpg'):
                 d = veri.get((ay, tur))
                 if not d:
                     sira.append(None); continue
-                avro = sum(d) / len(d)          # kaynak zaten EUR/litre
+                gun = min(d, key=lambda kv: (abs(int(kv[0][8:10]) - AY_ORTASI),
+                                             kv[0]))[0]
+                avro = ay_ortasina_en_yakin(d)   # kaynak zaten EUR/litre
                 if not (EUR_ALT < avro < EUR_UST):
                     atilan += 1
+                    sira.append(None); continue
+                katsayi = kura_en_yakin(kur_seri, gun) if para else 1.0
+                if katsayi is None:
                     sira.append(None); continue
                 sira.append(round(avro * katsayi, 3))
             if any(v is not None for v in sira):
@@ -293,11 +327,13 @@ def tr_tablo():
             if i < len(h):
                 v = sayi(h[i])
                 if v: seri[tur].append((gun, v))
+    # Diken ayıklama ay seçiminden ÖNCE: tek gün gömüldüğü için seçilen
+    # günün kaynak hatası olması ihtimali artık tüm ayı bozar.
     aylik = defaultdict(lambda: defaultdict(list))
     for tur in seri:
         temiz_seri, _ = dikenleri_ayikla(sorted(seri[tur]), f'TR/{tur}')
         for gun, v in temiz_seri:
-            aylik[gun[:7]][tur].append(v)
+            aylik[gun[:7]][tur].append((gun, v))
     en_eski = f"{datetime.now(timezone.utc).year - GECMIS_YIL}-01"
     m = {}
     for ay in sorted(aylik):
@@ -305,7 +341,8 @@ def tr_tablo():
         sira = []
         for tur in ('petrol', 'diesel', 'lpg'):
             d = aylik[ay].get(tur)
-            sira.append(round(sum(d) / len(d), 3) if d else None)
+            v = ay_ortasina_en_yakin(d)
+            sira.append(round(v, 3) if v is not None else None)
         if any(v is not None for v in sira):
             m[ay] = sira
     return {'src': 'tppd', 'tur': ['petrol', 'diesel', 'lpg'], 'm': m}
@@ -326,7 +363,7 @@ def denetle(tablo, kurlar):
             if para:
                 seri = kurlar.get(ay, {}).get(para)
                 if not seri: continue          # kur yoksa sınanamaz, sessiz geç
-                k = sum(seri) / len(seri)
+                k = sum(v for _, v in seri) / len(seri)
             for tur, x in zip(g['tur'], v):
                 if x is None: continue
                 avro = x / k
