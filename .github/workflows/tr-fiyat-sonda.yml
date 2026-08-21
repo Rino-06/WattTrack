@@ -1,6 +1,6 @@
 # Tek seferlik doğrulama: county=1000 gerçekten Çankaya mı?
 # Bugünün fiyatını ilçe ilçe yazdırır; elle bilinen bir değerle karşılaştırmak için.
-name: sonda-cankaya
+name: tr-fiyat-sonda
 on: workflow_dispatch
 jobs:
   sonda:
