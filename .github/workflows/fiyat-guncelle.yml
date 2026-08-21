@@ -1,0 +1,63 @@
+# Yakıt fiyatı tablosunu açık kaynaklardan tazeler.
+#
+# Uygulama çevrimdışı çalışıyor ve sunucusu yok: fiyatı tarayıcıdan çekmek
+# CORS'a takılır, API anahtarı da istemcide görünür olurdu. Veri BURADA
+# toplanıp evprices.js'e gömülüyor; uygulama çalışırken ağa hiç çıkmıyor.
+#
+# push  -> yalnız rapor (dosya değişmez)
+# elle  -> yaz=true seçilirse evprices.js güncellenip commit edilir
+# ayda bir -> otomatik tazeleme
+name: fiyat-guncelle
+
+on:
+  workflow_dispatch:
+    inputs:
+      yaz:
+        description: 'evprices.js güncellensin mi?'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '0 4 3 * *'      # her ayın 3'ü 04:00 UTC
+  push:
+    paths:
+      - 'tools/fiyat-guncelle.py'
+      - '.github/workflows/fiyat-guncelle.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  guncelle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install openpyxl
+
+      - name: Kaynakları çek ve raporla
+        if: github.event_name == 'push' || inputs.yaz != true
+        run: python tools/fiyat-guncelle.py
+
+      - name: Tabloyu güncelle
+        if: inputs.yaz == true || github.event_name == 'schedule'
+        run: python tools/fiyat-guncelle.py --yaz
+
+      - name: Testleri koştur
+        if: inputs.yaz == true || github.event_name == 'schedule'
+        working-directory: test
+        run: npm install --silent && npm test
+
+      - name: Değişikliği işle
+        if: inputs.yaz == true || github.event_name == 'schedule'
+        run: |
+          if git diff --quiet -- evprices.js; then
+            echo "Fiyat tablosunda değişiklik yok."
+            exit 0
+          fi
+          git config user.name  "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git add evprices.js
+          git commit -m "Yakıt fiyatı tablosu tazelendi (otomatik)"
+          git push
