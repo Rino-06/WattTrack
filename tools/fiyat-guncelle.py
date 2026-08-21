@@ -73,8 +73,12 @@ def sayi(s):
 # AB — Haftalık Petrol Bülteni
 # ============================================================
 AB_SAYFA = "https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en"
-# Uygulamanın COUNTRIES tablosundaki para birimleri (avro olmayanlar)
-AVRO_DISI = {'BG': 'BGN', 'CZ': 'CZK', 'DK': 'DKK', 'HU': 'HUF',
+# Uygulamanın COUNTRIES tablosundaki para birimleri (avro olmayanlar).
+# Bulgaristan avroya geçtiği için BGN buradan çıkarıldı: ECB leva kurunu
+# 2025 sonundan sonra yayımlamıyordu, kuru olmayan ay atlandığı için
+# Bulgaristan'ın fiyatları 2025-12'de kesiliyordu. Artık çevrim yok,
+# bültendeki avro değeri doğrudan kullanılıyor ve geçmiş tam.
+AVRO_DISI = {'CZ': 'CZK', 'DK': 'DKK', 'HU': 'HUF',
              'PL': 'PLN', 'RO': 'RON', 'SE': 'SEK'}
 
 def uygulama_ulkeleri():

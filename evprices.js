@@ -66,7 +66,10 @@ const KWH_PRICES = {
   AT: {p:0.3088, cur:'EUR', y:2025, s:'eurostat'},
   BA: {p:0.1859, cur:'BAM', y:2025, s:'eurostat'},
   BE: {p:0.3535, cur:'EUR', y:2025, s:'eurostat'},
-  BG: {p:0.2597, cur:'BGN', y:2025, s:'eurostat'},
+  // Bulgaristan avroya geçti. Eurostat rakamı leva cinsindendi (0,2597);
+  // avroya geçişin RESMİ sabit kuruyla çevrildi (1 EUR = 1,95583 BGN),
+  // yani yuvarlama dışında bir tahmin içermiyor.
+  BG: {p:0.1328, cur:'EUR', y:2025, s:'eurostat'},
   CA: {p:null, cur:'CAD', y:2024, s:'hydroquebec', sub:{QC:{p:0.0805,ad:'Québec (Montréal)'},
     MB:{p:0.1053,ad:'Manitoba (Winnipeg)'},
     BC:{p:0.1206,ad:'British Columbia (Vancouver)'},

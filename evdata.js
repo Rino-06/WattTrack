@@ -34,7 +34,7 @@ const COUNTRIES = [
   ['SK','🇸🇰','Slovensko','EUR','€','km','en'],
   ['HU','🇭🇺','Magyarország','HUF','Ft','km','en'],
   ['RO','🇷🇴','România','RON','lei','km','en'],
-  ['BG','🇧🇬','България','BGN','лв','km','en'],
+  ['BG','🇧🇬','България','EUR','€','km','en'],
   ['GR','🇬🇷','Ελλάδα','EUR','€','km','en'],
   ['HR','🇭🇷','Hrvatska','EUR','€','km','en'],
   ['SI','🇸🇮','Slovenija','EUR','€','km','en'],
@@ -59,7 +59,7 @@ const COUNTRIES = [
 
 const CURRENCY_SYMBOLS = {
   TRY:'₺', EUR:'€', USD:'$', CAD:'$', GBP:'£', CHF:'CHF', NOK:'kr', SEK:'kr',
-  DKK:'kr', ISK:'kr', PLN:'zł', CZK:'Kč', HUF:'Ft', RON:'lei', BGN:'лв',
+  DKK:'kr', ISK:'kr', PLN:'zł', CZK:'Kč', HUF:'Ft', RON:'lei',
   RSD:'дин', BAM:'KM', MKD:'ден', ALL:'L', MDL:'L'
 };
 

@@ -3343,6 +3343,25 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       .join(',') || 'tamam');
   check('WT-77: eksik otogaz değeri UYDURULMUYOR (null geçiliyor)',
     aylar.every(a => H.m[a][2] === null || typeof H.m[a][2] === 'number'));
+  // Bulgaristan avroya geçince ECB leva kurunu yayımlamayı bıraktı; kuru
+  // olmayan ay atlandığı için o ülkenin fiyatları sessizce 2025-12'de
+  // kesilmişti. Hiçbir ekranda hata görünmüyordu — Bulgar kullanıcı sadece
+  // aylardır eski bir fiyatla kıyaslanıyordu. Her ülkenin geçmişinin GÜNCEL
+  // bittiğini ayrı ayrı doğrula.
+  check('WT-77: hiçbir ülkenin geçmişi sessizce eskimiş değil', (() => {
+    const sinir = new Date(Date.now() - 190 * 86400000).toISOString().slice(0, 7);
+    return Object.values(A.FUEL_HIST).every(g => {
+      const a = Object.keys(g.m).sort();
+      return a[a.length - 1] >= sinir;
+    });
+  })(),
+    Object.entries(A.FUEL_HIST).map(([k, g]) => {
+      const a = Object.keys(g.m).sort();
+      return [k, a[a.length - 1]];
+    }).filter(([, son]) =>
+      son < new Date(Date.now() - 190 * 86400000).toISOString().slice(0, 7))
+      .map(x => x.join('→')).join(',') || 'tamam');
+
   // Bülten ülke sütunlarının yanında bir de 'EU' ortalama bloğu yayımlıyor.
   // O bir ülke değil: kullanıcı seçemez, para birimi karşılığı yok. Tabloya
   // sızarsa hiçbir ekranda görünmediği için sessiz kalırdı.
