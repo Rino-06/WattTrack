@@ -35,6 +35,17 @@ UA = {'User-Agent': 'WattTrack-fiyat-guncelleyici/1.0 (+https://github.com/Rino-
 TPPD_IL, TPPD_ILCE = 6, 1000
 TPPD_BASLANGIC = '01.01.2020'
 
+# Kaç yıllık geçmiş gömülecek? Bülten 2005'e kadar iniyor ama uygulama
+# çevrimdışı çalışıyor: tabloyu olduğu gibi gömmek evprices.js'i 11 KB'den
+# ~230 KB'ye çıkarırdı. Sekiz yıl, gerçekçi bir şarj geçmişini fazlasıyla
+# kapsıyor. Değeri büyütmek dosyayı doğrusal büyütür.
+GECMIS_YIL = 8
+
+# Litre başına yakıt fiyatı AVRO KARŞILIĞI bu aralığın dışındaysa veri
+# şüphelidir. Para biriminden bağımsız olsun diye ölçüt hep avro cinsinden:
+# forint 600/lt ile avro 1,7/lt aynı ölçekte sınanır.
+EUR_ALT, EUR_UST = 0.3, 5.0
+
 def indir(url, limit=90_000_000, ek=None):
     b = dict(UA)
     if ek: b.update(ek)
@@ -144,18 +155,23 @@ def ab_tablo():
     aylik = ab_cek()
     aylar = sorted({ay for k in aylik for ay, _ in aylik[k]})
     if not aylar: raise SystemExit("AB: hiç ay üretilmedi")
-    kur = fx_serisi(set(AVRO_DISI.values()), aylar[0] + '-01', aylar[-1] + '-28')
+    # Kur serisi YALNIZ gömülecek dönem için; TRY de isteniyor çünkü Türkiye
+    # verisinin denetimi de avro karşılığı üzerinden yapılıyor.
+    bas = max(aylar[0], f"{datetime.now(timezone.utc).year - GECMIS_YIL}-01")
+    kur = fx_serisi(set(AVRO_DISI.values()) | {'TRY'}, bas + '-01', aylar[-1] + '-28')
     # ay -> ortalama kur
     ay_kur = defaultdict(lambda: defaultdict(list))
     for gun, m in kur.items():
         for p, v in m.items():
             ay_kur[gun[:7]][p].append(v)
 
-    out = {}
+    en_eski = f"{datetime.now(timezone.utc).year - GECMIS_YIL}-01"
+    out, atilan = {}, 0
     for kod, veri in sorted(aylik.items()):
         para = AVRO_DISI.get(kod)
         m = {}
         for ay in sorted({a for a, _ in veri}):
+            if ay < en_eski: continue
             katsayi = 1.0
             if para:
                 k = ay_kur.get(ay, {}).get(para)
@@ -165,12 +181,20 @@ def ab_tablo():
             sira = []
             for tur in ('petrol', 'diesel', 'lpg'):
                 d = veri.get((ay, tur))
-                sira.append(round(sum(d) / len(d) * katsayi, 3) if d else None)
+                if not d:
+                    sira.append(None); continue
+                avro = sum(d) / len(d)          # kaynak zaten EUR/litre
+                if not (EUR_ALT < avro < EUR_UST):
+                    atilan += 1
+                    sira.append(None); continue
+                sira.append(round(avro * katsayi, 3))
             if any(v is not None for v in sira):
                 m[ay] = sira
         if m:
             out[kod] = {'src': 'ecoil', 'tur': ['petrol', 'diesel', 'lpg'], 'm': m}
-    return out
+    if atilan:
+        print(f"  AB: {atilan} değer makul avro aralığı dışında olduğu için atıldı")
+    return out, ay_kur
 
 # ============================================================
 # TÜRKİYE — TPPD arşivi (Ankara / Çankaya)
@@ -218,8 +242,10 @@ def tr_tablo():
             if i < len(h):
                 v = sayi(h[i])
                 if v: aylik[ay][tur].append(v)
+    en_eski = f"{datetime.now(timezone.utc).year - GECMIS_YIL}-01"
     m = {}
     for ay in sorted(aylik):
+        if ay < en_eski: continue
         sira = []
         for tur in ('petrol', 'diesel', 'lpg'):
             d = aylik[ay].get(tur)
@@ -231,16 +257,25 @@ def tr_tablo():
 # ============================================================
 # Akıl sağlığı denetimi — saçma veriyi ASLA yazma
 # ============================================================
-def denetle(tablo):
+def denetle(tablo, kurlar):
+    """Yapısal denetim + para biriminden BAĞIMSIZ aralık denetimi.
+    Ölçüt avro karşılığı: 600 HUF/lt ile 1,7 EUR/lt aynı sınavı geçer."""
     hata = []
-    for kod, g in tablo.items():
+    for kod, g in sorted(tablo.items()):
         if len(g['m']) < 6:
-            hata.append(f"{kod}: yalnız {len(g['m'])} ay")
+            hata.append(f"{kod}: yalnız {len(g['m'])} ay — kaynak eksik olabilir")
+        para = AVRO_DISI.get(kod) or ('TRY' if kod == 'TR' else None)
         for ay, v in g['m'].items():
+            k = 1.0
+            if para:
+                seri = kurlar.get(ay, {}).get(para)
+                if not seri: continue          # kur yoksa sınanamaz, sessiz geç
+                k = sum(seri) / len(seri)
             for tur, x in zip(g['tur'], v):
                 if x is None: continue
-                if not (0.05 < x < 500):
-                    hata.append(f"{kod} {ay} {tur}: {x} makul aralık dışında")
+                avro = x / k
+                if not (EUR_ALT < avro < EUR_UST):
+                    hata.append(f"{kod} {ay} {tur}: {x} (≈{avro:.2f} EUR) aralık dışında")
     return hata
 
 def js_yaz(tablo, kaynaklar):
@@ -266,7 +301,7 @@ def js_yaz(tablo, kaynaklar):
 
 def main():
     print("=" * 70); print("AB — Haftalık Petrol Bülteni"); print("=" * 70)
-    tablo = ab_tablo()
+    tablo, kurlar = ab_tablo()
     print("=" * 70); print("TÜRKİYE — TPPD arşivi (Ankara / Çankaya)"); print("=" * 70)
     try:
         tablo['TR'] = tr_tablo()
@@ -281,7 +316,7 @@ def main():
         ornek = g['m'][son]
         print(f"  {kod}: {len(aylar):>3} ay  {ilk} … {son}   son değer={ornek}")
 
-    hatalar = denetle(tablo)
+    hatalar = denetle(tablo, kurlar)
     if hatalar:
         print("\nDENETİM UYARILARI:")
         for h in hatalar[:20]: print("   -", h)
