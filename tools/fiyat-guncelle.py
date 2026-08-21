@@ -226,9 +226,40 @@ def tr_tarih(s):
     p = duz(s).lower().split()
     if len(p) != 3: return None
     try:
-        return f"{int(p[2]):04d}-{TR_AY[p[1]]:02d}"
+        return f"{int(p[2]):04d}-{TR_AY[p[1]]:02d}-{int(p[0]):02d}"
     except (KeyError, ValueError):
         return None
+
+def dikenleri_ayikla(seri, etiket):
+    """Tek günlük, ertesi gün geri dönen sıçramaları atar.
+
+    Kaynakta gerçek bir giriş hatası var: 13 Ağustos 2026'da motorin
+    81,14 -> 71,84 -> 80,73 diye yazılmış. Bu bir günlük %11'lik iniş
+    fiyat hareketi değil, yazım hatası — üstelik beş ilçede de aynı
+    büyüklükte, yani kaynağın kendi verisinden geliyor. Ay ortalaması
+    alındığı için tek gün bile ayı 81,03'ten 79,50'ye çekiyordu.
+
+    Ölçüt UZAKLIK değil BİÇİM: bir nokta hem öncekinden hem sonrakinden
+    belirgin ayrılıyorsa VE komşuları birbirine yakınsa (yani değer geri
+    dönüyorsa) atılıyor. Böylece gerçek bir eğilim — enflasyonlu bir ayda
+    fiyatın adım adım yükselmesi — asla kırpılmıyor."""
+    if len(seri) < 3: return seri, []
+    tut, atilan = [seri[0]], []
+    for i in range(1, len(seri) - 1):
+        (_, onceki), (t, v), (_, sonraki) = seri[i - 1], seri[i], seri[i + 1]
+        if not onceki or not sonraki or not v: tut.append(seri[i]); continue
+        ayrik = abs(v - onceki) / onceki > 0.05 and abs(v - sonraki) / sonraki > 0.05
+        doner = abs(onceki - sonraki) / onceki < 0.03
+        yon = (v - onceki) * (v - sonraki) > 0          # iki komşudan da AYNI yönde
+        if ayrik and doner and yon:
+            atilan.append((t, v, round((onceki + sonraki) / 2, 2)))
+        else:
+            tut.append(seri[i])
+    tut.append(seri[-1])
+    if atilan:
+        for t, v, bek in atilan:
+            print(f"  {etiket}: {t} değeri {v} atıldı (komşuları ~{bek})")
+    return tut, atilan
 
 def tr_tablo():
     bugun = datetime.now(timezone.utc).strftime('%d.%m.%Y')
@@ -252,16 +283,21 @@ def tr_tablo():
     if 'petrol' not in idx or 'diesel' not in idx:
         raise SystemExit("TR: benzin/motorin sütunu bulunamadı")
 
-    aylik = defaultdict(lambda: defaultdict(list))
+    seri = defaultdict(list)
     for s in satirlar[1:]:
         h = [duz(x) for x in re.findall(r'(?is)<t[dh][^>]*>(.*?)</t[dh]>', s)]
         if len(h) < 2: continue
-        ay = tr_tarih(h[0])
-        if not ay: continue
+        gun = tr_tarih(h[0])
+        if not gun: continue
         for tur, i in idx.items():
             if i < len(h):
                 v = sayi(h[i])
-                if v: aylik[ay][tur].append(v)
+                if v: seri[tur].append((gun, v))
+    aylik = defaultdict(lambda: defaultdict(list))
+    for tur in seri:
+        temiz_seri, _ = dikenleri_ayikla(sorted(seri[tur]), f'TR/{tur}')
+        for gun, v in temiz_seri:
+            aylik[gun[:7]][tur].append(v)
     en_eski = f"{datetime.now(timezone.utc).year - GECMIS_YIL}-01"
     m = {}
     for ay in sorted(aylik):

@@ -10,3 +10,5 @@ _snapshot/
 
 # Kişisel yedek dosyaları — ASLA depoya girmemeli (kayıt tarihleri, tutarlar, konumlar)
 watttrack-yedek*.json
+__pycache__/
+*.pyc
