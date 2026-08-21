@@ -1,0 +1,21 @@
+# GEÇİCİ SONDA: Türkiye akaryakıt fiyat arşivlerinin kazınabilirliğini ölçer.
+# Sorunun cevabı alınınca kaldırılacak.
+name: tr-fiyat-sonda
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/tr-fiyat-sonda.py'
+      - '.github/workflows/tr-fiyat-sonda.yml'
+
+jobs:
+  sonda:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Kaynakları sorgula
+        run: python tools/tr-fiyat-sonda.py
