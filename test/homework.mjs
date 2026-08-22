@@ -118,8 +118,16 @@ const placeLeg = $('d-donut2-legend').textContent;
 check('WT-16/5: şarj TİPİ donutu yalnız DC/AC gösteriyor',
   /DC/.test(tipLeg) && /AC/.test(tipLeg) && !/Ev-İş/.test(tipLeg),
   'tip = ' + tipLeg.replace(/\s+/g, ' ').trim());
-check('WT-16/5: şarj YERİ donutu Ev-İş / Şarj firması gösteriyor',
-  /Ev-İş/.test(placeLeg) && /firma/i.test(placeLeg),
+// WT-102: ikinci donut "Ev-İş / Şarj firması" ikiliğiydi. Hiç ev şarjı
+// yapmayan kullanıcıda HER ZAMAN tek dilim çiziyordu — kullanıcı bildirdi.
+// Artık `firma` alanına göre kırılıyor. Ev/iş kayıtlarının firma alanı zaten
+// "Ev-İş" etiketini taşıdığı için o dilim KAYBOLMUYOR; sınanan da bu:
+// firmalar ayrı ayrı görünüyor VE ev şarjı hâlâ kendi dilimi.
+check('WT-102: ikinci donut firmaları AYRI AYRI gösteriyor',
+  /ZES/.test(placeLeg) && /Trugo/.test(placeLeg),
+  'yer = ' + placeLeg.replace(/\s+/g, ' ').trim());
+check('WT-102 KABUL: ev/iş şarjı kendi dilimini KORUYOR (firma bazına geçince kaybolmadı)',
+  /Ev-İş/.test(placeLeg),
   'yer = ' + placeLeg.replace(/\s+/g, ' ').trim());
 check('WT-16/6: tip donutu ana sayfayla aynı `tip` alanını kullanıyor (AC=50 kWh)',
   /AC\s*50 kWh/.test(placeLeg) === false && /50 kWh/.test(tipLeg),

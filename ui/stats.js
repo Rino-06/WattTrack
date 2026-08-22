@@ -161,15 +161,26 @@ async function renderStats() {
     {name: 'DC', kwh: sumKwh(cur.filter(r => tipOf(r) === 'DC')), col: '#16A34A'},
     {name: 'AC', kwh: sumKwh(cur.filter(r => tipOf(r) === 'AC')), col: '#1B5FAA'}
   ].filter(x => x.kwh > 0));
-  // Şarj YERİ: `mekan` alanından. Eski kayıtlarda mekan yoksa firma adına düş.
-  // WT-86: mekan artık 'ev' | 'is' | 'firma' (+ eski 'evis'). Donut ikisini
-  // BİRLİKTE gösteriyor — eski 'evis' kayıtları ev mi iş mi olduğunu
-  // söylemiyor, üç dilime bölmek o kayıtları uydurma bir dilime atardı.
-  const isHome = isHomeRec;
-  drawDonut('d-donut2', 'd-donut2-legend', t('placeSplit'), [
-    {name: t('homeChip'), kwh: sumKwh(cur.filter(isHome)), col: '#7DC855'},
-    {name: t('placeFirm'), kwh: sumKwh(cur.filter(r => !isHome(r))), col: '#1B5FAA'}
-  ].filter(x => x.kwh > 0));
+  // WT-102: bu donut "Ev-İş / Şarj firması" ikiliğini gösteriyordu. Hiç ev
+  // şarjı yapmayan kullanıcıda — ki azınlık değiller — HER ZAMAN tek dilim
+  // çiziyor ve hiçbir şey anlatmıyordu.
+  //
+  // Artık `firma` alanına göre kırılıyor. Ev/iş kayıtlarının firma alanı
+  // zaten "Ev"/"İş" etiketini taşıdığı için o kullanıcılar dilimlerini
+  // KAYBETMİYOR; firmada şarj edenler ise ZES/Trugo gibi gerçek bir dağılım
+  // görüyor. Ölçüt kWh — komşu DC/AC donutuyla aynı; sayfanın sonundaki
+  // firma listesi PARA gösteriyor, yani ikisi farklı soruya cevap veriyor.
+  const kwhByFirma = {};
+  cur.forEach(r => { kwhByFirma[r.firma] = (kwhByFirma[r.firma] || 0) + (r.kwh || 0); });
+  const firmaSirali = Object.entries(kwhByFirma)
+    .filter(([, k]) => k > 0).sort((a, b) => b[1] - a[1]);
+  // Çok firmada donut okunmaz hale gelir: ilk beş ayrı dilim, kalanı "Diğer".
+  const ILK = 5;
+  const dilimler = firmaSirali.slice(0, ILK)
+    .map(([ad, k]) => ({name: ad, kwh: k, col: colorFor(ad)}));
+  const kalan = firmaSirali.slice(ILK).reduce((s, [, k]) => s + k, 0);
+  if (kalan > 0) dilimler.push({name: t('otherFirms'), kwh: kalan, col: '#94A3B8'});
+  drawDonut('d-donut2', 'd-donut2-legend', t('firmSplit'), dilimler);
 
   // en çok lokasyonlar
   const bL = {};
