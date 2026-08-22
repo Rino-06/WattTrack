@@ -91,6 +91,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
        scanUnassigned, scanOrphans,
        allTrips, tripSessions, tripExpenses, tripOverlaps, tripMesafe,
        tripOzet, tripBitis, renderTrips, openTrip, openTripEdit, ortTlKm,
+       tripOrnek, tripAdKur, tripAdParcala, TRIP_ORNEK,
        t, shortDate, distDisp, photoSrc, fotoDisaAktar};`;
 try {
   window.eval(bundle);
@@ -3969,6 +3970,102 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.db.trips.clear(); await A.db.expenses.clear();
   await A.db.sessions.clear(); await A.db.vehicles.clear();
   A.S.hView = 'rows';
+}
+
+// --- WT-103: yolculuk adı iki kutu + ülkeye göre örnek + elle mesafe ---
+{
+  const A = app();
+  const doc = window.document;
+  const $ = id => doc.getElementById(id);
+  await A.db.trips.clear(); await A.db.vehicles.clear(); await A.db.sessions.clear();
+  const vid = await A.db.vehicles.add({ad: 'Test EV', batt: 60});
+  A.S.defaultVehicleId = vid;
+
+  // 1) Yer tutucu KULLANICININ ülkesinden geliyor
+  A.S.country = 'TR'; A.S.unit = 'km';
+  await A.openTripEdit(null); await sleep(150);
+  check('WT-103 KABUL: TR kurulumunda örnekler Türkiye şehirleri',
+    $('in-trip-from').placeholder === 'Ankara' && $('in-trip-to').placeholder === 'İstanbul',
+    `${$('in-trip-from').placeholder} / ${$('in-trip-to').placeholder}`);
+
+  A.S.country = 'US';
+  await A.openTripEdit(null); await sleep(150);
+  check('WT-103 KABUL: ülke değişince örnek de değişiyor (US)',
+    $('in-trip-from').placeholder === 'New York'
+      && /Washington/.test($('in-trip-to').placeholder),
+    `${$('in-trip-from').placeholder} / ${$('in-trip-to').placeholder}`);
+  check('WT-103: TR ve US örnekleri gerçekten FARKLI (test anlamlı)',
+    A.tripOrnek('TR')[0] !== A.tripOrnek('US')[0]);
+
+  // Listede olmayan bir ülke kodunda şehir UYDURULMUYOR — kutu boş kalıyor.
+  // (Bugün 45 ülkenin hepsinin örneği var; bu, yarın yenisi eklendiğinde
+  // ekranın çökmeyeceğinin ve boş kalacağının güvencesi.)
+  A.S.country = 'ZZ';
+  await A.openTripEdit(null); await sleep(150);
+  check('WT-103 KABUL: örneği olmayan ülkede yer tutucu BOŞ (şehir uydurulmuyor)',
+    A.tripOrnek('ZZ') == null
+      && $('in-trip-from').placeholder === '' && $('in-trip-to').placeholder === '',
+    `ornek=${JSON.stringify(A.tripOrnek('ZZ'))} ph="${$('in-trip-from').placeholder}"`);
+
+  // 2) İki kutu TEK ada dönüşüyor, elle mesafe kaydediliyor
+  A.S.country = 'TR';
+  await A.openTripEdit(null); await sleep(150);
+  $('in-trip-from').value = 'Ankara';
+  $('in-trip-to').value = 'İzmir';
+  $('in-trip-start').value = '2026-09-12';
+  $('in-trip-end').value = '2026-09-15';
+  $('in-trip-odo1').value = '';
+  $('in-trip-odo2').value = '';
+  $('in-trip-km').value = '740';
+  $('btn-save-trip').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(350);
+  const kayit = (await A.allTrips())[0];
+  check('WT-103 KABUL: iki kutu tek ada birleşti',
+    kayit && kayit.ad === 'Ankara – İzmir', kayit && kayit.ad);
+  check('WT-103: parçalar da ayrı ayrı saklandı (düzenlemede geri dolsun)',
+    kayit.nereden === 'Ankara' && kayit.nereye === 'İzmir',
+    JSON.stringify([kayit.nereden, kayit.nereye]));
+  check('WT-103 KABUL: sayaç yerine elle yazılan mesafe kaydedildi',
+    kayit.elleKm === 740, 'elleKm=' + kayit.elleKm);
+  check('WT-103 KABUL: mesafe elle girilen değerden geliyor',
+    A.tripMesafe(kayit, []).km === 740
+      && A.tripMesafe(kayit, []).kaynak === 'elle',
+    JSON.stringify(A.tripMesafe(kayit, [])));
+  check('WT-103: elle mesafe kayıt toplamını EZİYOR (kayıt yoksa bile sayı çıkıyor)',
+    A.tripOzet(kayit, [], [], 1.5).km === 740);
+
+  // Sayaç girilmişse SAYAÇ kazanıyor — iki uçtan okuma daha güvenilir
+  check('WT-103 KABUL: sayaç varsa elle mesafeye değil SAYACA bakılıyor',
+    A.tripMesafe({...kayit, odoBas: 1000, odoBit: 1900}, []).km === 900,
+    JSON.stringify(A.tripMesafe({...kayit, odoBas: 1000, odoBit: 1900}, [])));
+
+  // 3) Düzenlemede kutular geri doluyor
+  await A.openTripEdit(kayit); await sleep(150);
+  check('WT-103 KABUL: düzenlemede iki kutu geri doldu',
+    $('in-trip-from').value === 'Ankara' && $('in-trip-to').value === 'İzmir',
+    `${$('in-trip-from').value} / ${$('in-trip-to').value}`);
+  check('WT-103: elle mesafe de geri doldu', $('in-trip-km').value.replace(/\D/g, '') === '740',
+    $('in-trip-km').value);
+
+  // Eski (tek kutulu) kayıt: ad ayraçtan bölünüyor, veri kaybolmuyor
+  const eski = {id: 999, ad: 'Ankara – Antalya', baslangic: '2026-01-01'};
+  check('WT-103 KABUL: eski tek kutulu kayıt düzenlemede ikiye bölünüyor',
+    A.tripAdParcala(eski).join('|') === 'Ankara|Antalya',
+    A.tripAdParcala(eski).join('|'));
+  check('WT-103: ayraç içermeyen eski ad ilk kutuya düşüyor, kaybolmuyor',
+    A.tripAdParcala({ad: 'Yaz Tatili'}).join('|') === 'Yaz Tatili|',
+    A.tripAdParcala({ad: 'Yaz Tatili'}).join('|'));
+  check('WT-103: tek kutu doluysa ad ayraçsız kuruluyor',
+    A.tripAdKur('Ankara', '') === 'Ankara' && A.tripAdKur('', 'İzmir') === 'İzmir');
+
+  // Her uygulama ülkesinin örneği var mı — biri eklenip unutulursa yakalansın
+  const eksik = A.COUNTRIES.map(c => c[0]).filter(k => !A.TRIP_ORNEK[k]);
+  check('WT-103: örneği olmayan uygulama ülkesi yok',
+    eksik.length === 0, 'eksik=' + (eksik.join(',') || 'yok'));
+
+  await A.overlayClose('page-tripedit', {force: true});
+  await A.db.trips.clear(); await A.db.vehicles.clear();
+  A.S.country = 'TR';
 }
 
 // --- WT-101: bozuk araç fotoğrafı Aracım sayfasını çökertiyordu ---

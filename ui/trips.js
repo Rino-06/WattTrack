@@ -13,6 +13,19 @@
 // veriyi gösteriyor, farklı çerçeveden — o yüzden yedinci bir sekme değil.
 let editingTripId = null;
 
+// Yolculuk adı iki kutudan kuruluyor: nereden ve nereye. Listede ve detayda
+// TEK isim gösteriliyor, o yüzden birleşiği `ad` alanında da tutuluyor —
+// eski kayıtlar (tek kutulu dönem) hiç dokunulmadan çalışmaya devam ediyor.
+const TRIP_AYRAC = ' – ';
+const tripAdKur = (a, b) => (a && b) ? a + TRIP_AYRAC + b : (a || b || '');
+function tripAdParcala(tr) {
+  if (tr && (tr.nereden != null || tr.nereye != null))
+    return [tr.nereden || '', tr.nereye || ''];
+  const ad = (tr && tr.ad) || '';
+  const i = ad.indexOf(TRIP_AYRAC);
+  return i < 0 ? [ad, ''] : [ad.slice(0, i), ad.slice(i + TRIP_AYRAC.length)];
+}
+
 // Aracın GENEL ₺/km ortalaması. Yolculuğun "adil maliyeti" bununla çıkıyor:
 // evde ucuz doldurup yolda pahalı şarj etmenin çarpıtmasını bu düzeltiyor.
 // Mesafesi bilinen kayıt yoksa null — sayı UYDURULMUYOR, kutu gizleniyor.
@@ -164,14 +177,22 @@ async function openTripEdit(rec) {
     vs.map(v => `<option value="${v.id}">${esc(vehName(v))}</option>`).join('');
   const defVeh = rec?.aracId ?? (vs.find(v => v.id === S.defaultVehicleId)?.id ?? vs[0]?.id);
   $('in-trip-veh').value = defVeh != null ? String(defVeh) : '';
-  $('in-trip-name').value = rec?.ad || '';
-  $('in-trip-name').placeholder = t('tripNamePh');
+  const [nereden, nereye] = tripAdParcala(rec);
+  $('in-trip-from').value = nereden;
+  $('in-trip-to').value = nereye;
+  // Yer tutucu kullanıcının ülkesinden geliyor. Ülke listede yoksa kutu boş
+  // kalıyor — tanımadığı bir şehir adı örnek diye gösterilmiyor.
+  const ornek = typeof tripOrnek === 'function' ? tripOrnek(S.country) : null;
+  $('in-trip-from').placeholder = ornek ? ornek[0] : '';
+  $('in-trip-to').placeholder = ornek ? ornek[1] : '';
   $('in-trip-start').value = rec?.baslangic || localISO();
   $('in-trip-end').value = rec?.bitis || '';
   $('lbl-trip-odo1').textContent = t('tripStartOdo', {u: S.unit});
   $('lbl-trip-odo2').textContent = t('tripEndOdo', {u: S.unit});
   $('in-trip-odo1').value = rec?.odoBas != null ? fmtNum(Math.round(distDisp(rec.odoBas)), 0) : '';
   $('in-trip-odo2').value = rec?.odoBit != null ? fmtNum(Math.round(distDisp(rec.odoBit)), 0) : '';
+  $('lbl-trip-km').textContent = t('tripTotalDist', {u: S.unit});
+  $('in-trip-km').value = rec?.elleKm > 0 ? fmtNum(Math.round(distDisp(rec.elleKm)), 0) : '';
   const round = rec ? rec.gidisDonus !== false : true;
   $('trip-kind').querySelectorAll('button').forEach(b =>
     b.classList.toggle('sel', (b.dataset.kind === 'round') === round));
@@ -235,8 +256,10 @@ $('btn-del-trip').addEventListener('click', async () => {
 });
 
 $('btn-save-trip').addEventListener('click', async () => {
-  const ad = $('in-trip-name').value.trim();
-  if (!ad) { toast(t('tripNameNeeded')); $('in-trip-name').focus(); return; }
+  const nereden = $('in-trip-from').value.trim();
+  const nereye = $('in-trip-to').value.trim();
+  const ad = tripAdKur(nereden, nereye);
+  if (!ad) { toast(t('tripNameNeeded')); $('in-trip-from').focus(); return; }
   const bas = $('in-trip-start').value;
   if (!isValidDate(bas)) { toast(t('dateNeeded')); $('in-trip-start').focus(); return; }
   const bit = isValidDate($('in-trip-end').value) ? $('in-trip-end').value : null;
@@ -249,10 +272,11 @@ $('btn-save-trip').addEventListener('click', async () => {
   if (odoBas != null && odoBit != null && odoBit <= odoBas) {
     toast(t('tripOdoOrder')); $('in-trip-odo2').focus(); return;
   }
+  const elleKm = odoNum('in-trip-km');
   const rec = {
-    ad, baslangic: bas, bitis: bit,
+    ad, nereden, nereye, baslangic: bas, bitis: bit,
     aracId: +$('in-trip-veh').value || null,
-    odoBas, odoBit,
+    odoBas, odoBit, elleKm,
     gidisDonus: $('trip-kind').querySelector('button.sel')?.dataset.kind !== 'one'
   };
   const wasEditing = editingTripId;

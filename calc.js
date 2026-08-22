@@ -462,6 +462,9 @@ function tripOverlaps(tr, digerleri) {
 function tripMesafe(tr, sess) {
   if (tr.odoBas != null && tr.odoBit != null && tr.odoBit > tr.odoBas)
     return {km: tr.odoBit - tr.odoBas, kaynak: 'odo'};
+  // Sayaç girilmediyse kullanıcının elle yazdığı toplam mesafe. Sayaç varsa
+  // o kazanıyor — iki uçtan okunan değer tek bir tahminden daha güvenilir.
+  if (tr.elleKm > 0) return {km: tr.elleKm, kaynak: 'elle'};
   const top = sess.reduce((s, r) => s + (r.mesafeKm || 0), 0);
   return top > 0 ? {km: top, kaynak: 'kayit'} : {km: null, kaynak: null};
 }

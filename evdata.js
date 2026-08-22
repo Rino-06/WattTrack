@@ -330,3 +330,36 @@ const EV_DB = [
   ['Rivian','R1S','Large Pack',2022,0,135,400,220,11,494,'suv'],
   ['Lucid','Air','Touring',2022,0,92,900,250,19,725,'sedan'],
 ];
+
+/* ---- WT-103: yolculuk adı için ülkeye göre örnek şehir çifti ---- */
+// Yolculuk formunda "nereden / nereye" kutularının yer tutucusu. Sabit bir
+// "Ankara – İstanbul" örneği Türkiye dışındaki kullanıcıya hiçbir şey
+// anlatmıyor; herkes kendi ülkesinden tanıdığı iki şehri görüyor.
+// Ölçüt: ülkenin en çok bilinen iki merkezi (genelde başkent + en kalabalık).
+const TRIP_ORNEK = {
+  TR: ['Ankara', 'İstanbul'],      DE: ['Berlin', 'München'],
+  FR: ['Paris', 'Lyon'],           GB: ['London', 'Manchester'],
+  US: ['New York', 'Washington, D.C.'], CA: ['Toronto', 'Montréal'],
+  ES: ['Madrid', 'Barcelona'],     IT: ['Roma', 'Milano'],
+  NL: ['Amsterdam', 'Rotterdam'],  BE: ['Brussel', 'Antwerpen'],
+  AT: ['Wien', 'Salzburg'],        CH: ['Zürich', 'Genève'],
+  PT: ['Lisboa', 'Porto'],         IE: ['Dublin', 'Cork'],
+  NO: ['Oslo', 'Bergen'],          SE: ['Stockholm', 'Göteborg'],
+  DK: ['København', 'Aarhus'],     FI: ['Helsinki', 'Tampere'],
+  IS: ['Reykjavík', 'Akureyri'],   PL: ['Warszawa', 'Kraków'],
+  CZ: ['Praha', 'Brno'],           SK: ['Bratislava', 'Košice'],
+  HU: ['Budapest', 'Debrecen'],    RO: ['București', 'Cluj-Napoca'],
+  BG: ['София', 'Пловдив'],        GR: ['Αθήνα', 'Θεσσαλονίκη'],
+  HR: ['Zagreb', 'Split'],         SI: ['Ljubljana', 'Maribor'],
+  RS: ['Beograd', 'Novi Sad'],     BA: ['Sarajevo', 'Banja Luka'],
+  ME: ['Podgorica', 'Budva'],      MK: ['Скопје', 'Битола'],
+  AL: ['Tiranë', 'Durrës'],        XK: ['Prishtinë', 'Prizren'],
+  MD: ['Chișinău', 'Bălți'],       EE: ['Tallinn', 'Tartu'],
+  LV: ['Rīga', 'Daugavpils'],      LT: ['Vilnius', 'Kaunas'],
+  LU: ['Luxembourg', 'Esch-sur-Alzette'], MT: ['Valletta', 'Sliema'],
+  CY: ['Λευκωσία', 'Λεμεσός'],     LI: ['Vaduz', 'Schaan'],
+  MC: ['Monaco', 'Nice'],          AD: ['Andorra la Vella', 'Encamp'],
+  SM: ['San Marino', 'Rimini']
+};
+// Listede olmayan ülke: yer tutucu boş kalır, uydurma şehir YAZILMAZ.
+const tripOrnek = kod => TRIP_ORNEK[kod] || null;
