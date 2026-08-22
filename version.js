@@ -6,5 +6,5 @@
    ============================================================ */
 var WT_VERSION = 'v44';          // uygulama sürümü (Ayarlar'da görünür) — Faz 17
 var WT_DATE    = '20.08.2026';   // sürüm tarihi
-var WT_SCHEMA  = 8;              // yedek dosyası şema sürümü (uygulamadan bağımsız)
+var WT_SCHEMA  = 9;              // yedek dosyası şema sürümü (uygulamadan bağımsız)
 var WT_CACHE   = 'watttrack-' + WT_VERSION;  // service worker önbellek adı

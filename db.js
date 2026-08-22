@@ -135,6 +135,30 @@ db.version(6).stores({
   fuelPrices: '++id, tarih, tur, ulke'
 }).upgrade(() => { /* yeni tablo, mevcut kayıtlara dokunulmadı */ });
 
+// WT-88: yolculuk. "Ankara-Antalya gidiş-dönüş ne tuttu?" sorusu, kayıtlar
+// tarih tarih durduğu sürece cevaplanamıyordu.
+//
+// ŞARJ KAYITLARINA ALAN EKLENMEDİ. Bir şarjın hangi yolculuğa ait olduğu
+// YAZMA anında değil, OKUMA anında tarih aralığından bulunuyor. Gerekçe:
+// yolculuk çoğu zaman DÖNDÜKTEN SONRA giriliyor ("gidip geldim, bakayım ne
+// tutmuş"). Bağı kayda yazsaydık geriye dönük yolculuk hiçbir şey toplamaz,
+// kullanıcı da her şarjda etiket seçmeyi hatırlamak zorunda kalırdı.
+//
+// GİDERE ise seyahatId EKLENDİ, çünkü orada tarih aralığı YETMEZ: yolculuk
+// günlerine denk gelen yıllık bir sigorta ödemesi, dört günlük yolculuğun
+// maliyetini sessizce şişirirdi. Otoyol/otopark gibi kalemler yolculuğa
+// AÇIKÇA bağlanıyor (form aktif yolculuğu önerir, son söz kullanıcının).
+// upgrade GÖVDESİ BOŞ: mevcut giderlerin seyahatId'si undefined kalır,
+// bu da "hiçbir yolculuğa bağlı değil" demektir — doğru varsayılan.
+db.version(7).stores({
+  sessions: '++id, tarih, firma, tip, aracId, mekan, odo',
+  vehicles: '++id, ad',
+  settings: 'key',
+  expenses: '++id, tarih, tur, aracId, seyahatId',
+  fuelPrices: '++id, tarih, tur, ulke',
+  trips: '++id, baslangic, aracId'
+}).upgrade(() => { /* yeni tablo + yeni indeks; mevcut kayıtlara dokunulmadı */ });
+
 
 const EXP_TYPES = ['tax', 'insurance', 'maintenance', 'tire', 'inspection',
                    'repair', 'parking', 'equipment', 'other'];
@@ -196,8 +220,9 @@ async function initStorage() {
 // demek. Hem Table metotları sarmalanıyor (add/put/update/delete/bulk*/clear)
 // hem de Dexie hook'ları bağlanıyor (Collection.delete()/modify() Table
 // metodundan geçmiyor). İkisi birden her yazma yolunu kapatıyor.
-const CACHED_TABLES = ['sessions', 'vehicles', 'expenses', 'fuelPrices'];
-const _cache = {sessions: null, vehicles: null, expenses: null, fuelPrices: null};
+const CACHED_TABLES = ['sessions', 'vehicles', 'expenses', 'fuelPrices', 'trips'];
+const _cache = {sessions: null, vehicles: null, expenses: null, fuelPrices: null,
+  trips: null};
 let _cacheGen = 0;   // memoize edilen türetilmiş değerler bunu izler
 
 function invalidateCache(tablo) {
@@ -235,6 +260,7 @@ const allSessions = () => _all('sessions');
 const allVehicles = () => _all('vehicles');
 const allExpenses = () => _all('expenses');
 const allFuelPrices = () => _all('fuelPrices');   // WT-43
+const allTrips = () => _all('trips');             // WT-88
 
 // WT-49/4: ağır türetilmiş değerler için memoize. Önbellek geçersiz kılınınca
 // (yani herhangi bir yazmada) otomatik olarak düşer.

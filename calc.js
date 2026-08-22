@@ -422,3 +422,69 @@ const fiyatGoster = p => S.unit === 'mi' ? p * GALON_LT : p;          // ₺/lt 
 const fiyatMetrik = p => S.unit === 'mi' ? p / GALON_LT : p;
 const tuketimGoster = c => S.unit === 'mi' ? (c > 0 ? MPG_SABIT / c : 0) : c;
 const tuketimMetrik = c => S.unit === 'mi' ? (c > 0 ? MPG_SABIT / c : 0) : c;
+
+/* ---- WT-88: yolculuk ---- */
+// ============================================================
+// YOLCULUK
+// ============================================================
+// Bir yolculuğun ŞARJLARI tarih aralığından bulunuyor, kayda yazılmış bir
+// bağdan değil (gerekçe db.js'te v7 yükseltmesinde). Bitişi girilmemiş
+// yolculuk "sürüyor" demektir; üst sınır bugündür.
+const tripBitis = tr => tr.bitis || localISO();
+
+function tripSessions(tr, sessions) {
+  const bit = tripBitis(tr);
+  return (sessions || []).filter(r =>
+    vehEq(r.aracId, tr.aracId ?? null) &&
+    r.tarih.slice(0, 10) >= tr.baslangic && r.tarih.slice(0, 10) <= bit);
+}
+
+// Giderler tarihe göre DEĞİL, açık bağa göre geliyor: yolculuk günlerine
+// denk gelen yıllık bir sigorta ödemesi dört günlük yolculuğu şişirirdi.
+const tripExpenses = (tr, expenses) =>
+  (expenses || []).filter(e => e.seyahatId === tr.id);
+
+// İki yolculuk aynı araçta zaman olarak çakışıyor mu? Çakışırsa aynı şarj
+// ikisine birden sayılır — kullanıcı uyarılmalı.
+function tripOverlaps(tr, digerleri) {
+  const bit = tripBitis(tr);
+  return (digerleri || []).filter(o => o.id !== tr.id &&
+    vehEq(o.aracId ?? null, tr.aracId ?? null) &&
+    tr.baslangic <= tripBitis(o) && o.baslangic <= bit);
+}
+
+// Yolculuğun mesafesi. Sayaç değerleri VARSA onlar esastır — kesin ölçüm.
+// Yoksa kayıtlardaki sürüş mesafeleri toplanıyor; o da yoksa null döner ve
+// mesafeye dayanan sayılar (₺/km, yakıtlı kıyası) HİÇ gösterilmez.
+function tripMesafe(tr, sess) {
+  if (tr.odoBas != null && tr.odoBit != null && tr.odoBit > tr.odoBas)
+    return {km: tr.odoBit - tr.odoBas, kaynak: 'odo'};
+  const top = sess.reduce((s, r) => s + (r.mesafeKm || 0), 0);
+  return top > 0 ? {km: top, kaynak: 'kayit'} : {km: null, kaynak: null};
+}
+
+// Yolculuğun özeti. ortTlKm: aracın GENEL ₺/km ortalaması (Kıyasla'dan) —
+// "adil maliyet" bununla çıkıyor. Yoksa o sayı atlanır, uydurulmaz.
+function tripOzet(tr, sessions, expenses, ortTlKm) {
+  const sess = tripSessions(tr, sessions);
+  const exp = tripExpenses(tr, expenses);
+  const cv = sess.filter(isConv);
+  const sarj = cv.reduce((s, r) => s + amtB(r), 0);
+  const gider = exp.filter(isConv).reduce((s, e) => s + expB(e), 0);
+  const {km, kaynak} = tripMesafe(tr, sess);
+  return {
+    sess, exp,
+    sarjSayi: sess.length, giderSayi: exp.length,
+    kwh: cv.reduce((s, r) => s + (r.kwh || 0), 0),
+    sarj, gider, odenen: sarj + gider,
+    km, kmKaynak: kaynak,
+    // Cüzdandan çıkan / km. Yolda evdekinden pahalı şarj edildiyse aracın
+    // genel ortalamasından yüksek çıkar — fark kullanıcıya anlatılıyor.
+    tlKm: km > 0 ? (sarj + gider) / km : null,
+    adil: km > 0 && ortTlKm > 0 ? km * ortTlKm : null,
+    sureGun: (() => {
+      const a = new Date(tr.baslangic + 'T00:00'), b = new Date(tripBitis(tr) + 'T00:00');
+      return Math.round((b - a) / 86400000) + 1;
+    })()
+  };
+}
