@@ -159,6 +159,19 @@ db.version(7).stores({
   trips: '++id, baslangic, aracId'
 }).upgrade(() => { /* yeni tablo + yeni indeks; mevcut kayıtlara dokunulmadı */ });
 
+// WT-105: banka para iadesi. Şarj kaydının ALANI DEĞİL, kendi tablosu —
+// iade tek tek şarjlara değil, bankanın hesap kesimine bağlı; bir iade
+// çoğu zaman birden fazla şarjı kapsıyor ve tarihi onlardan farklı.
+db.version(8).stores({
+  sessions: '++id, tarih, firma, tip, aracId, mekan, odo',
+  vehicles: '++id, ad',
+  settings: 'key',
+  expenses: '++id, tarih, tur, aracId, seyahatId',
+  fuelPrices: '++id, tarih, tur, ulke',
+  trips: '++id, baslangic, aracId',
+  cashbacks: '++id, tarih, banka'
+}).upgrade(() => { /* yalnız yeni tablo; mevcut kayıtlara dokunulmadı */ });
+
 
 const EXP_TYPES = ['tax', 'insurance', 'maintenance', 'tire', 'inspection',
                    'repair', 'parking', 'equipment', 'other'];
@@ -220,7 +233,7 @@ async function initStorage() {
 // demek. Hem Table metotları sarmalanıyor (add/put/update/delete/bulk*/clear)
 // hem de Dexie hook'ları bağlanıyor (Collection.delete()/modify() Table
 // metodundan geçmiyor). İkisi birden her yazma yolunu kapatıyor.
-const CACHED_TABLES = ['sessions', 'vehicles', 'expenses', 'fuelPrices', 'trips'];
+const CACHED_TABLES = ['sessions', 'vehicles', 'expenses', 'fuelPrices', 'trips', 'cashbacks'];
 const _cache = {sessions: null, vehicles: null, expenses: null, fuelPrices: null,
   trips: null};
 let _cacheGen = 0;   // memoize edilen türetilmiş değerler bunu izler
@@ -261,6 +274,7 @@ const allVehicles = () => _all('vehicles');
 const allExpenses = () => _all('expenses');
 const allFuelPrices = () => _all('fuelPrices');   // WT-43
 const allTrips = () => _all('trips');             // WT-88
+const allCashbacks = () => _all('cashbacks');     // WT-105
 
 // WT-49/4: ağır türetilmiş değerler için memoize. Önbellek geçersiz kılınınca
 // (yani herhangi bir yazmada) otomatik olarak düşer.

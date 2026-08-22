@@ -330,6 +330,12 @@ h1,h2{font-size:inherit;font-weight:inherit}
 .switchrow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
 .switchrow .t{font-size:14px;font-weight:600}
 .switchrow .d{font-size:11.5px;color:var(--muted2)}
+/* WT-105: Yeni Şarj Kaydı'nın içindeki para iadesi girişi. ALAN DEĞİL —
+   dokununca kendi ekranını açan bir satır; iade tek bir şarja ait değil. */
+.cbrow{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:var(--card);border:1px solid var(--hairline);border-radius:12px;padding:12px 14px;margin-top:12px;text-align:left;cursor:pointer}
+.cbrow .t{display:block;font-size:14px;font-weight:600}
+.cbrow .d{display:block;font-size:12px;color:var(--muted2);margin-top:2px}
+.cbrow .chev{color:var(--faint);font-size:20px;line-height:1;flex:none}
 .sw{position:relative;width:46px;height:27px;flex-shrink:0}
 .sw input{opacity:0;width:0;height:0}
 /* WT-31: anahtarın sınırı zeminden 3:1 ayrılsın (WCAG 1.4.11) — --track'i
@@ -648,6 +654,9 @@ nav button{min-height:48px;justify-content:center}
       <div>
         <div class="k"><span id="d-period-lbl">Bu ay</span> · <span data-i18n="netLbl">net</span></div>
         <div class="v" id="d-total">0</div>
+        <!-- WT-105: banka iadesi varsa büyük sayının hemen altında yazıyor;
+             yoksa satır hiç çizilmiyor. -->
+        <div class="pill" id="d-cashback" style="display:none"></div>
         <div class="delta" id="d-delta"></div>
       </div>
       <div class="hero-sep"></div>
@@ -1392,6 +1401,18 @@ nav button{min-height:48px;justify-content:center}
       </div>
     </div>
 
+    <!-- WT-105: banka para iadesi. Şarj kaydının bir ALANI DEĞİL: iade
+         bankanın hesap kesiminde toplu gelir, tek bir şarja denk düşmez ve
+         tarihi çoğu zaman şarjın tarihinden başkadır. Bu yüzden burada
+         yalnız bir KAPI var; dokununca kendi ekranı açılıyor. -->
+    <button type="button" class="cbrow" id="btn-cashback">
+      <span>
+        <span class="t" data-i18n="cashback">Banka Para İadesi</span>
+        <span class="d" id="cb-summary" data-i18n="cashbackD">Bankandan gelen iadeyi gir; girdiğin tarihin haftasından, ayından ve yılından düşülür.</span>
+      </span>
+      <span class="chev" aria-hidden="true">›</span>
+    </button>
+
     <div class="form-err" id="form-err" role="alert" data-i18n="formError">Firma, kWh ve tutar gerekli</div>
     <button class="save-btn" id="btn-save" data-i18n="save">Kaydet</button>
   </div>
@@ -1601,6 +1622,45 @@ nav button{min-height:48px;justify-content:center}
   </div>
 </section>
 
+<!-- ============ WT-105: BANKA PARA İADESİ ============ -->
+<section class="overlay" id="page-cashback" role="dialog" aria-modal="true" aria-labelledby="cashback-title">
+  <div class="ov-head">
+    <button class="close" id="btn-close-cb">×</button>
+    <div class="title" id="cashback-title" data-i18n="cashback">Banka Para İadesi</div>
+    <div style="width:32px"></div>
+  </div>
+  <div class="ov-body">
+    <div class="about" data-i18n="cashbackAbout">Bankanın kartına geri yatırdığı tutarı gir. Girdiğin tarih hangi haftaya, aya ve yıla düşüyorsa harcaman o dönemlerde bu kadar azalır.</div>
+    <div class="row2">
+      <div>
+        <label class="lbl" data-i18n="date" for="in-cb-date">Tarih</label>
+        <input type="date" id="in-cb-date">
+      </div>
+      <div>
+        <label class="lbl" data-i18n="bank" for="in-cb-bank">Banka</label>
+        <select id="in-cb-bank"></select>
+      </div>
+    </div>
+    <div class="row2">
+      <div>
+        <label class="lbl" id="lbl-cb-amt" for="in-cb-amt">Tutar</label>
+        <input type="text" inputmode="decimal" id="in-cb-amt">
+      </div>
+      <div>
+        <label class="lbl" data-i18n="currency" for="in-cb-cur">Para Birimi</label>
+        <select id="in-cb-cur"></select>
+      </div>
+    </div>
+    <div>
+      <label class="lbl" data-i18n="note" for="in-cb-note">Not</label>
+      <input type="text" id="in-cb-note" maxlength="120">
+    </div>
+    <button class="save-btn" id="btn-save-cb" data-i18n="save">Kaydet</button>
+    <div class="section-lbl" style="margin-top:20px" data-i18n="cashbackList">Girdiğin İadeler</div>
+    <div id="cb-list"></div>
+  </div>
+</section>
+
 <!-- ============ ÜLKE SEÇİCİ ============ -->
 <section class="overlay" id="page-country" role="dialog" aria-modal="true" aria-labelledby="country-title">
   <div class="ov-head">
@@ -1766,6 +1826,7 @@ nav button{min-height:48px;justify-content:center}
 <script src="ui/stats.js"></script>
 <script src="ui/history.js"></script>
 <script src="ui/trips.js"></script>
+<script src="ui/cashback.js"></script>
 <script src="ui/compare.js"></script>
 <script src="ui/vehicle.js"></script>
 <script src="ui/forms.js"></script>

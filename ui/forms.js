@@ -400,6 +400,10 @@ async function openAdd(id) {
   editingId = id || null;
   const r = id ? await db.sessions.get(id) : null;
   $('add-title').textContent = t(id ? 'editTitle' : 'addTitle');
+  // WT-105: para iadesi kapısının altyazısı bu ayki iadeyi söylüyor; form
+  // her açıldığında tazeleniyor (uygulama açılışında henüz veri okunmamış
+  // olabiliyor, tek seferlik yazmak eski değeri dondururdu).
+  cbOzetYaz();
   $('form-err').classList.remove('show');
   // WT-42/2: kaydın şarj kaybı (varsa) formun üstünde
   const lossEl = $('in-loss');

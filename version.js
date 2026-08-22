@@ -4,7 +4,7 @@
    (importScripts) tarafından yüklenir; bu yüzden klasik script,
    modül DEĞİL. Sürüm değişikliğinde SADECE bu dosya düzenlenir.
    ============================================================ */
-var WT_VERSION = 'v45';          // uygulama sürümü (Ayarlar'da görünür) — Faz 18
-var WT_DATE    = '21.08.2026';   // sürüm tarihi
-var WT_SCHEMA  = 9;              // yedek dosyası şema sürümü (uygulamadan bağımsız)
+var WT_VERSION = 'v46';          // uygulama sürümü (Ayarlar'da görünür) — Faz 19
+var WT_DATE    = '22.08.2026';   // sürüm tarihi
+var WT_SCHEMA  = 10;             // yedek dosyası şema sürümü (uygulamadan bağımsız)
 var WT_CACHE   = 'watttrack-' + WT_VERSION;  // service worker önbellek adı

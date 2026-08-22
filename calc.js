@@ -245,6 +245,12 @@ const amtB = r => { const k = convOf(r); return k == null ? 0 : (r.odenen || 0) 
 const savB = r => { const k = convOf(r); return k == null ? 0 : savingsOf(r) * k; };
 const isConv = r => convOf(r) != null;
 const expB = e => { const k = convOf(e); return k == null ? 0 : (e.tutar || 0) * k; };
+// WT-105: banka para iadesi — dönem toplamı, gösterim para biriminde. Kuru
+// çevrilemeyen iade 0 sayılır (amtB ile aynı kural): uydurma kur yok.
+// Bu iki yardımcı ui/cashback.js'te DEĞİL burada: ana sayfa ve İstatistik
+// toplamları bunlara bağlı ve o ekranlar iade ekranı olmadan da çiziliyor.
+const iadeB = c => { const k = convOf(c); return k == null ? 0 : (c.tutar || 0) * k; };
+const iadeToplam = list => (list || []).reduce((s, c) => s + iadeB(c), 0);
 // WT-10: convOf() null dönünce amtB() 0 veriyor ve kayıt toplamlardan sessizce
 // düşüyordu. (Kod içinde tanımlı ama hiç kullanılmayan fxPendingCount bu
 // uyarının planlanıp unutulduğunu gösteriyordu — kaldırıldı, yerine bu geldi.)

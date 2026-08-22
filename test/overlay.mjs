@@ -37,7 +37,7 @@ window.URL.revokeObjectURL = () => {};
 // WT-37: jsdom'da HTMLMediaElement.play() yok; splash yedek yolu koşsun
 window.HTMLMediaElement.prototype.play = () => Promise.reject(new Error('autoplay blocked (test)'));
 
-window.eval(['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', 'db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js', 'app.js']
+window.eval(['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', 'db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/cashback.js', 'ui/forms.js', 'ui/settings.js', 'app.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
   + `\n;window.__app = {db, S, openAdd, openExpense, overlayOpen, overlayClose,
        overlayStack, saveSetting, showScreen, markFormClean,

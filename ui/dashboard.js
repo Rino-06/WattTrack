@@ -111,6 +111,15 @@ async function renderDashboard() {
   }
 
   const allRaw = await allSessions();
+  // WT-105: banka para iadesi. Araç filtresine BAĞLANMIYOR — iade bankanın
+  // kartına gelir, bir araca ait değildir; araç seçiliyken iadeyi bölüştürmek
+  // uydurma olurdu. Bu yüzden yalnız "tüm araçlar" görünümünde düşülüyor.
+  const iadeHepsi = S.dashVeh ? [] : await allCashbacks();
+  const iade = iadeToplam(inPeriod(iadeHepsi, S.period));
+  // "Tümü" görünümünde bütçe ölçütü İÇİNDE BULUNULAN YIL (bkz. butceCiz);
+  // ölçüt hangi dönemse iade de o dönemden alınmalı.
+  const iadeButce = S.period === 'all'
+    ? iadeToplam(inPeriod(iadeHepsi, 'year')) : iade;
   const allVeh = vehFilter(allRaw, S.dashVeh);
   const all = typeFilter(allVeh);   // WT-90
   const cur = periodFilter(all);
@@ -140,14 +149,25 @@ async function renderDashboard() {
   const grossD = netD + wd.reduce((s, r) => s + savB(r), 0);
   const f = distFactor();
 
-  $('d-total').textContent = money(net);
+  // Cüzdandan çıkan para = şarjlar − bankanın geri yatırdığı. Birim fiyat
+  // kutuları (₺/kWh, ₺/km) BİLEREK dokunulmadan kalıyor: iade belirli bir
+  // kWh'nin ya da km'nin fiyatı değil, hesap kesimine bağlı toplu bir geri
+  // ödeme; oranlara karıştırmak her iki sayıyı da yanlış yapardı.
+  const netIade = net - iade;
+  $('d-total').textContent = money(netIade);
   $('d-gross').textContent = money(gross);
   $('d-savings').textContent = '−' + money(sav) + ' ' + t('savings');
-  // önceki döneme göre değişim
-  const prev = prevPeriodFilter(all).reduce((s, r) => s + amtB(r), 0);
+  // İade satırı yalnız iade VARSA çiziliyor; olmayan kullanıcı boş bir
+  // rozet görmesin.
+  const cbEl = $('d-cashback');
+  cbEl.style.display = iade > 0 ? '' : 'none';
+  cbEl.textContent = iade > 0 ? '−' + money(iade) + ' ' + t('cashback') : '';
+  // önceki döneme göre değişim — iki taraf da AYNI hesapla (iade düşülmüş)
+  const prev = prevPeriodFilter(all).reduce((s, r) => s + amtB(r), 0)
+    - iadeToplam(prevPeriodFilter(iadeHepsi));
   const dEl = $('d-delta');
   if (prev > 0) {
-    const pct = Math.round((net - prev) / prev * 100);
+    const pct = Math.round((netIade - prev) / prev * 100);
     dEl.textContent = (pct >= 0 ? '▲ +' : '▼ ') + pct + '% ' + t('prevPeriod');
     // Kullanıcı kuralı: değişim pozitifse yeşil, negatifse kırmızı; tam 0'da
     // renk verilmiyor (ne artış ne azalış var).
@@ -189,7 +209,7 @@ async function renderDashboard() {
       scopeEl.textContent = '';
     }
   }
-  butceCiz(cur, all);   // WT-45
+  butceCiz(cur, all, iadeButce);   // WT-45 · WT-105
   $('d-kwh').textContent = fmtNum(kwh, 0);
   // Ham kWh tüm kayıtları sayar; oran metrikleri saymaz — fark varsa söyle
   $('d-kwh-note').textContent = conv.length !== cur.length ? ' · ' + t('allRecordsNote') : '';
@@ -259,7 +279,7 @@ async function renderDashboard() {
 // yoktu. Bilinçli olarak YALNIZ gerçekleşen harcama ve geçmişle kıyas
 // gösteriliyor: "bu gidişle ay sonu ~X" gibi projeksiyon YOK (madde açıkça
 // yasaklıyor — az veriyle üretilen tahmin güven kaybettirir).
-function butceCiz(cur, all) {
+function butceCiz(cur, all, iade = 0) {
   const box = $('d-budget');
   const aylik = S.budgetM > 0 ? S.budgetM : null;
   const yillik = S.budgetY > 0 ? S.budgetY : null;
@@ -278,7 +298,12 @@ function butceCiz(cur, all) {
   // itibaren kalıcı olarak taşırır ve hiçbir şey anlatmazdı; "yıldaki gibi"
   // istenen davranış bu.
   const olcut = S.period === 'all' ? inPeriod(all, 'year') : cur;
-  const harcanan = olcut.filter(isConv).reduce((s, r) => s + amtB(r), 0);
+  // WT-105: bütçe "cebinden ne kadar çıktı" sorusunun karşılığı; ana sayfanın
+  // büyük sayısıyla aynı hesabı kullanmalı, yoksa iki sayı çelişirdi.
+  // "Tümü" görünümünde ölçüt İÇİNDE BULUNULAN YIL; çağıran iadeyi de o
+  // döneme göre hesaplayıp gönderiyor (iadeButce).
+  const harcanan = Math.max(0,
+    olcut.filter(isConv).reduce((s, r) => s + amtB(r), 0) - iade);
   const pct = Math.round(harcanan / hedef * 100);
   box.style.display = '';
   $('d-budget-lbl').textContent = t('budgetLine', {

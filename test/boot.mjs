@@ -62,7 +62,7 @@ window.HTMLMediaElement.prototype.play = function () {
 // edilirse const/let bildirimleri birbirini görmez. Tek eval'de birleştir.
 // WT-50: uygulama kodu 12 klasik script'e bölündü; index.html'deki sıra.
 const APP_FILES = ['db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js',
-  'ui/stats.js', 'ui/history.js', 'ui/trips.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js',
+  'ui/stats.js', 'ui/history.js', 'ui/trips.js', 'ui/cashback.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js',
   'ui/settings.js', 'app.js'];
 const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP_FILES]
   .map(f => `/* ==== ${f} ==== */\n` + fs.readFileSync(path.join(ROOT, f), 'utf8'))
@@ -92,6 +92,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
        allTrips, tripSessions, tripExpenses, tripOverlaps, tripMesafe,
        tripOzet, tripBitis, renderTrips, openTrip, openTripEdit, ortTlKm,
        tripOrnek, tripAdKur, tripAdParcala, TRIP_ORNEK,
+       allCashbacks, iadeB, iadeToplam, openCashback, renderCbList, inPeriod,
        t, shortDate, distDisp, photoSrc, fotoDisaAktar};`;
 try {
   window.eval(bundle);
@@ -3686,7 +3687,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   // dinamik bir önekle (exp_, rem_, spec_) üretiliyor olmalı.
   const kaynak = ['index.html', 'app.js', 'calc.js', 'db.js',
     'evprices.js', 'evdata.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js',
-    'ui/stats.js', 'ui/history.js', 'ui/trips.js', 'ui/compare.js', 'ui/vehicle.js',
+    'ui/stats.js', 'ui/history.js', 'ui/trips.js', 'ui/cashback.js', 'ui/compare.js', 'ui/vehicle.js',
     'ui/forms.js', 'ui/settings.js']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
   // T sözlüğünün kendisi "kullanım" sayılmaz — yoksa her anahtar kendini bulur
@@ -3746,7 +3747,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const kullanim = html.slice(0, i) + html.slice(j)
     + ['app.js', 'calc.js', 'db.js', 'evprices.js', 'i18n.js',
        'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js',
-       'ui/trips.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js']
+       'ui/trips.js', 'ui/cashback.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js']
       .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
   const olu = [...siniflar].filter(c =>
     !new RegExp('\\b' + c.replace(/[-]/g, '\\-') + '\\b').test(kullanim)).sort();
@@ -4154,6 +4155,163 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 
   await A.db.sessions.clear();
   A.S.sMetric = 'spend'; A.S.gran = 'month';
+}
+
+// --- WT-105: banka para iadesi ---
+{
+  const A = app();
+  const doc = window.document;
+  const $ = id => doc.getElementById(id);
+  await A.db.sessions.clear(); await A.db.vehicles.clear();
+  await A.db.cashbacks.clear();
+  A.S.dashVeh = ''; A.S.currency = 'TRY'; A.S.unit = 'km';
+  A.S.gran = 'month'; A.S.sMetric = 'spend'; A.S.period = 'month';
+  A.S.budgetM = null; A.S.budgetY = null;
+  const bugun = A.localISO();
+  await A.db.sessions.add({tarih: bugun + 'T10:00', firma: 'ZES', tip: 'DC',
+    kwh: 50, tutar: 500, odenen: 500, cur: 'TRY', mesafeKm: 250, aracId: null});
+  A.invalidateCache();
+
+  // 1) Giriş noktası: ALAN değil, kendi ekranını açan bir düğme
+  const kapi = $('btn-cashback');
+  check('WT-105 KABUL: para iadesi Yeni Şarj Kaydı ekranının içinde',
+    kapi != null && $('page-add').contains(kapi));
+  check('WT-105 KABUL: alan değil, dokununca açılan bir düğme',
+    kapi.tagName === 'BUTTON' && !$('page-add').querySelector('#in-cashback'),
+    kapi.tagName);
+  kapi.dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(300);
+  check('WT-105 KABUL: dokununca para iadesi ekranı açılıyor',
+    $('page-cashback').classList.contains('open')
+      || $('page-cashback').style.display !== 'none',
+    'class=' + $('page-cashback').className);
+  check('WT-105: iade yokken liste boş metni yazıyor',
+    /iade/i.test($('cb-list').textContent), $('cb-list').textContent.slice(0, 60));
+
+  // 2) İade girildi
+  $('in-cb-date').value = bugun;
+  $('in-cb-amt').value = '120';
+  $('in-cb-note').value = 'Ağustos kampanyası';
+  $('btn-save-cb').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(400);
+  const kayitlar = await A.allCashbacks();
+  check('WT-105: iade kaydedildi', kayitlar.length === 1 && kayitlar[0].tutar === 120,
+    JSON.stringify(kayitlar));
+  check('WT-105: girilen iade listede görünüyor',
+    /120/.test($('cb-list').textContent) && /kampanya/i.test($('cb-list').textContent),
+    $('cb-list').textContent.replace(/\s+/g, ' ').slice(0, 80));
+
+  // 3) AY'dan düşülüyor
+  A.S.period = 'month';
+  await A.renderDashboard(); await sleep(300);
+  check('WT-105 KABUL: iade ayın harcamasından düşüldü (500 − 120 = 380)',
+    /380/.test($('d-total').textContent), 'd-total=' + $('d-total').textContent);
+  check('WT-105 KABUL: ne kadar düşüldüğü ekranda yazıyor',
+    $('d-cashback').style.display !== 'none' && /120/.test($('d-cashback').textContent),
+    'd-cashback=' + $('d-cashback').textContent);
+  check('WT-105: indirimsiz (brüt) tutara DOKUNULMUYOR — iade indirim değil',
+    /500/.test($('d-gross').textContent), 'd-gross=' + $('d-gross').textContent);
+  check('WT-105 KABUL: ₺/kWh kutusu iadeden ETKİLENMİYOR (500/50 = 10,00)',
+    /10,00/.test($('d-avg').textContent), 'd-avg=' + $('d-avg').textContent);
+
+  // 4) YIL'dan ve HAFTA'dan da düşülüyor — üçü de kullanıcının istediği kural
+  const sonCubuk = () => {
+    const mb = [...doc.querySelectorAll('#d-months .mb')];
+    return mb.length ? mb[mb.length - 1].querySelector('.amt').textContent.trim() : '(yok)';
+  };
+  for (const g of ['week', 'month', 'year']) {
+    A.S.gran = g;
+    await A.renderStats(); await sleep(250);
+    check(`WT-105 KABUL: ${g} grafiğinde de iade düşülmüş (380)`,
+      /380/.test(sonCubuk()), `${g} son çubuk=${sonCubuk()}`);
+  }
+
+  // 5) Para OLMAYAN ölçüler iadeden etkilenmiyor
+  A.S.gran = 'month';
+  A.S.sMetric = 'kwh';
+  await A.renderStats(); await sleep(250);
+  check('WT-105: kWh ölçüsü iadeden etkilenmiyor (para değil)',
+    sonCubuk() === '50', sonCubuk());
+  A.S.sMetric = 'cons';
+  await A.renderStats(); await sleep(250);
+  check('WT-105: tüketim ölçüsü iadeden etkilenmiyor (50/250 = 20,0)',
+    sonCubuk() === '20,0', sonCubuk());
+  A.S.sMetric = 'spend';
+
+  // 6) Bütçe çubuğu ana sayfanın büyük sayısıyla AYNI hesabı kullanıyor
+  A.S.budgetM = 1000;
+  await A.renderDashboard(); await sleep(300);
+  check('WT-105 KABUL: bütçe de iade düşülmüş harcamayı ölçüyor',
+    /380/.test($('d-budget-lbl').textContent),
+    $('d-budget-lbl').textContent.replace(/\s+/g, ' ').slice(0, 80));
+  A.S.budgetM = null;
+
+  // 7) Belirli bir araç seçiliyken iade düşülmüyor — iade karta gelir, araca
+  // değil; tek araca yazmak da bölüştürmek de uydurma olurdu. (Araç seçicisi
+  // ancak İKİ araç varken çıkıyor; tek araçlı kullanıcıda "tümü" zaten geçerli
+  // ve iade her zaman düşülüyor.)
+  const vid = await A.db.vehicles.add({ad: 'Test EV', batt: 60});
+  await A.db.vehicles.add({ad: 'İkinci Araç', batt: 40});
+  await A.db.sessions.toCollection().modify({aracId: vid});
+  A.invalidateCache();
+  A.S.dashVeh = String(vid);
+  await A.renderDashboard(); await sleep(300);
+  check('WT-105 KABUL: belirli bir araç seçiliyken iade düşülmüyor',
+    /500/.test($('d-total').textContent) && $('d-cashback').style.display === 'none',
+    'd-total=' + $('d-total').textContent);
+  A.S.dashVeh = '';
+  await A.renderDashboard(); await sleep(300);
+  check('WT-105: "tüm araçlar"a dönünce iade yine düşülüyor (test anlamlı)',
+    /380/.test($('d-total').textContent), 'd-total=' + $('d-total').textContent);
+
+  // 8) Yedek: iade dışa aktarılıyor ve geri yüklenirken mükerrer yazılmıyor
+  const yedek = await A.backupPayload();
+  check('WT-105: iade yedeğe giriyor',
+    Array.isArray(yedek.cashbacks) && yedek.cashbacks.length === 1
+      && yedek.cashbacks[0].tutar === 120,
+    JSON.stringify(yedek.cashbacks));
+  await A.importBackupText(JSON.stringify(yedek));
+  await sleep(500);
+  check('WT-105 KABUL: aynı yedek ikinci kez iadeyi ÇOĞALTMIYOR',
+    (await A.allCashbacks()).length === 1,
+    'adet=' + (await A.allCashbacks()).length);
+  // Temiz cihaza geri yükleme. Şarj kayıtları da siliniyor: mevcut içe alma
+  // "gelen şarjların HEPSİ mükerrer" durumunda tüm dosyayı reddediyor
+  // (importAllDup) — telefon değiştiren kullanıcının gerçek yolu bu.
+  await A.db.cashbacks.clear(); await A.db.sessions.clear();
+  A.invalidateCache();
+  await A.importBackupText(JSON.stringify(yedek));
+  await sleep(500);
+  check('WT-105 KABUL: yedekten geri yüklenen iade geri geliyor',
+    (await A.allCashbacks()).length === 1
+      && (await A.allCashbacks())[0].tutar === 120,
+    JSON.stringify(await A.allCashbacks()));
+  check('WT-105: geri yüklenen iade notunu ve tarihini koruyor',
+    (await A.allCashbacks())[0].not === 'Ağustos kampanyası'
+      && (await A.allCashbacks())[0].tarih === bugun,
+    JSON.stringify(await A.allCashbacks()));
+
+  // 9) İade silinince harcama eski haline dönüyor
+  await A.db.cashbacks.clear();
+  A.S.period = 'month';
+  await A.renderDashboard(); await sleep(300);
+  check('WT-105: iade silinince ayın harcaması eski haline dönüyor',
+    /500/.test($('d-total').textContent)
+      && $('d-cashback').style.display === 'none',
+    'd-total=' + $('d-total').textContent);
+
+  // 10) İade ekranı kapanınca Yeni Şarj Kaydı ekranı ALTTA duruyor —
+  // kullanıcı yarım bıraktığı kaydı kaybetmiyor.
+  await A.overlayClose('page-cashback', {force: true});
+  await sleep(200);
+  check('WT-105 KABUL: iade ekranı kapanınca şarj kaydı ekranı açık kalıyor',
+    !$('page-cashback').classList.contains('active')
+      && $('page-add').classList.contains('active'),
+    `cb=${$('page-cashback').className} add=${$('page-add').className}`);
+
+  await A.overlayClose('page-add', {force: true});
+  await A.db.sessions.clear(); await A.db.vehicles.clear();
+  A.S.period = 'all'; A.S.gran = 'month';
 }
 
 // --- WT-101: bozuk araç fotoğrafı Aracım sayfasını çökertiyordu ---

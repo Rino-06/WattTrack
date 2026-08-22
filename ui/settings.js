@@ -355,6 +355,7 @@ async function backupPayload() {
       .map(fotoDisaAktar)),
     expenses: (await allExpenses()).filter(r => !isDemo(r)),
     trips: (await allTrips()).filter(r => !isDemo(r)),   // WT-88
+    cashbacks: (await allCashbacks()).filter(r => !isDemo(r)),   // WT-105
     settings: await db.settings.toArray()
   };
 }
@@ -726,10 +727,21 @@ async function importBackupText(text) {
         .filter(x => x.ad && x.baslangic && !haveTrip.has(tsig(x)))
     : [];
 
+  // WT-105: para iadeleri. Mükerrer ölçütü tarih + banka + tutar; araca ya da
+  // yolculuğa bağlı olmadığı için haritalanacak bir kimliği yok.
+  const csig = c => [c.tarih, (c.banka || '').trim().toLowerCase(), c.tutar,
+    c.cur || ''].join('|');
+  const haveCb = new Set((await allCashbacks()).map(csig));
+  const freshCb = Array.isArray(data.cashbacks)
+    ? data.cashbacks.map(({id, ...c}) => c)
+        .filter(c => c.tarih && c.tutar > 0 && !haveCb.has(csig(c)))
+    : [];
+
   // --- Tek transaction: ortada hata olursa hiçbir şey yazılmasın (WT-08/3) ---
   // WT-12: kota dolarsa kullanıcı 'geri yüklendi' sanmasın
   const imported = await safeWrite(() =>
-    db.transaction('rw', db.sessions, db.vehicles, db.expenses, db.trips, db.settings, async () => {
+    db.transaction('rw', db.sessions, db.vehicles, db.expenses, db.trips,
+      db.cashbacks, db.settings, async () => {
     // WT-08: önce araçlar, sonra eskiId → yeniId haritası.
     // Eskiden sessions'tan sadece `id` düşürülüyor, `aracId` eski değerini
     // koruyordu; cihazda zaten araç varsa kayıtlar YANLIŞ araca bağlanıyordu.
@@ -777,6 +789,7 @@ async function importBackupText(text) {
         : (tripMap.has(m.seyahatId) ? tripMap.get(m.seyahatId) : null);
       return m;
     }));
+    if (freshCb.length) await db.cashbacks.bulkAdd(freshCb);
 
     if (restoreSettings) {
       const rows = data.settings.map(row => {

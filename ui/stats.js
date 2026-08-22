@@ -30,6 +30,9 @@ async function renderStats() {
   }
 
   const all = vehFilter(await allSessions(), S.dashVeh);
+  // WT-105: banka iadesi bir araca ait değil (kartın hesabına geliyor), o
+  // yüzden ana sayfadaki gibi yalnız "tüm araçlar" görünümünde düşülüyor.
+  const iadeler = S.dashVeh ? [] : await allCashbacks();
   reportFxGaps(all, 's-warnings', 'fxStats');   // WT-10
 
   // WT-15: d-gran segmenti YALNIZCA harcama grafiğini etkiliyordu; altındaki
@@ -72,6 +75,16 @@ async function renderStats() {
     const g = {gun: {}, ay: {}, yil: {}};
     const kova = o => (o.tutar = o.tutar || 0, o.kwh = o.kwh || 0, o.km = o.km || 0,
       o.ckwh = o.ckwh || 0, o.ckm = o.ckm || 0, o);
+    // İade, TARİHİNİN düştüğü günden/aydan/yıldan düşülüyor — kullanıcının
+    // istediği kural bu. Yalnız `tutar`ı etkiler; kWh, mesafe ve tüketim
+    // para değil, onlara dokunmuyor.
+    iadeler.forEach(c => {
+      const v = iadeB(c);
+      const d = (c.tarih || '').slice(0, 10), a = d.slice(0, 7), y = d.slice(0, 4);
+      if (!d) return;
+      [g.gun[d] = kova(g.gun[d] || {}), g.ay[a] = kova(g.ay[a] || {}),
+       g.yil[y] = kova(g.yil[y] || {})].forEach(o => { o.tutar -= v; });
+    });
     all.forEach(r => {
       const v = amtB(r);
       const d = r.tarih.slice(0, 10), a = r.tarih.slice(0, 7), y = r.tarih.slice(0, 4);
@@ -97,7 +110,9 @@ async function renderStats() {
     if (S.sMetric === 'kwh') return o.kwh;
     if (S.sMetric === 'dist') return distDisp(o.km);
     if (S.sMetric === 'cons') return o.ckm >= 20 ? cons100(o.ckwh, o.ckm) : null;
-    return o.tutar;
+    // İade o dönemin şarjlarından büyükse toplam eksiye düşer; çubuk eksi
+    // çizilemez, sıfıra kırpılıyor (para geri gelmiş, harcama yok demek).
+    return Math.max(0, o.tutar);
   };
   const olcuMetin = v => {
     if (v == null) return '';
