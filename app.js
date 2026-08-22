@@ -69,7 +69,7 @@ function clearFormErr() {
 const SETTING_KEYS = ['country','currency','unit','lang','advOpen','defaultVehicleId',
   'onboarded','cmp','bankCountries','customBanks','gran','theme','homeKwhPrice',
   'budgetM','budgetY','kwhRegion','homeKwhAuto',
-  'workKwhPrice','workKwhAuto'];   // WT-39, WT-45, WT-78, WT-87
+  'workKwhPrice','workKwhAuto','sMetric'];   // WT-39, WT-45, WT-78, WT-87, WT-104
 
 // WT-81/3: ayarların S'e okunması init() ve yedek geri yükleme
 // (ui/settings.js) içinde iki kez yazılmıştı — SETTING_KEYS'e yeni anahtar

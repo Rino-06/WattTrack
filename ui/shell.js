@@ -427,10 +427,22 @@ async function fetchRate(from, to, date) {
 //
 // bars: [{label, value, text, year}] · value null ise "veri yok" (taban çubuk)
 // opt.yearAttr: yalnız #d-months için — sütuna data-y + tıklanabilirlik verir
+// opt.tabanli: ORAN gösteren ölçüler için (tüketim gibi). Sıfırdan ölçmek
+// 17,4 ile 19,1 arasındaki gerçek farkı görünmez yapar — çubukların hepsi
+// birbirinin aynı çıkar. Tabanlı ölçekte en düşük değerin biraz altından
+// başlanır; grafiğin altındaki not tabanı yazar ki çubuk boyu "iki katı"
+// diye okunmasın.
 function barChartHTML(bars, opt = {}) {
+  const degerler = bars.map(b => b.value).filter(v => v != null && v > 0);
   const max = Math.max(1, ...bars.map(b => b.value || 0));
+  // Taban: en düşük değerin, aralığın %25'i kadar altı. Tek değer varsa
+  // aralık sıfır olur; o zaman taban da sıfır kalır (çubuk tam boy).
+  const min = degerler.length ? Math.min(...degerler) : 0;
+  const taban = (opt.tabanli && degerler.length > 1)
+    ? Math.max(0, min - (max - min) * 0.25) : 0;
   return bars.map(b => {
-    const oran = b.value ? Math.max(2, Math.round(b.value / max * 100)) : 2;
+    const oran = b.value && b.value > taban
+      ? Math.max(2, Math.round((b.value - taban) / (max - taban) * 100)) : 2;
     const attr = opt.yearAttr && b.year != null
       ? ` data-y="${esc(String(b.year))}" style="cursor:pointer"` : '';
     return `<div class="mb"${attr}>

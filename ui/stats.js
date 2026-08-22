@@ -7,6 +7,12 @@
 
 
 /* ---- İstatistik ---- */
+// WT-104: ölçü -> açıklama anahtarı. Anahtarlar DÜZ YAZI duruyor; sözlük
+// bütünlüğü sınaması kodu metin olarak tarıyor, 'metricNote_' + degisken
+// yazılsaydı hem "eksik anahtar" hem "ölü anahtar" diye iki kez yanılırdı.
+const METRIC_NOTE = {
+  spend: 'metricNote_spend', kwh: 'metricNote_kwh', dist: 'metricNote_dist'
+};
 // ============================================================
 // İSTATİSTİK (ana sayfadan taşınan grafikler + dağılımlar)
 // ============================================================
@@ -58,19 +64,50 @@ async function renderStats() {
   // gün/ay/yıl toplamları TEK geçişte çıkarılıyor ve önbellek kuşağına bağlı
   // memoize ediliyor. Anahtar araç filtresini ve para birimini içeriyor —
   // amtB() para birimine bağlı, ayarlar tablosu önbelleğe dahil değil.
+  //
+  // WT-104: kova artık tek sayı değil, dört ölçüyü birden taşıyan bir demet.
+  // `ckwh`/`ckm` tüketime UYGUN kayıtların toplamı — tuketimOrt()'un elediği
+  // kayıtlar (atlanan, mesafesiz) buraya girmiyor; yoksa oran bozulurdu.
   const T_ = memo('statsSums:' + S.dashVeh + ':' + S.currency, () => {
     const g = {gun: {}, ay: {}, yil: {}};
+    const kova = o => (o.tutar = o.tutar || 0, o.kwh = o.kwh || 0, o.km = o.km || 0,
+      o.ckwh = o.ckwh || 0, o.ckm = o.ckm || 0, o);
     all.forEach(r => {
       const v = amtB(r);
       const d = r.tarih.slice(0, 10), a = r.tarih.slice(0, 7), y = r.tarih.slice(0, 4);
-      g.gun[d] = (g.gun[d] || 0) + v;
-      g.ay[a] = (g.ay[a] || 0) + v;
-      g.yil[y] = (g.yil[y] || 0) + v;
+      const uygun = !r.atlanan && r.mesafeKm > 0 && r.kwh > 0;
+      [g.gun[d] = kova(g.gun[d] || {}), g.ay[a] = kova(g.ay[a] || {}),
+       g.yil[y] = kova(g.yil[y] || {})].forEach(o => {
+        o.tutar += v;
+        o.kwh += r.kwh || 0;
+        // Mesafede de atlanan kayıt sayılmıyor: o mesafe bir sonraki kayda ait.
+        if (!r.atlanan) o.km += r.mesafeKm || 0;
+        if (uygun) { o.ckwh += r.kwh; o.ckm += r.mesafeKm; }
+      });
     });
     return g;
   });
 
-  // harcama grafiği: kasıtlı olarak birden çok dönemi yan yana gösterir (seyir)
+  // Seçili ölçünün bir kovadan çıkardığı sayı. Tüketim ORAN olduğu için
+  // toplanamaz — kovanın kendi kWh/km toplamından yeniden hesaplanıyor.
+  // 20 km altında oran anlamsız (tuketimOrt ile aynı eşik) → null, yani
+  // "veri yok"; sıfır çubuk çizip yanıltmıyor.
+  const olcuDeger = o => {
+    if (!o) return S.sMetric === 'cons' ? null : 0;
+    if (S.sMetric === 'kwh') return o.kwh;
+    if (S.sMetric === 'dist') return distDisp(o.km);
+    if (S.sMetric === 'cons') return o.ckm >= 20 ? cons100(o.ckwh, o.ckm) : null;
+    return o.tutar;
+  };
+  const olcuMetin = v => {
+    if (v == null) return '';
+    if (S.sMetric === 'kwh') return v > 0 ? fmtNum(v, 0) : '';
+    if (S.sMetric === 'dist') return v > 0 ? fmtNum(Math.round(v), 0) : '';
+    if (S.sMetric === 'cons') return fmtNum(v, 1);
+    return v ? money(v) : '';
+  };
+
+  // Tek grafik: kasıtlı olarak birden çok dönemi yan yana gösterir (seyir)
   const now = new Date();
   const bars = [];
   if (S.gran === 'week') {
@@ -80,31 +117,61 @@ async function renderStats() {
       bars.push({
         label: DAYS[S.lang][(d.getDay() + 6) % 7],
         year: String(d.getFullYear()),
-        sum: T_.gun[key] || 0
+        sum: olcuDeger(T_.gun[key])
       });
     }
   } else if (S.gran === 'year') {
     for (const y of sonYillar(5))
-      bars.push({label: y.label, year: y.year, sum: T_.yil[y.key] || 0});
+      bars.push({label: y.label, year: y.year, sum: olcuDeger(T_.yil[y.key])});
   } else if (S.gran === 'all') {
     // WT-56: son 5 takvim yılı DEĞİL, verinin kendi yılları — eski bir yedeği
     // geri yükleyen kullanıcının çubukları boş çıkmasın.
     const yls = Object.keys(T_.yil).sort().slice(-6);
     (yls.length ? yls : [String(now.getFullYear())]).forEach(y =>
-      bars.push({label: y, year: y, sum: T_.yil[y] || 0}));
+      bars.push({label: y, year: y, sum: olcuDeger(T_.yil[y])}));
   } else {
     for (const m of sonAylar(6))
-      bars.push({label: m.label, year: m.year, sum: T_.ay[m.key] || 0});
+      bars.push({label: m.label, year: m.year, sum: olcuDeger(T_.ay[m.key])});
   }
+  // Ölçü anahtarı: seçili düğme, başlık ve mesafe düğmesinin birimi.
+  $('s-metric-dist').textContent = S.unit;
+  $('s-metric').querySelectorAll('button').forEach(b => {
+    const sec = b.dataset.m === S.sMetric;
+    b.classList.toggle('sel', sec);
+    b.setAttribute('aria-checked', sec ? 'true' : 'false');
+  });
+  const baslik = {
+    kwh: 'kWh', dist: S.unit,
+    cons: t('mCons') + ' (' + consUnit() + ')'
+  }[S.sMetric] || t('mSpend');
+  $('s-chart-lbl').textContent = baslik;
+
   // WT-81: çizim barChartHTML()'e taşındı (oran bozulması düzeltmesi)
+  // WT-104: tüketimde tabanı sıfırdan başlatmak grafiği DÜZ gösteriyor —
+  // 17 ile 19 arasındaki fark sıfırdan ölçülünce göze çarpmıyor. Oranlı
+  // ölçüde taban en düşük değerin altı; altındaki not tabanı yazıyor ki
+  // çubuk boyu "yarısı kadar" diye okunmasın.
   $('d-months').innerHTML = barChartHTML(bars.map(b => ({
-    label: b.label, year: b.year, value: b.sum, text: b.sum ? money(b.sum) : ''
-  })), {yearAttr: true});
+    label: b.label, year: b.year, value: b.sum, text: olcuMetin(b.sum)
+  })), {yearAttr: true, tabanli: S.sMetric === 'cons'});
   $('d-months').querySelectorAll('.mb').forEach(el =>
     el.addEventListener('click', () => { histYear = el.dataset.y; showScreen('history'); }));
-  labelBarChart('d-months', t('spendChart'),
-    bars.map(b => ({label: b.label, text: money(b.sum)})));
+  labelBarChart('d-months', baslik, bars.map(b => ({
+    label: b.label, text: b.sum == null ? t('noData') : (olcuMetin(b.sum) || '0')
+  })));
   makeBarsFocusable('d-months', el => el.dataset.y + ' — ' + t('viewAll'));
+
+  // Grafiğin altındaki tek cümle: ne okunduğunu ve ölçeğin nereden
+  // başladığını söylüyor.
+  const dolu = bars.filter(b => b.sum != null && b.sum > 0);
+  $('s-chart-note').textContent = S.sMetric === 'cons'
+    ? (dolu.length >= 2
+        ? t('consTrendNote', {
+            u: S.unit,
+            min: fmtNum(Math.min(...dolu.map(b => b.sum)), 1),
+            max: fmtNum(Math.max(...dolu.map(b => b.sum)), 1)})
+        : t('consTrendNeed'))
+    : t(METRIC_NOTE[S.sMetric] || METRIC_NOTE.spend, {u: S.unit});
 
   // WT-72: haftanın günlerine göre dağılım grafiği kaldırıldı (kullanıcı isteği)
 
@@ -210,35 +277,6 @@ async function renderStats() {
       <span class="tv" style="color:${Math.abs(ort) > KAYIP_UYARI ? 'var(--red)' : 'var(--muted)'}">${ort >= 0 ? '+' : '−'}%${fmtNum(Math.abs(ort), 1)}</span></div>`).join('')
     : `<div class="tl" style="color:var(--faint)">${t('lossNeed')}</div>`;
 
-  // WT-41/3: aylık tüketim trendi. Son 6 ay; atlanan kayıtlar hariç.
-  // Kışın artışı görmek EV sahipleri için en değerli sinyallerden biri.
-  const consAy = sonAylar(6).map(m => ({
-    label: m.label,
-    v: tuketimOrt(all.filter(r => monthKey(r.tarih) === m.key))
-  }));
-  // WT-81/6: başlık birimi taşıyor, o yüzden data-i18n ile DEĞİL burada
-  // yazılıyor (para/birim içeren etiketlerin yerleşik kalıbı — applyI18n
-  // yalnız statik metni çevirir).
-  $('s-cons-lbl').textContent = t('consTrend', {u: S.unit});
-  $('s-cons').innerHTML = barChartHTML(consAy.map(x => ({
-    label: x.label, value: x.v, text: x.v != null ? fmtNum(x.v, 1) : ''
-  })));
-  // WT-81/hata avı: bu grafiğin metin alternatifi HİÇ YOKTU. WT-30 üç
-  // grafiği kapsamıştı, tüketim trendi ondan sonra (WT-41/3) eklendi ve
-  // ekran okuyucuya görünmez kaldı.
-  labelBarChart('s-cons', t('consTrend', {u: S.unit}), consAy.map(x => ({
-    label: x.label,
-    text: x.v != null ? fmtNum(x.v, 1) + ' ' + consUnit() : t('noData')
-  })));
-  // WLTP ile karşılaştırma KASITLI olarak yok (WT-41/2): araçlar o değere
-  // ulaşmıyor, yanıltıcı olurdu. Ölçek kullanıcının kendi geçmişi.
-  const dolu = consAy.filter(x => x.v != null);
-  $('s-cons-note').textContent = dolu.length >= 2
-    ? t('consTrendNote', {
-        u: S.unit,
-        min: fmtNum(Math.min(...dolu.map(x => x.v)), 1),
-        max: fmtNum(Math.max(...dolu.map(x => x.v)), 1)})
-    : t('consTrendNeed');
 }
 
 // WT-41/4: kaydın kendi tüketimi. Atlanan kayıtta gösterilmez — o kaydın

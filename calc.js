@@ -20,7 +20,10 @@ const S = {
   ocrOn: false, budgetM: null, budgetY: null, workKwhPrice: null, workKwhAuto: false,
   // WT-88: Geçmiş'in görünümü — 'rows' (kayıtlar) ya da 'trips'.
   // Kalıcı tercih DEĞİL, o anki bakış açısı; SETTING_KEYS'e girmiyor.
-  hView: 'rows'
+  hView: 'rows',
+  // WT-104: İstatistik'teki tek grafiğin ölçüsü — 'spend' | 'kwh' | 'dist' |
+  // 'cons'. Dönem seçici (gran) gibi KALICI: SETTING_KEYS'te.
+  sMetric: 'spend'
 };
 const $ = id => document.getElementById(id);
 

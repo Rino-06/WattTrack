@@ -1633,14 +1633,18 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   check('WT-41/2: WLTP ile karşılaştırma YOK, kendi geçmişiyle',
     !/WLTP/.test($('d-cons-d').textContent + $('d-cons').textContent));
 
+  // WT-104: tüketim artık AYRI bir grafik değil; tek grafiğin bir ölçüsü.
+  // Anahtar "Tüketim"e alınınca aynı grafik tüketimi çiziyor.
+  A.S.gran = 'month'; A.S.sMetric = 'cons';
   await A.renderStats();
   await sleep(250);
-  const cubuk = window.document.querySelectorAll('#s-cons .mb');
+  const cubuk = window.document.querySelectorAll('#d-months .mb');
   check('WT-41/3: aylık tüketim trendi 6 ay çiziliyor', cubuk.length === 6,
     'çubuk=' + cubuk.length);
   check('WT-41/3: trend notu ölçeğin kendi geçmişi olduğunu söylüyor',
-    /WLTP|geçmiş/i.test($('s-cons-note').textContent),
-    $('s-cons-note').textContent.slice(0, 60));
+    /WLTP|geçmiş/i.test($('s-chart-note').textContent),
+    $('s-chart-note').textContent.slice(0, 60));
+  A.S.sMetric = 'spend';
 
   await A.renderHistory();
   await sleep(250);
@@ -3120,7 +3124,8 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     /#s-data\{[^}]*display:grid[^}]*repeat\(auto-fit,minmax\(300px,1fr\)\)/.test(css));
   const sData = doc.getElementById('s-data');
   const hucreler = [...sData.querySelectorAll(':scope > .gcell')];
-  check('WT-80: İstatistik blokları hücrelere sarıldı', hucreler.length >= 7,
+  // WT-104: harcama ve tüketim tek hücrede birleşti; alt sınır 7'den 6'ya indi.
+  check('WT-80: İstatistik blokları hücrelere sarıldı', hucreler.length >= 6,
     'hücre=' + hucreler.length);
   const basliksiz = hucreler.filter(g => !g.querySelector('h2'));
   check('WT-80 KABUL: her hücrede kendi başlığı var (başlık/değer ayrılmıyor)',
@@ -3560,7 +3565,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.renderStats();
   await A.renderVehiclePage();
   await sleep(400);
-  for (const id of ['d-months', 's-cons', 'v-exp-chart']) {
+  for (const id of ['d-months', 'v-exp-chart']) {
     const barlar = [...doc.querySelectorAll('#' + id + ' .bar')];
     if (!barlar.length) { check('WT-81/1: ' + id + ' çizildi', false, 'çubuk yok'); continue; }
     check('WT-81/1: ' + id + ' ortak yardımcıdan geçiyor (.track var)',
@@ -3570,16 +3575,25 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
       barlar.map(b => b.style.height).join(','));
   }
 
-  // --- Hata avı: tüketim grafiğinin metin alternatifi HİÇ YOKTU (WT-30
-  // üç grafiği kapsamıştı, #s-cons ondan sonra WT-41/3 ile eklendi).
-  const cons = doc.getElementById('s-cons');
+  // --- Hata avı: tüketim grafiğinin metin alternatifi HİÇ YOKTU (WT-30 üç
+  // grafiği kapsamıştı, tüketim ondan sonra WT-41/3 ile eklendi). WT-104'te
+  // tek grafiğe birleşti; metin alternatifi ölçü değişince de yenilenmeli.
+  A.S.sMetric = 'cons';
+  await A.renderStats(); await sleep(300);
+  const cons = doc.getElementById('d-months');
   check('WT-81/1 KABUL: tüketim grafiği artık ekran okuyucuya görünür',
     cons.getAttribute('role') === 'img'
       && (cons.getAttribute('aria-label') || '').length > 10,
     (cons.getAttribute('aria-label') || '(yok)').slice(0, 70));
+  check('WT-104: metin alternatifi SEÇİLİ ölçüyü söylüyor (harcamada kalmıyor)',
+    /kWh\/100/.test(cons.getAttribute('aria-label') || ''),
+    (cons.getAttribute('aria-label') || '(yok)').slice(0, 70));
   check('WT-81/1: tüketim grafiğinin de özet tablosu var',
     cons.nextElementSibling && cons.nextElementSibling.matches('table.sr-only'),
     cons.nextElementSibling?.tagName + '.' + cons.nextElementSibling?.className);
+  check('WT-104: eski ayrı tüketim grafiği DOM\'dan kalktı (iki grafik kalmadı)',
+    doc.getElementById('s-cons') == null);
+  A.S.sMetric = 'spend';
 }
 
 // ---- WT-81/3: kur alanları tek yerden dolduruluyor ----
@@ -4066,6 +4080,80 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.overlayClose('page-tripedit', {force: true});
   await A.db.trips.clear(); await A.db.vehicles.clear();
   A.S.country = 'TR';
+}
+
+// --- WT-104: tek grafik + ölçü anahtarı ---
+{
+  const A = app();
+  const doc = window.document;
+  const $ = id => doc.getElementById(id);
+  await A.db.sessions.clear(); await A.db.vehicles.clear();
+  A.S.dashVeh = ''; A.S.currency = 'TRY'; A.S.unit = 'km'; A.S.gran = 'month';
+  const ay = A.localISO().slice(0, 8);           // bu ayın kendisi
+  await A.db.sessions.bulkAdd([
+    {tarih: ay + '05T10:00', firma: 'ZES', tip: 'DC', kwh: 40, tutar: 400,
+      odenen: 400, cur: 'TRY', mesafeKm: 200, aracId: null},
+    {tarih: ay + '06T10:00', firma: 'Trugo', tip: 'AC', kwh: 20, tutar: 300,
+      odenen: 300, cur: 'TRY', mesafeKm: 100, aracId: null},
+    // Atlanan kayıt: mesafesi bir sonrakine ait. Harcamaya ve kWh'ye girer,
+    // mesafeye ve tüketime GİRMEZ — dört ölçü aynı kaydı farklı sayıyor.
+    {tarih: ay + '07T10:00', firma: 'ZES', tip: 'DC', kwh: 10, tutar: 100,
+      odenen: 100, cur: 'TRY', mesafeKm: 500, atlanan: true, aracId: null}
+  ]);
+  A.invalidateCache();
+
+  const sonCubuk = () => {
+    const mb = [...doc.querySelectorAll('#d-months .mb')];
+    return mb.length ? mb[mb.length - 1].querySelector('.amt').textContent.trim() : '(çubuk yok)';
+  };
+  const olcuSec = async m => {
+    $('s-metric').querySelector(`[data-m="${m}"]`)
+      .dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+    await sleep(250);
+  };
+
+  await olcuSec('spend');
+  check('WT-104 KABUL: Harcama ölçüsü bu ayın toplam parasını çiziyor',
+    /800/.test(sonCubuk()), sonCubuk());
+  await olcuSec('kwh');
+  check('WT-104 KABUL: kWh ölçüsü enerjiyi çiziyor (atlanan kayıt dahil)',
+    sonCubuk() === '70', sonCubuk());
+  await olcuSec('dist');
+  check('WT-104 KABUL: mesafe ölçüsü atlanan kaydın 500 km’sini SAYMIYOR',
+    sonCubuk() === '300', sonCubuk());
+  await olcuSec('cons');
+  check('WT-104 KABUL: tüketim ölçüsü 60 kWh / 300 km = 20,0 veriyor',
+    sonCubuk() === '20,0', sonCubuk());
+
+  check('WT-104: seçili düğme hem sınıfla hem aria-checked ile işaretli',
+    $('s-metric').querySelector('[data-m="cons"]').classList.contains('sel')
+      && $('s-metric').querySelector('[data-m="cons"]').getAttribute('aria-checked') === 'true'
+      && $('s-metric').querySelector('[data-m="spend"]').getAttribute('aria-checked') === 'false');
+  check('WT-104: ölçü seçimi kalıcı (ayarlara yazıldı)',
+    (await A.db.settings.get('sMetric'))?.value === 'cons',
+    JSON.stringify(await A.db.settings.get('sMetric')));
+
+  // Dönem seçici ÖLÇÜDEN bağımsız çalışmaya devam ediyor
+  A.S.gran = 'week';
+  await A.renderStats(); await sleep(250);
+  check('WT-104 KABUL: dönem seçici tüketim ölçüsünde de geçerli (7 gün)',
+    doc.querySelectorAll('#d-months .mb').length === 7,
+    'çubuk=' + doc.querySelectorAll('#d-months .mb').length);
+  A.S.gran = 'month';
+
+  // Oranlı ölçüde taban sıfır DEĞİL — yoksa 17 ile 19 aynı boyda çizilirdi
+  const yuks = html => [...html.matchAll(/height:(\d+)%/g)].map(m => +m[1]);
+  const sifirdan = yuks(A.barChartHTML([{label: 'a', value: 17}, {label: 'b', value: 19}], {}));
+  const tabanli = yuks(A.barChartHTML([{label: 'a', value: 17}, {label: 'b', value: 19}], {tabanli: true}));
+  check('WT-104: sıfır tabanlı ölçekte 17 ile 19 neredeyse aynı boyda (kusurun kendisi)',
+    sifirdan[1] - sifirdan[0] <= 12, JSON.stringify(sifirdan));
+  check('WT-104 KABUL: oranlı ölçüde fark GÖRÜNÜR hale geliyor',
+    tabanli[1] - tabanli[0] >= 40, JSON.stringify(tabanli));
+  check('WT-104: tek değerli seride taban devreye girmiyor (çubuk tam boy)',
+    yuks(A.barChartHTML([{label: 'a', value: 17}], {tabanli: true}))[0] === 100);
+
+  await A.db.sessions.clear();
+  A.S.sMetric = 'spend'; A.S.gran = 'month';
 }
 
 // --- WT-101: bozuk araç fotoğrafı Aracım sayfasını çökertiyordu ---

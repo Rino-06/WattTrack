@@ -200,13 +200,25 @@ check('WT-81/6 KABUL: Geçmiş satırındaki tüketim de birime uyuyor',
   `mi="${satirMi.trim()}" km="${satirKm.trim()}"`);
 
 // İstatistik başlığı ve trend notu da birimi taşımalı (sabit "km" kalmamalı)
+// WT-104: başlık artık SEÇİLİ ölçüye göre yazılıyor; birim tüketim ölçüsünde
+// başlıkta, mesafe ölçüsünde ise anahtarın kendi düğmesinde görünüyor.
 A.S.unit = 'mi';
 A.S.gran = 'all';
+A.S.sMetric = 'cons';
 await A.renderStats();
 await sleep(200);
-const baslik = ($(w, 's-cons-lbl').textContent || '').trim();
-check('WT-81/6: aylık trend başlığı seçili birimi yazıyor',
+const baslik = ($(w, 's-chart-lbl').textContent || '').trim();
+check('WT-81/6: tüketim başlığı seçili birimi yazıyor',
   /mi\)/.test(baslik) && !/km\)/.test(baslik), `"${baslik}"`);
+
+A.S.sMetric = 'dist';
+await A.renderStats();
+await sleep(200);
+check('WT-104: mesafe ölçüsünde başlık ve düğme birimi mi',
+  ($(w, 's-chart-lbl').textContent || '').trim() === 'mi'
+    && ($(w, 's-metric-dist').textContent || '').trim() === 'mi',
+  `baslik="${$(w, 's-chart-lbl').textContent}" dugme="${$(w, 's-metric-dist').textContent}"`);
+A.S.sMetric = 'spend';
 A.S.unit = 'km';
 
 console.log('');

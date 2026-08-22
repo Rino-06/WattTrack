@@ -30,6 +30,15 @@ $('d-gran').addEventListener('click', e => {
   renderStats();
 });
 $('s-vehsel').addEventListener('change', () => { S.dashVeh = $('s-vehsel').value; renderStats(); });
+// WT-104: İstatistik'teki tek grafiğin ölçü anahtarı. Seçili sınıf ve
+// aria-checked renderStats() içinde yazılıyor — dönem düğmesinden farklı
+// olarak, çizimle aynı yerde kalsın diye.
+$('s-metric').addEventListener('click', e => {
+  const b = e.target.closest('button[data-m]'); if (!b) return;
+  S.sMetric = b.dataset.m;
+  saveSetting('sMetric', S.sMetric);
+  renderStats();
+});
 
 function periodFilter(all) { return inPeriod(all, S.period); }
 function prevPeriodFilter(all) {

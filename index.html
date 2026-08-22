@@ -765,20 +765,24 @@ nav button{min-height:48px;justify-content:center}
        bloğuyla aynı .gcell içinde — WT-33'ün kuralı: hücre tek başına
        anlamlı olmalı, başlık bir sütunda değeri başka sütunda kalmamalı.
        Dar ekranda .gcell düz bir <div>, hiçbir şeyi değiştirmiyor. -->
+  <!-- WT-104: harcama ve tüketim AYRI iki grafikti; ikisi de aynı dönemi
+       anlatıyordu ve tüketim grafiği dönem seçicisini hiç dinlemiyordu (hep
+       son 6 ay). Artık TEK grafik var, üstündeki anahtar hangi ölçünün
+       çizileceğini seçiyor. Dönem seçici (yukarıdaki #d-gran) ikisini de
+       yönetiyor — sayfada tek bir "şu an neye bakıyorum" cevabı var. -->
   <div class="gcell">
     <div class="h2row" style="margin-top:0">
-      <h2 class="h2" data-i18n="spendChart">Harcama grafiği</h2>
+      <h2 class="h2"><span id="s-chart-lbl">Harcama</span></h2>
       <span class="scope-badge" id="s-chart-scope"></span>
     </div>
+    <div class="seg" id="s-metric" role="radiogroup" data-i18n-aria="metricLbl" aria-label="Ölçü" style="margin-bottom:12px">
+      <button type="button" role="radio" aria-checked="true" class="sel" data-m="spend" data-i18n="mSpend">Harcama</button>
+      <button type="button" role="radio" aria-checked="false" data-m="kwh">kWh</button>
+      <button type="button" role="radio" aria-checked="false" data-m="dist" id="s-metric-dist">km</button>
+      <button type="button" role="radio" aria-checked="false" data-m="cons" data-i18n="mCons">Tüketim</button>
+    </div>
     <div class="monthbars" id="d-months"></div>
-  </div>
-
-  <div class="gcell">
-    <!-- WT-81/6: başlık birim taşıyor (km/mi), applyI18n statik metin
-         çevirdiği için id ile render sırasında yazılıyor. -->
-    <h2 class="h2"><span id="s-cons-lbl">Aylık tüketim (kWh/100 km)</span></h2>
-    <div class="monthbars" id="s-cons"></div>
-    <div class="about" id="s-cons-note" style="margin:-8px 0 14px;font-size:12px"></div>
+    <div class="about" id="s-chart-note" style="margin:-2px 0 14px;font-size:12px"></div>
   </div>
 
   <!-- WT-72: haftanın günlerine göre dağılım grafiği kaldırıldı;
