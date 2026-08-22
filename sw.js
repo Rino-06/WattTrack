@@ -12,6 +12,7 @@ const ASSETS = [
   './ui/dashboard.js',
   './ui/stats.js',
   './ui/history.js',
+  './ui/trips.js',
   './ui/compare.js',
   './ui/vehicle.js',
   './ui/forms.js',

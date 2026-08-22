@@ -62,7 +62,7 @@ window.HTMLMediaElement.prototype.play = function () {
 // edilirse const/let bildirimleri birbirini görmez. Tek eval'de birleştir.
 // WT-50: uygulama kodu 12 klasik script'e bölündü; index.html'deki sıra.
 const APP_FILES = ['db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js',
-  'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js',
+  'ui/stats.js', 'ui/history.js', 'ui/trips.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js',
   'ui/settings.js', 'app.js'];
 const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP_FILES]
   .map(f => `/* ==== ${f} ==== */\n` + fs.readFileSync(path.join(ROOT, f), 'utf8'))
@@ -88,7 +88,10 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
        KWH_PRICES, KWH_SRC, defaultKwhPrice, kwhRegions, kwhPriceAutofill,
        FUEL_HIST, FUEL_HIST_SRC, fuelHistMerge,
        renderSettings, barChartHTML, fetchRate, fetchTable, FX_TIMEOUT,
-       scanUnassigned, scanOrphans};`;
+       scanUnassigned, scanOrphans,
+       allTrips, tripSessions, tripExpenses, tripOverlaps, tripMesafe,
+       tripOzet, tripBitis, renderTrips, openTrip, openTripEdit, ortTlKm,
+       t, shortDate, distDisp};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -1918,7 +1921,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
 // --- WT-50: dosya yapısı bölündü mü? ---
 {
   const oku = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
-  check('WT-50/8: index.html on iki dosyayı da sırasıyla yüklüyor', (() => {
+  check('WT-50/8: index.html on üç dosyayı da sırasıyla yüklüyor', (() => {
     const sira = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1]);
     const i = sira.indexOf(APP_FILES[0]);
     return i >= 0 && APP_FILES.every((f, k) => sira[i + k] === f);
@@ -3668,7 +3671,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   // dinamik bir önekle (exp_, rem_, spec_) üretiliyor olmalı.
   const kaynak = ['index.html', 'app.js', 'calc.js', 'db.js',
     'evprices.js', 'evdata.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js',
-    'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js',
+    'ui/stats.js', 'ui/history.js', 'ui/trips.js', 'ui/compare.js', 'ui/vehicle.js',
     'ui/forms.js', 'ui/settings.js']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
   // T sözlüğünün kendisi "kullanım" sayılmaz — yoksa her anahtar kendini bulur
@@ -3728,7 +3731,7 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   const kullanim = html.slice(0, i) + html.slice(j)
     + ['app.js', 'calc.js', 'db.js', 'evprices.js', 'i18n.js',
        'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js',
-       'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js']
+       'ui/trips.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js']
       .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
   const olu = [...siniflar].filter(c =>
     !new RegExp('\\b' + c.replace(/[-]/g, '\\-') + '\\b').test(kullanim)).sort();
@@ -3823,6 +3826,149 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
     sahipler.size === 1 && sahipler.has('Rino-06'), [...sahipler].join(', '));
   check('depo taşındıktan sonra eski hesap adı hiçbir yerde kalmadı',
     !/hasdemirfatih/i.test(kaynaklar), 'tarandı');
+}
+
+// --- WT-88: yolculuk uçtan uca ---
+{
+  const A = app();
+  const doc = window.document;
+  await A.db.sessions.clear(); await A.db.expenses.clear();
+  await A.db.trips.clear();   await A.db.vehicles.clear();
+  A.S.unit = 'km'; A.S.currency = 'TRY'; A.S.country = 'TR';
+
+  const vid = await A.db.vehicles.add({ad: 'Kona', batt: 64});
+  const baska = await A.db.vehicles.add({ad: 'Zoe', batt: 52});
+  A.S.defaultVehicleId = vid;
+
+  await A.db.sessions.bulkAdd([
+    // yolculuk içi (12–15 Eylül, Kona)
+    {tarih: '2026-09-12T09:00', firma: 'ZES', tip: 'DC', kwh: 41.2, tutar: 428,
+      odenen: 428, cur: 'TRY', mesafeKm: 240, aracId: vid},
+    {tarih: '2026-09-15T16:00', firma: 'Eşarj', tip: 'DC', kwh: 41.5, tutar: 436,
+      odenen: 436, cur: 'TRY', mesafeKm: 243, aracId: vid},
+    // aralık DIŞI
+    {tarih: '2026-09-20T10:00', firma: 'Ev', tip: 'AC', kwh: 50, tutar: 168,
+      odenen: 168, cur: 'TRY', mesafeKm: 300, aracId: vid},
+    // aralık içi ama BAŞKA araç
+    {tarih: '2026-09-13T10:00', firma: 'ZES', tip: 'DC', kwh: 30, tutar: 300,
+      odenen: 300, cur: 'TRY', mesafeKm: 100, aracId: baska}
+  ]);
+  const tid = await A.db.trips.add({ad: 'Ankara–Antalya', baslangic: '2026-09-12',
+    bitis: '2026-09-15', aracId: vid, odoBas: 48210, odoBit: 49176, gidisDonus: true});
+
+  const sess = await A.allSessions();
+  const exps = await A.allExpenses();
+  const tr = await A.db.trips.get(tid);
+
+  check('WT-88 KABUL: yolculuk yalnız KENDİ tarih aralığındaki şarjları topluyor',
+    A.tripSessions(tr, sess).length === 2,
+    'eşleşen=' + A.tripSessions(tr, sess).map(r => r.firma).join(','));
+  check('WT-88: başka aracın aynı tarihteki şarjı sayılmıyor',
+    !A.tripSessions(tr, sess).some(r => r.aracId === baska));
+
+  const o1 = A.tripOzet(tr, sess, exps, 1.5);
+  check('WT-88: mesafe SAYAÇTAN geliyor (kayıt toplamı değil)',
+    o1.km === 966 && o1.kmKaynak === 'odo', o1.km + '/' + o1.kmKaynak);
+  check('WT-88: ödenen yalnız eşleşen şarjların toplamı',
+    o1.sarj === 864, 'sarj=' + o1.sarj);
+
+  // --- sayaç yoksa kayıtlardaki mesafeler toplanır ---
+  const o2 = A.tripOzet({...tr, odoBas: null, odoBit: null}, sess, exps, 1.5);
+  check('WT-88: sayaç yoksa mesafe kayıtlardan toplanıyor',
+    o2.km === 483 && o2.kmKaynak === 'kayit', o2.km + '/' + o2.kmKaynak);
+
+  // --- mesafe hiç yoksa UYDURULMUYOR ---
+  const bos = A.tripOzet({...tr, odoBas: null, odoBit: null, baslangic: '2027-01-01',
+    bitis: '2027-01-02'}, sess, exps, 1.5);
+  check('WT-88 KABUL: mesafe bilinmiyorsa null — ₺/km ve adil maliyet UYDURULMUYOR',
+    bos.km === null && bos.tlKm === null && bos.adil === null,
+    JSON.stringify({km: bos.km, tlKm: bos.tlKm, adil: bos.adil}));
+
+  // --- gider: tarih DEĞİL açık bağ ---
+  const gid1 = await A.db.expenses.add({tarih: '2026-09-13', tur: 'parking',
+    tutar: 340, cur: 'TRY', aracId: vid, seyahatId: tid});
+  await A.db.expenses.add({tarih: '2026-09-14', tur: 'insurance',
+    tutar: 9000, cur: 'TRY', aracId: vid, seyahatId: null});
+  const exps2 = await A.allExpenses();
+  const o3 = A.tripOzet(tr, sess, exps2, 1.5);
+  check('WT-88 KABUL: yolculuk günlerine denk gelen BAĞSIZ gider (sigorta) sayılmıyor',
+    o3.gider === 340 && o3.giderSayi === 1, 'gider=' + o3.gider);
+  check('WT-88: ödenen = şarj + bağlı gider', o3.odenen === 1204, 'odenen=' + o3.odenen);
+
+  // --- çakışma ---
+  const tid2 = await A.db.trips.add({ad: 'Çakışan', baslangic: '2026-09-14',
+    bitis: '2026-09-18', aracId: vid, gidisDonus: false});
+  const hepsi = await A.allTrips();
+  check('WT-88 KABUL: aynı araçta çakışan yolculuk yakalanıyor',
+    A.tripOverlaps(tr, hepsi).length === 1, JSON.stringify(A.tripOverlaps(tr, hepsi).map(x => x.ad)));
+  check('WT-88: başka araçtaki aynı tarihler çakışma SAYILMIYOR',
+    A.tripOverlaps({...tr, aracId: baska}, hepsi).length === 0);
+  await A.db.trips.delete(tid2);
+
+  // --- bitişi girilmemiş yolculuk "sürüyor" ---
+  check('WT-88: bitişi boş yolculuğun üst sınırı bugün',
+    A.tripBitis({baslangic: '2026-01-01', bitis: null}) === A.localISO());
+
+  // --- EKRAN: görünüm anahtarı ---
+  A.S.hView = 'trips';
+  await A.renderHistory();
+  await sleep(250);
+  check('WT-88 KABUL: Yolculuklar görünümünde kayıt listesi ve filtreler gizli',
+    $('h-trips').style.display !== 'none' && $('h-groups').style.display === 'none'
+      && $('h-filter-btn').style.display === 'none',
+    `trips=${$('h-trips').style.display} rows=${$('h-groups').style.display}`);
+  check('WT-88: yolculuk kartı listeleniyor',
+    doc.querySelectorAll('#trip-list [data-trip]').length === 1,
+    'kart=' + doc.querySelectorAll('#trip-list [data-trip]').length);
+  check('WT-88: kartta yolculuğun adı ve toplamı yazılı',
+    /Ankara/.test($('trip-list').textContent) && /1\.204/.test($('trip-list').textContent),
+    $('trip-list').textContent.replace(/\s+/g, ' ').slice(0, 90));
+
+  A.S.hView = 'rows';
+  await A.renderHistory();
+  await sleep(200);
+  check('WT-88: Kayıtlar görünümüne dönünce liste geri geliyor',
+    $('h-groups').style.display !== 'none' && $('h-trips').style.display === 'none');
+
+  // --- EKRAN: detay ---
+  await A.openTrip(tid);
+  await sleep(300);
+  const gov = $('trip-body').textContent;
+  check('WT-88 KABUL: detayda İKİ sayı da var (ödenen ve adil maliyet)',
+    gov.includes(A.t('tripPaid')) && gov.includes(A.t('tripFair')),
+    gov.replace(/\s+/g, ' ').slice(0, 80));
+  // Ekran ortalamayı KENDİ hesaplıyor (aracın tüm kayıtlarından), testin
+  // elle verdiği sayıyı değil. Beklenen değer de aynı yoldan türetiliyor —
+  // sabit bir sayı yazmak, hesap değişince testi sessizce yanlışlar.
+  const ortGercek = A.ortTlKm(vid, sess);
+  const beklenen = A.fmtNum(Math.round(966 * ortGercek), 0);
+  check('WT-88 KABUL: adil maliyet = mesafe × aracın KENDİ ₺/km ortalaması',
+    gov.includes(beklenen),
+    `ort=${ortGercek.toFixed(3)} beklenen=${beklenen}`);
+  check('WT-88: bağlı şarjlar detayda listeleniyor',
+    $('trip-body').querySelectorAll('.crow[data-id]').length === 2);
+  check('WT-88: bağlı gider detayda listeleniyor',
+    $('trip-body').querySelectorAll('[data-exp]').length === 1);
+  await A.overlayClose('page-trip', {force: true});
+
+  // --- silme: yolculuk gider, GİDERİN KENDİSİ kalır ---
+  A.S.hView = 'trips';
+  await A.renderHistory(); await sleep(200);
+  await A.openTrip(tid); await sleep(200);
+  $('btn-edit-trip').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(250);
+  window.confirm = () => true;
+  $('btn-del-trip').dispatchEvent(new window.MouseEvent('click', {bubbles: true}));
+  await sleep(350);
+  check('WT-88 KABUL: yolculuk silinince gider SİLİNMİYOR, yalnız bağı çözülüyor',
+    (await A.db.expenses.get(gid1)) != null
+      && (await A.db.expenses.get(gid1)).seyahatId == null,
+    JSON.stringify(await A.db.expenses.get(gid1)));
+  check('WT-88: yolculuk gerçekten silindi', (await A.db.trips.get(tid)) == null);
+
+  await A.db.trips.clear(); await A.db.expenses.clear();
+  await A.db.sessions.clear(); await A.db.vehicles.clear();
+  A.S.hView = 'rows';
 }
 
 // WT-81/11 KUSURU: bu satır dosyanın ORTASINDA (WT-76 bloğundan hemen sonra)

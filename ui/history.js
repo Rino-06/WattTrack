@@ -16,6 +16,18 @@
 // Tek araçlı kullanıcıda null bırakılıyor — rozet o zaman bilgi taşımıyor.
 let VEH_ADI = null;
 async function renderHistory() {
+  // WT-88: iki görünüm aynı sayfada. Yolculuk görünümündeyken kayıt
+  // listesinin filtreleri ve özeti anlamsız — gizleniyorlar.
+  const tripView = S.hView === 'trips';
+  $('h-trips').style.display = tripView ? '' : 'none';
+  $('h-groups').style.display = tripView ? 'none' : '';
+  $('h-summary').style.display = tripView ? 'none' : '';
+  $('h-filter-btn').style.display = tripView ? 'none' : '';
+  if (tripView) $('h-filters').style.display = 'none';
+  $('h-view').querySelectorAll('button').forEach(b =>
+    b.classList.toggle('sel', (b.dataset.hview === 'trips') === tripView));
+  if (tripView) { await renderTrips(); return; }
+
   const all = await allSessions();
   const vehicles = await allVehicles();
   const sorted = [...all].sort((a, b) => b.tarih.localeCompare(a.tarih));
@@ -131,4 +143,13 @@ $('h-filter-btn').addEventListener('click', () => {
   const box = $('h-filters'), acik = box.style.display === 'none';
   box.style.display = acik ? '' : 'none';
   $('h-filter-btn').setAttribute('aria-expanded', String(acik));
+});
+
+// WT-88: görünüm anahtarı. Seçim S'te tutuluyor ama AYARLARA yazılmıyor —
+// kalıcı bir tercih değil, o anki bakış açısı.
+$('h-view').addEventListener('click', e => {
+  const b = e.target.closest('button[data-hview]');
+  if (!b) return;
+  S.hView = b.dataset.hview;
+  renderHistory();
 });

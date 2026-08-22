@@ -187,6 +187,16 @@ h1,h2{font-size:inherit;font-weight:inherit}
 
 .rows{display:flex;flex-direction:column;gap:10px}
 .crow{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:12px;box-shadow:var(--shadow);cursor:pointer}
+/* WT-88: yolculuk kartı. .crow tek satırlık bir kayıt; yolculuk iki satır
+   (ad+tutar, sonra ölçüler) olduğu için kendi sınıfı var. */
+.tcard{background:var(--card);border-radius:14px;padding:12px;box-shadow:var(--shadow);cursor:pointer;display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.tcard .thead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.tcard .tname{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.tcard .tdate{font-size:12px;color:var(--muted);margin-top:2px}
+.tcard .tamt{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tmeta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.tmeta b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+.tchip{display:inline-block;background:var(--chip);color:var(--accent-text);font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px}
 .crow .avatar{width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px}
 .crow .mid{flex:1;min-width:0}
 .crow .name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -820,6 +830,10 @@ nav button{min-height:48px;justify-content:center}
     <h1 class="page-title"><span data-i18n="historyTitle">Geçmiş</span></h1>
     <button class="theme-btn" data-themetoggle data-i18n-aria="ariaThemeToggle" aria-label="Tema">🌙</button>
   </div>
+  <div class="seg" id="h-view" role="radiogroup" data-i18n-aria="historyTitle" aria-label="Geçmiş">
+    <button type="button" role="radio" aria-checked="true" data-hview="rows" class="sel" data-i18n="recordsTab">Kayıtlar</button>
+    <button type="button" role="radio" aria-checked="false" data-hview="trips" data-i18n="tripsTab">Yolculuklar</button>
+  </div>
   <!-- WT-46/1: arama kutusu (firma, lokasyon, not, banka) -->
   <!-- WT-71: serbest metin araması kaldırıldı (kullanıcı isteği). Filtre
        paneli (yıl, firma, tip, araç, banka, lokasyon) yerinde duruyor. -->
@@ -837,6 +851,13 @@ nav button{min-height:48px;justify-content:center}
   <!-- WT-46/2: asıl istenen — filtrelenmiş sonucun toplamı -->
   <div class="h-summary" id="h-summary" aria-live="polite"></div>
   <div id="h-groups"></div>
+  <!-- WT-88: yolculuk görünümü. Kayıtlar ve yolculuklar AYNI veriyi
+       gösteriyor, farklı çerçeveden — o yüzden yeni sekme değil, aynı
+       sayfada anahtar. -->
+  <div id="h-trips" style="display:none">
+    <button type="button" class="mini-btn" id="btn-new-trip" data-i18n="newTrip">+ Yeni yolculuk başlat</button>
+    <div id="trip-list"></div>
+  </div>
 </section>
 
 <!-- ============ KIYASLA ============ -->
@@ -1455,6 +1476,13 @@ nav button{min-height:48px;justify-content:center}
       <label class="lbl" data-i18n="vehicle" for="in-exp-veh">Araç</label>
       <select id="in-exp-veh"></select>
     </div>
+    <!-- WT-88: yol gideri (otoyol, otopark) bir yolculuğa bağlanabilir.
+         Tarih aralığıyla OTOMATİK bağlanmıyor — yolculuk günlerine denk
+         gelen yıllık bir sigorta ödemesi yolculuğu şişirirdi. -->
+    <div id="wrap-exp-trip" style="display:none">
+      <label class="lbl" data-i18n="expTrip" for="in-exp-trip">Yolculuk</label>
+      <select id="in-exp-trip"></select>
+    </div>
     <div>
       <label class="lbl" data-i18n="noteLbl" for="in-exp-note">Not</label>
       <input type="text" id="in-exp-note" maxlength="200" placeholder="">
@@ -1496,6 +1524,65 @@ nav button{min-height:48px;justify-content:center}
     </div>
 
     <button class="save-btn" id="btn-save-exp" data-i18n="save">Kaydet</button>
+  </div>
+</section>
+
+<!-- ============ WT-88: YOLCULUK DETAYI ============ -->
+<section class="overlay" id="page-trip" role="dialog" aria-modal="true" aria-labelledby="trip-title">
+  <div class="ov-head">
+    <button class="close" id="btn-close-trip">×</button>
+    <div class="title" id="trip-title">Yolculuk</div>
+    <button class="close" id="btn-edit-trip" style="font-size:17px">✎</button>
+  </div>
+  <div class="ov-body" id="trip-body"></div>
+</section>
+
+<!-- ============ WT-88: YOLCULUK OLUŞTUR / DÜZENLE ============ -->
+<section class="overlay" id="page-tripedit" role="dialog" aria-modal="true" aria-labelledby="tripedit-title">
+  <div class="ov-head">
+    <button class="close" id="btn-close-tripedit">×</button>
+    <div class="title" id="tripedit-title" data-i18n="addTrip">Yeni Yolculuk</div>
+    <button class="close" id="btn-del-trip" style="color:var(--red);font-size:18px">🗑</button>
+  </div>
+  <div class="ov-body">
+    <div>
+      <label class="lbl" data-i18n="tripName" for="in-trip-name">Ad</label>
+      <input type="text" id="in-trip-name" maxlength="60" placeholder="">
+    </div>
+    <div class="row2">
+      <div>
+        <label class="lbl" data-i18n="tripStart" for="in-trip-start">Başlangıç</label>
+        <input type="date" id="in-trip-start">
+      </div>
+      <div>
+        <label class="lbl" data-i18n="tripEnd" for="in-trip-end">Bitiş</label>
+        <input type="date" id="in-trip-end">
+      </div>
+    </div>
+    <div class="row2">
+      <div>
+        <label class="lbl" id="lbl-trip-odo1" for="in-trip-odo1">Başlangıç</label>
+        <input type="text" inputmode="decimal" id="in-trip-odo1">
+      </div>
+      <div>
+        <label class="lbl" id="lbl-trip-odo2" for="in-trip-odo2">Bitiş</label>
+        <input type="text" inputmode="decimal" id="in-trip-odo2">
+      </div>
+    </div>
+    <div id="wrap-trip-veh">
+      <label class="lbl" data-i18n="vehicle" for="in-trip-veh">Araç</label>
+      <select id="in-trip-veh"></select>
+    </div>
+    <div>
+      <span class="lbl" data-i18n="tripType">Tür</span>
+      <div class="seg" id="trip-kind" role="radiogroup" data-i18n-aria="tripType" aria-label="Tür">
+        <button type="button" role="radio" aria-checked="false" data-kind="one" data-i18n="oneWay">Tek Yön</button>
+        <button type="button" role="radio" aria-checked="true" data-kind="round" class="sel" data-i18n="roundTrip">Gidiş-Dönüş</button>
+      </div>
+    </div>
+    <div class="about" id="trip-warn" style="display:none"></div>
+    <div class="about" data-i18n="tripAutoNote">Bu tarihler arasındaki şarjlar kendiliğinden bu yolculuğa bağlanır.</div>
+    <button class="save-btn" id="btn-save-trip" data-i18n="save">Kaydet</button>
   </div>
 </section>
 
@@ -1663,6 +1750,7 @@ nav button{min-height:48px;justify-content:center}
 <script src="ui/dashboard.js"></script>
 <script src="ui/stats.js"></script>
 <script src="ui/history.js"></script>
+<script src="ui/trips.js"></script>
 <script src="ui/compare.js"></script>
 <script src="ui/vehicle.js"></script>
 <script src="ui/forms.js"></script>

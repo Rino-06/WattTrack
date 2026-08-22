@@ -713,6 +713,26 @@ async function openExpense(rec) {
   const defVeh = rec?.aracId
     ?? (vs.find(v => v.id === S.defaultVehicleId)?.id ?? vs[0]?.id);
   $('in-exp-veh').value = defVeh != null ? String(defVeh) : '';
+  // WT-88: yolculuk seçici. Yalnız yolculuk TANIMLIYSA görünür — hiç
+  // yolculuğu olmayan kullanıcı boş bir seçiciyle karşılaşmasın.
+  // Yeni giderde, tarihi kapsayan yolculuk ÖNERİLİYOR (seçili gelir) ama
+  // dayatılmıyor: kullanıcı "yolculuğa bağlama"yı seçebilir.
+  const tripsAll = await allTrips();
+  $('wrap-exp-trip').style.display = tripsAll.length ? '' : 'none';
+  if (tripsAll.length) {
+    const sirali = [...tripsAll].sort((a, b) => b.baslangic.localeCompare(a.baslangic));
+    $('in-exp-trip').innerHTML = `<option value="">${t('expNoTrip')}</option>` +
+      sirali.map(x => `<option value="${x.id}">${esc(x.ad)}</option>`).join('');
+    let sec = rec?.seyahatId ?? null;
+    if (!rec) {
+      const g = $('in-exp-date').value;
+      const kapsayan = sirali.find(x =>
+        vehEq(x.aracId ?? null, defVeh ?? null) &&
+        g >= x.baslangic && g <= tripBitis(x));
+      if (kapsayan) sec = kapsayan.id;
+    }
+    $('in-exp-trip').value = sec != null ? String(sec) : '';
+  }
   $('in-exp-note').value = rec?.not || '';
   $('in-exp-amt-lbl').textContent = t('expAmount') + ' (' + symOf($('in-exp-cur').value) + ')';
   // WT-44/1: hatırlatma alanları
@@ -770,6 +790,9 @@ $('btn-save-exp').addEventListener('click', async () => {
     tutar, cur,
     aracId: expVeh,
     not: $('in-exp-note').value.trim(),
+    // WT-88: boş seçim null olur — undefined bırakılırsa Dexie güncellemede
+    // alanı hiç yazmaz ve eski bağ canlı kalırdı.
+    seyahatId: +$('in-exp-trip').value || null,
     // WT-44/1: hatırlatma. Sayaç değeri km olarak saklanıyor (gösterim mi olabilir).
     hatirlatmaAraligi: $('in-exp-int').value || null,
     hatirlatmaKm: $('in-exp-intkm').value ? +$('in-exp-intkm').value : null,

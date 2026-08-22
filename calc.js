@@ -17,7 +17,10 @@ const S = {
   period: 'all', cmp: null, dashVeh: '', cmpVeh: '', vehExpVeh: '', vehExpGran: 'month', vehExpFltTur: '', vehExpFltDon: '', bankCountries: null, gran: 'month', customBanks: [], theme: 'light', dstatType: '', histBadOnly: null, homeKwhPrice: null, kwhRegion: '', homeKwhAuto: false,
   // WT-94: bunlar da SETTING_KEYS'te — varsayılansız bırakılırsa `undefined`
   // olurlar ve okuyan her yer sessiz dala düşer. Boş = kapalı / hedef yok.
-  ocrOn: false, budgetM: null, budgetY: null, workKwhPrice: null, workKwhAuto: false
+  ocrOn: false, budgetM: null, budgetY: null, workKwhPrice: null, workKwhAuto: false,
+  // WT-88: Geçmiş'in görünümü — 'rows' (kayıtlar) ya da 'trips'.
+  // Kalıcı tercih DEĞİL, o anki bakış açısı; SETTING_KEYS'e girmiyor.
+  hView: 'rows'
 };
 const $ = id => document.getElementById(id);
 

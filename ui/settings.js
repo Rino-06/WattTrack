@@ -330,6 +330,7 @@ async function backupPayload() {
       .map(({ekranGorVar, ekranGor, ocrSablon, ...r}) => r),
     vehicles: (await allVehicles()).filter(r => !isDemo(r)),
     expenses: (await allExpenses()).filter(r => !isDemo(r)),
+    trips: (await allTrips()).filter(r => !isDemo(r)),   // WT-88
     settings: await db.settings.toArray()
   };
 }
@@ -693,10 +694,18 @@ async function importBackupText(text) {
     ? data.expenses.map(({id, ...e}) => ({...e, _oldVeh: e.aracId})).filter(e => !haveExp.has(esig(e)))
     : [];
 
+  // WT-88: yolculuklar. Mükerrer ölçütü ad + başlangıç tarihi.
+  const tsig = x => (x.ad || '').trim().toLowerCase() + '|' + x.baslangic;
+  const haveTrip = new Set((await allTrips()).map(tsig));
+  const freshTrip = Array.isArray(data.trips)
+    ? data.trips.map(({id, ...x}) => ({...x, _oldVeh: x.aracId, _oldId: id}))
+        .filter(x => x.ad && x.baslangic && !haveTrip.has(tsig(x)))
+    : [];
+
   // --- Tek transaction: ortada hata olursa hiçbir şey yazılmasın (WT-08/3) ---
   // WT-12: kota dolarsa kullanıcı 'geri yüklendi' sanmasın
   const imported = await safeWrite(() =>
-    db.transaction('rw', db.sessions, db.vehicles, db.expenses, db.settings, async () => {
+    db.transaction('rw', db.sessions, db.vehicles, db.expenses, db.trips, db.settings, async () => {
     // WT-08: önce araçlar, sonra eskiId → yeniId haritası.
     // Eskiden sessions'tan sadece `id` düşürülüyor, `aracId` eski değerini
     // koruyordu; cihazda zaten araç varsa kayıtlar YANLIŞ araca bağlanıyordu.
@@ -726,7 +735,21 @@ async function importBackupText(text) {
       return rec;
     };
     if (fresh.length) await db.sessions.bulkAdd(fresh.map(mapVeh));
-    if (freshExp.length) await db.expenses.bulkAdd(freshExp.map(mapVeh));
+    // WT-88: yolculuklar giderlerden ÖNCE yazılıyor. Giderin seyahatId'si
+    // yedekteki ESKİ id'yi taşıyor; aracId'de olduğu gibi (WT-08) haritadan
+    // geçmezse gider yanlış yolculuğa bağlanır ya da ölü referans kalır.
+    const tripMap = new Map();
+    for (const x of freshTrip) {
+      const {_oldId, ...t2} = mapVeh(x);
+      const yeni = await db.trips.add(t2);
+      if (_oldId != null) tripMap.set(_oldId, yeni);
+    }
+    if (freshExp.length) await db.expenses.bulkAdd(freshExp.map(e => {
+      const m = mapVeh(e);
+      m.seyahatId = m.seyahatId == null ? null
+        : (tripMap.has(m.seyahatId) ? tripMap.get(m.seyahatId) : null);
+      return m;
+    }));
 
     if (restoreSettings) {
       const rows = data.settings.map(row => {

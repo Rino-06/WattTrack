@@ -46,13 +46,13 @@ async function boot() {
   // WT-37: jsdom'da HTMLMediaElement.play() yok; splash yedek yolu koşsun
   window.HTMLMediaElement.prototype.play = () => Promise.reject(new Error('autoplay blocked (test)'));
 
-  const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', 'db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js', 'app.js']
+  const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', 'db.js', 'calc.js', 'i18n.js', 'ui/shell.js', 'ui/dashboard.js', 'ui/stats.js', 'ui/history.js', 'ui/trips.js', 'ui/compare.js', 'ui/vehicle.js', 'ui/forms.js', 'ui/settings.js', 'app.js']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
     + `\n;window.__app = {db, S, applyI18n, applyTheme, importBackupText,
          deleteVehicleFlow, moveRecordsFlow, scanOrphans, warnings,
          SETTING_KEYS, saveSetting, renderVehiclePage, openExpense,
          migrateExpenseVehicles, renderCompare,
-         allSessions, backupPayload, renderHistory};`;
+         allSessions, backupPayload, renderHistory, allTrips, allExpenses};`;
   window.eval(bundle);
   await new Promise(r => setTimeout(r, 1200));
   return window;
@@ -366,6 +366,73 @@ dlgPick('__yok__');   // hiçbir seçenekle eşleşmez → Vazgeç butonuna bas�
   check('geri yüklenen eski kayıtta da ataç ikonu yok',
     (w3.document.getElementById('h-groups').innerHTML.match(/📎/g) || []).length === 0,
     'ataç sayısı: ' + (w3.document.getElementById('h-groups').innerHTML.match(/📎/g) || []).length);
+}
+
+// --- WT-88: yolculuk yedekte gidiş-dönüş yapıyor mu ---
+{
+  const w = await boot();
+  w.confirm = () => true;
+  const D = w.__app;
+  await D.db.sessions.clear(); await D.db.vehicles.clear();
+  await D.db.expenses.clear(); await D.db.trips.clear();
+
+  const vid = await D.db.vehicles.add({ad: 'Kona', batt: 64});
+  const tid = await D.db.trips.add({ad: 'Ankara–Antalya', baslangic: '2026-09-12',
+    bitis: '2026-09-15', aracId: vid, odoBas: 48210, odoBit: 49176, gidisDonus: true});
+  await D.db.expenses.add({tarih: '2026-09-13', tur: 'parking', tutar: 340,
+    cur: 'TRY', aracId: vid, seyahatId: tid});
+
+  const payload = await D.backupPayload();
+  check('WT-88: yedek yolculukları içeriyor',
+    Array.isArray(payload.trips) && payload.trips.length === 1,
+    'trips=' + JSON.stringify(payload.trips));
+  check('WT-88: yedekteki yolculukta sayaç ve tür alanları duruyor',
+    payload.trips[0].odoBas === 48210 && payload.trips[0].gidisDonus === true);
+
+  // TEMİZ bir cihaza geri yükle: araç ve yolculuk id'leri YENİDEN atanır.
+  // Giderin seyahatId'si haritadan geçmezse ölü referans kalır — asıl sınav bu.
+  const w2 = await boot();
+  w2.confirm = () => true;   // içe aktarma onayı + "ayarlar da geri yüklensin mi"
+  const E = w2.__app;
+  await E.db.sessions.clear(); await E.db.vehicles.clear();
+  await E.db.expenses.clear(); await E.db.trips.clear();
+  // KUKLA kayıtlar: hedef cihazda zaten veri olsun ki geri yüklenen
+  // yolculuğa YENİ bir id verilsin. Taze veritabanında hem eski hem yeni id
+  // 1 çıkıyor ve eşleme hiç kurulmasa da test geçerdi — sınav olmuyordu.
+  const kuklaVeh = await E.db.vehicles.add({ad: 'Kukla', batt: 40});
+  const kuklaTrip = await E.db.trips.add({ad: 'Kukla yolculuk',
+    baslangic: '2020-01-01', bitis: '2020-01-02', aracId: kuklaVeh});
+  await E.importBackupText(JSON.stringify(payload));
+  await sleep(600);
+
+  const trips2 = (await E.allTrips()).filter(x => x.id !== kuklaTrip);
+  const exps2 = await E.allExpenses();
+  const vehs2 = (await E.db.vehicles.toArray()).filter(v => v.id !== kuklaVeh);
+  check('WT-88: yolculuk geri yüklendi', trips2.length === 1, 'trips=' + trips2.length);
+  check('WT-88: geri yüklenen yolculuk YENİ bir id aldı (eşleme gerçekten sınanıyor)',
+    trips2[0] && trips2[0].id !== 1, 'yeni id=' + trips2[0]?.id);
+  check('WT-88 KABUL: giderin seyahatId\'si YENİ yolculuk id\'sine çevrildi',
+    exps2.length === 1 && trips2.length === 1 && exps2[0].seyahatId === trips2[0].id,
+    `gider.seyahatId=${exps2[0]?.seyahatId} yolculuk.id=${trips2[0]?.id}`);
+  check('WT-88: yolculuğun aracId\'si de yeni araca bağlandı',
+    vehs2.length === 1 && trips2[0].aracId === vehs2[0].id,
+    `trip.aracId=${trips2[0]?.aracId} veh.id=${vehs2[0]?.id}`);
+
+  // İkinci kez aynı yedek: mükerrer yolculuk oluşmamalı
+  await E.importBackupText(JSON.stringify(payload));
+  await sleep(600);
+  check('WT-88: aynı yedek ikinci kez yüklenince yolculuk ÇOĞALMIYOR',
+    (await E.allTrips()).filter(x => x.id !== kuklaTrip).length === 1,
+    'trips=' + (await E.allTrips()).filter(x => x.id !== kuklaTrip).length);
+
+  // Yolculuğu OLMAYAN eski yedek çökertmemeli
+  const eski = JSON.stringify({app: 'WattTrack', version: 8,
+    exportedAt: new Date().toISOString(),
+    sessions: [], vehicles: [{id: 1, ad: 'Zoe', batt: 52}], expenses: [], settings: []});
+  await E.importBackupText(eski);
+  await sleep(500);
+  check('WT-88: trips alanı OLMAYAN eski yedek sorunsuz yükleniyor',
+    (await E.db.vehicles.toArray()).some(v => v.ad === 'Zoe'));
 }
 
 const failed = results.filter(r => !r.pass);
