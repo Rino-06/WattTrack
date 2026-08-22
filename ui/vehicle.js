@@ -247,7 +247,8 @@ async function renderVehiclePage() {
     const sub = [v.batt ? `${v.trim || ''} · ${v.batt} kWh` : '', kmTxt, srcTxt]
       .filter(Boolean).join(' · ');
     const isDef = v.id === S.defaultVehicleId || (!S.defaultVehicleId && vehicles[0].id === v.id);
-    const thumb = v.photo ? `<img class="vthumb" src="${photoSrc(v.photo)}" alt="">` : '';
+    const vsrc = photoSrc(v.photo);   // WT-101: bozuk photo boş dizi döner
+    const thumb = vsrc ? `<img class="vthumb" src="${vsrc}" alt="">` : '';
     // WT-74: tek satırda ad + 5 düğme sıkışıyordu, model adı kırpılıyordu.
     // Ad ve alt bilgi ÜSTTE tam genişlik; yıldız, resim ve düğmeler ALTTA.
     return `<li data-vid="${v.id}" class="vrow2">

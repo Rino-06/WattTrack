@@ -322,13 +322,37 @@ function download(content, name, type) {
 }
 // WT-36/3f: örnek veri yedeğe GİRMEZ — kullanıcı yanlışlıkla sahte veriyi
 // yedekleyip sonra gerçek sanmasın. Ayrı fonksiyon: testten doğrulanabilsin.
+// WT-101: JSON.stringify bir Blob'u `{}` yapar. Araç fotoğrafı Blob olarak
+// saklandığı için yedeğe `photo:{}` yazılıyordu: fotoğraf KAYBOLUYOR, üstelik
+// geri yüklendiğinde "fotoğraf var" gibi görünüp Aracım sayfasını çökertiyordu.
+// Blob yedekte dataURL'e çevriliyor — hem gerçekten korunuyor hem de geri
+// yüklenince photoSrc'nin zaten desteklediği biçimde geliyor.
+async function fotoDisaAktar(v) {
+  if (!v.photo || typeof v.photo === 'string') return v;
+  if (typeof Blob === 'undefined' || !(v.photo instanceof Blob))
+    { const {photo, ...rest} = v; return rest; }   // tanınmayan değer: hiç yazma
+  try {
+    const dataURL = await new Promise((ok, err) => {
+      const fr = new FileReader();
+      fr.onload = () => ok(fr.result);
+      fr.onerror = () => err(fr.error);
+      fr.readAsDataURL(v.photo);
+    });
+    return {...v, photo: dataURL};
+  } catch {
+    const {photo, ...rest} = v;      // okunamadıysa fotoğrafsız yaz
+    return rest;
+  }
+}
+
 async function backupPayload() {
   return {
     app: 'WattTrack', version: SCHEMA_VERSION, appVersion: APP_VERSION,
     exportedAt: new Date().toISOString(),
     sessions: (await allSessions()).filter(r => !isDemo(r))
       .map(({ekranGorVar, ekranGor, ocrSablon, ...r}) => r),
-    vehicles: (await allVehicles()).filter(r => !isDemo(r)),
+    vehicles: await Promise.all((await allVehicles()).filter(r => !isDemo(r))
+      .map(fotoDisaAktar)),
     expenses: (await allExpenses()).filter(r => !isDemo(r)),
     trips: (await allTrips()).filter(r => !isDemo(r)),   // WT-88
     settings: await db.settings.toArray()
@@ -712,6 +736,9 @@ async function importBackupText(text) {
     const idMap = new Map();
     for (const {id: oldId, ...v} of (data.vehicles || [])) {
       if (!v.ad) continue;
+      // WT-101: eski yedeklerde photo `{}` olarak duruyor. Truthy ama Blob
+      // değil; saklanırsa Aracım sayfası çöker. Yalnız dataURL kabul ediliyor.
+      if (v.photo != null && typeof v.photo !== 'string') delete v.photo;
       const ex = await db.vehicles.where('ad').equals(v.ad).first();
       if (!ex) {
         const newId = await db.vehicles.add(v);
@@ -724,7 +751,7 @@ async function importBackupText(text) {
       if (v.kmStart != null) upd.kmStart = v.kmStart;
       if (v.kmNow != null && (ex.kmNow == null || v.kmNow > ex.kmNow || ex.kmStart === ex.kmNow))
         upd.kmNow = Math.max(v.kmNow, ex.kmNow || 0);
-      if (v.photo && !ex.photo) upd.photo = v.photo;
+      if (typeof v.photo === 'string' && v.photo && !ex.photo) upd.photo = v.photo;
       if (Object.keys(upd).length) await db.vehicles.update(ex.id, upd);
     }
     // haritada karşılığı yoksa null — ölü referans bırakma

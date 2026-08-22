@@ -91,7 +91,7 @@ const bundle = ['version.js', 'dexie.min.js', 'evdata.js', 'evprices.js', ...APP
        scanUnassigned, scanOrphans,
        allTrips, tripSessions, tripExpenses, tripOverlaps, tripMesafe,
        tripOzet, tripBitis, renderTrips, openTrip, openTripEdit, ortTlKm,
-       t, shortDate, distDisp};`;
+       t, shortDate, distDisp, photoSrc, fotoDisaAktar};`;
 try {
   window.eval(bundle);
 } catch (e) {
@@ -3969,6 +3969,90 @@ check('WT-02: hiçbir yerde İngiliz biçimi (1,234.5) yok',
   await A.db.trips.clear(); await A.db.expenses.clear();
   await A.db.sessions.clear(); await A.db.vehicles.clear();
   A.S.hView = 'rows';
+}
+
+// --- WT-101: bozuk araç fotoğrafı Aracım sayfasını çökertiyordu ---
+{
+  const A = app();
+  const doc = window.document;
+  // Gerçek tarayıcı davranışı: Blob OLMAYAN değerde createObjectURL patlar.
+  // jsdom'un/testin sahte sürümü her şeyi kabul ettiği için kusur testlerde
+  // GÖRÜNMÜYORDU; kullanıcı gerçek cihazda boş sayfa gördü.
+  const orjOU = window.URL.createObjectURL;
+  window.URL.createObjectURL = (o) => {
+    if (typeof window.Blob === 'undefined' || !(o instanceof window.Blob))
+      throw new TypeError("parameter 1 is not of type 'Blob'.");
+    return 'blob:sahte';
+  };
+
+  check('WT-101 KABUL: Blob olmayan photo çökertmiyor, boş dizi dönüyor',
+    A.photoSrc({}) === '' && A.photoSrc(null) === '' && A.photoSrc(undefined) === '',
+    JSON.stringify([A.photoSrc({}), A.photoSrc(null)]));
+  check('WT-101: dataURL dizesi olduğu gibi geçiyor',
+    A.photoSrc('data:image/png;base64,AAA') === 'data:image/png;base64,AAA');
+
+  await A.db.vehicles.clear();
+  await A.db.sessions.clear();
+  await A.db.expenses.clear();
+  // Kullanıcının yedeğindeki BİREBİR durum: photo:{}
+  const vid = await A.db.vehicles.add({ad: 'Tesla Model Y', brand: 'Tesla',
+    model: 'Model Y', batt: 84, body: 'suv', kmStart: 9271, kmNow: 15857, photo: {}});
+  A.S.defaultVehicleId = vid;
+  await A.db.expenses.add({tarih: '2026-08-08', tur: 'tax', tutar: 3000,
+    cur: 'TRY', aracId: vid});
+
+  check('WT-101: bozuk photo ile araç kartı çizilebiliyor',
+    (() => { try { return A.evSummaryHTML({ad: 'X', photo: {}, body: 'suv'}).length > 0; }
+             catch { return false; } })());
+
+  let patladi = null;
+  try { await A.renderVehiclePage(); await sleep(400); }
+  catch (e) { patladi = e.message; }
+  check('WT-101 KABUL: Aracım sayfası çökmeden çiziliyor', patladi === null, patladi || 'temiz');
+  check('WT-101 KABUL: araç listede GÖRÜNÜYOR',
+    doc.querySelectorAll('#page-vehicle [data-vid]').length === 1,
+    'satır=' + doc.querySelectorAll('#page-vehicle [data-vid]').length);
+  check('WT-101 KABUL: silme düğmesi bağlandı (sayfa yarıda kesilmedi)',
+    doc.querySelectorAll('#page-vehicle [data-del], #page-vehicle [data-vdel]').length > 0
+      || doc.querySelectorAll('#page-vehicle [data-vid] button').length > 0,
+    'düğme=' + doc.querySelectorAll('#page-vehicle [data-vid] button').length);
+  // Yaklaşanlar paneli de tutar yazıyor; ölçüt GİDER SATIRI olmalı ki
+  // "sayfa çizildi ama gider listesi boş" durumu yakalanabilsin.
+  const gsatir = doc.querySelectorAll('#page-vehicle .crow[data-exp]');
+  check('WT-101 KABUL: araç gideri LİSTE SATIRI olarak çizildi',
+    gsatir.length === 1 && /3\.000|3000/.test(gsatir[0].textContent),
+    'satır=' + gsatir.length + ' | ' +
+    (gsatir[0] ? gsatir[0].textContent.replace(/\s+/g, ' ').trim().slice(0, 50) : '-'));
+  check('WT-101: bozuk photo için <img> HİÇ üretilmiyor (kırık görsel yok)',
+    !/vthumb|carphoto/.test(doc.getElementById('page-vehicle').innerHTML));
+
+  // Yedek: Blob dataURL'e çevriliyor, `{}` yazılmıyor
+  const sahteBlob = new window.Blob(['x'], {type: 'image/png'});
+  await A.db.vehicles.update(vid, {photo: sahteBlob});
+  const y = await A.backupPayload();
+  const yv = y.vehicles.find(v => v.ad === 'Tesla Model Y');
+  check('WT-101 KABUL: yedekte photo `{}` DEĞİL — dataURL ya da hiç yok',
+    yv && (yv.photo === undefined || typeof yv.photo === 'string'),
+    'photo tipi=' + (yv ? typeof yv.photo : 'araç yok') +
+    ' değer=' + String(JSON.stringify(yv && yv.photo)).slice(0, 40));
+
+  // Yukarıdaki sınama yalnız "`{}` yazılmıyor"u kanıtlıyor. Blob -> dataURL
+  // ÇEVRİMİNİ kanıtlamıyor, çünkü fake-indexeddb Blob'u korumuyor: yazıp geri
+  // okuyunca düz nesneye dönüyor (gerçek tarayıcıda dönmez). Bu yüzden çevrim
+  // veri tabanından GEÇMEDEN, doğrudan sınanıyor.
+  const dURL = await A.fotoDisaAktar({ad: 'X', photo: sahteBlob});
+  check('WT-101 KABUL: Blob fotoğraf yedekte dataURL olarak KORUNUYOR',
+    typeof dURL.photo === 'string' && dURL.photo.startsWith('data:'),
+    String(dURL.photo).slice(0, 40));
+  const dBozuk = await A.fotoDisaAktar({ad: 'X', photo: {}});
+  check('WT-101: tanınmayan photo yedeğe HİÇ yazılmıyor (`{}` gitmiyor)',
+    !('photo' in dBozuk), JSON.stringify(dBozuk));
+  const dStr = await A.fotoDisaAktar({ad: 'X', photo: 'data:image/png;base64,AA'});
+  check('WT-101: zaten dataURL olan fotoğraf olduğu gibi kalıyor',
+    dStr.photo === 'data:image/png;base64,AA');
+
+  window.URL.createObjectURL = orjOU;
+  await A.db.vehicles.clear(); await A.db.expenses.clear();
 }
 
 // WT-81/11 KUSURU: bu satır dosyanın ORTASINDA (WT-76 bloğundan hemen sonra)

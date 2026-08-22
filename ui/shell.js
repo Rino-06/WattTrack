@@ -173,8 +173,11 @@ function evIssueURL(v) {
 }
 function evSummaryHTML(v) {
   const yr = v.y1 ? (v.y1 + (v.y2 ? '–' + v.y2 : '+')) : '—';
-  const visual = v.photo
-    ? `<img class="carphoto" src="${photoSrc(v.photo)}" alt="${esc(t('vehiclePhoto'))}" role="button" tabindex="0">`
+  // Ham alana DEĞİL, photoSrc'nin sonucuna bakılıyor: bozuk bir photo
+  // truthy olabilir ama gösterilebilir bir kaynak üretmez.
+  const foto = photoSrc(v.photo);
+  const visual = foto
+    ? `<img class="carphoto" src="${foto}" alt="${esc(t('vehiclePhoto'))}" role="button" tabindex="0">`
     : carSVG(v.body, colorFor(v.brand || v.ad || ''));
   // WT-40/A: "Mimari (400 V)" çipi kaldırıldı — son kullanıcı için anlamsız.
   // `arch` alanı veride DURUYOR (ileride lazım olabilir), yalnız gösterilmiyor;
@@ -317,8 +320,21 @@ async function fullResCanvas(file) {
 // Nesne URL'leri Blob başına bir kez üretilip saklanıyor: araç sayısı çok
 // düşük, erken revoke etmek kırık görsele yol açardı.
 const _blobURL = new WeakMap();
+// WT-101: `p` GEÇERLİ Mİ diye sorulmuyordu ve bu Aracım sayfasını komple
+// çökertiyordu. Nedeni: JSON.stringify bir Blob'u `{}` yapıyor. Yedek alan
+// kullanıcının aracında fotoğraf varsa dosyaya `photo:{}` yazılıyor, geri
+// yüklenince de öyle saklanıyor. `{}` truthy olduğu için "fotoğraf var"
+// sanılıyor, ama Blob olmadığı için URL.createObjectURL TypeError atıyor.
+// Hata renderVehiclePage'in ortasında patladığından sayfa hiç çizilmiyor,
+// silme düğmeleri bağlanmıyor ve gider listesi boş kalıyor — kullanıcının
+// bildirdiği üç belirtinin tamamı bu tek satırdan.
+// (WT-49/5 aynı kusuru sessions.ekranGor için düzeltmişti; vehicles.photo
+// gözden kaçmış.)
+const photoGecerli = p => typeof p === 'string'
+  ? p.length > 0
+  : (typeof Blob !== 'undefined' && p instanceof Blob);
 function photoSrc(p) {
-  if (!p) return '';
+  if (!photoGecerli(p)) return '';        // bozuk/eksik: fotoğraf YOK say
   if (typeof p === 'string') return p;                   // eski dataURL
   if (!_blobURL.has(p)) _blobURL.set(p, URL.createObjectURL(p));
   return _blobURL.get(p);
